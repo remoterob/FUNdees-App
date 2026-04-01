@@ -938,7 +938,35 @@
     nav { padding: 0 1rem; }
     .nav-links { display: none; }
   }
+
+  /* ─── MEMBER PORTAL ─────────────────────────── */
+  #page-portal { background: #07101e; }
+  .portal-wrap { max-width: 860px; margin: 0 auto; padding: 3rem 2rem; }
+  .portal-header { margin-bottom: 2.5rem; }
+  .portal-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem; color: var(--sand); line-height:1; }
+  .portal-header p { color: var(--muted); font-size: 0.88rem; margin-top: 0.35rem; }
+  .portal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .pcard { background: rgba(13,45,74,0.5); border: 1px solid var(--border-dim); border-radius: 4px; padding: 1.5rem; }
+  .pcard-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--surge); margin-bottom: 1.25rem; }
+  .status-badge { display: inline-block; padding: 0.3rem 0.9rem; border-radius: 2px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
+  .status-active { background: rgba(0,207,173,0.15); color: var(--surge); border: 1px solid rgba(0,207,173,0.3); }
+  .status-pending { background: rgba(245,166,35,0.12); color: #F5A623; border: 1px solid rgba(245,166,35,0.3); }
+  .status-casual { background: rgba(255,255,255,0.06); color: var(--muted); border: 1px solid var(--border-dim); }
+  .detail-row { display: flex; justify-content: space-between; align-items: baseline; padding: 0.5rem 0; border-bottom: 1px solid var(--border-dim); font-size: 0.85rem; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { color: var(--muted); }
+  .detail-val { color: var(--sand); font-weight: 400; text-align: right; }
+  .portal-edit-input { background: rgba(10,22,40,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 2px; padding: 0.55rem 0.75rem; color: var(--sand); font-family: 'Barlow', sans-serif; font-size: 0.85rem; width: 100%; outline: none; transition: border-color 0.2s; margin-bottom: 0.65rem; }
+  .portal-edit-input:focus { border-color: rgba(0,207,173,0.5); }
+  .portal-edit-label { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-bottom: 0.3rem; display: block; }
+  .qual-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+  .qual-tag { background: var(--surge-dim); border: 1px solid rgba(0,207,173,0.2); color: var(--surge); font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 2px; font-weight: 500; }
+  .pay-box { background: rgba(10,22,40,0.5); border: 1px solid rgba(0,207,173,0.2); border-radius: 3px; padding: 1.25rem; margin: 1rem 0; }
+  .pay-amount { font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem; color: var(--surge); line-height: 1; }
+  .pay-desc { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+  @media (max-width: 768px) { .portal-grid { grid-template-columns: 1fr; } }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -951,12 +979,15 @@
       <span>FUNdamentals</span>
     </div>
   </div>
-  <ul class="nav-links">
+  <ul class="nav-links" id="nav-links">
     <li><a href="#" onclick="showPage('home')">Home</a></li>
     <li><a href="#" onclick="showPage('sessions')">Pool Sessions</a></li>
     <li><a href="#" onclick="showPage('membership')">Membership</a></li>
-    <li><a href="/auth.html">Sign In</a></li>
-    <li><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
+    <!-- Auth state injected by JS -->
+    <li id="nav-auth-guest" style="display:none"><a href="/auth.html">Sign In</a></li>
+    <li id="nav-auth-guest2" style="display:none"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
+    <li id="nav-auth-user" style="display:none"><a href="#" onclick="showPage('portal')">My Account</a></li>
+    <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
 </nav>
 
@@ -1016,7 +1047,24 @@
     <p style="color:var(--muted);font-size:0.9rem;line-height:1.7;margin-top:0.75rem">All memberships include access to pool training sessions, club gear, and our community network. Payments processed securely via Stripe.</p>
   </div>
 
-  <div class="plans-grid">
+  
+        <!-- Logged-in member view — shown by JS if authenticated -->
+        <div id="membership-member-view" style="display:none;max-width:600px;margin:0 auto;padding:2rem 2rem 4rem">
+          <div class="pcard">
+            <div class="pcard-title">Your Membership</div>
+            <div id="mem-status-badge" class="status-badge status-pending" style="margin-bottom:1rem">Pending</div>
+            <div id="mem-details"></div>
+            <div id="mem-pay-section" style="display:none;margin-top:1rem">
+              <p style="font-size:0.85rem;color:var(--muted);line-height:1.6;margin-bottom:1rem">Your account is set up but membership payment is outstanding. Pay now to unlock member session rates and full club access.</p>
+              <div style="display:flex;gap:1rem;flex-wrap:wrap">
+                <button class="btn-primary" onclick="payMembership('annual')">Pay Annual — $120/yr</button>
+                <button class="btn-outline" onclick="payMembership('student')">Student — $60/yr</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+  <div class="plans-grid" id="membership-guest-view">
     <div class="plan-card">
       <div class="plan-name">Casual</div>
       <div class="plan-price">$5 <span>per session</span></div>
@@ -1064,6 +1112,82 @@
         <li class="dim">Vote at AGM</li>
       </ul>
       <button class="btn-outline" style="width:100%" onclick="window.location.href='/auth.html?tab=signup'">Join Now</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ─── MEMBER PORTAL PAGE ─── -->
+<div id="page-portal" class="page">
+  <div class="portal-wrap">
+    <div class="portal-header">
+      <h2 id="portal-greeting">My Account</h2>
+      <p id="portal-email" style="color:var(--muted);font-size:0.85rem"></p>
+    </div>
+
+    <div class="portal-grid">
+
+      <!-- Membership Status Card -->
+      <div class="pcard" style="grid-column: 1 / -1">
+        <div class="pcard-title">Membership Status</div>
+        <div id="portal-status-badge" class="status-badge status-pending">Pending</div>
+        <div id="portal-membership-info"></div>
+        <div id="portal-pay-section" style="display:none">
+          <div class="pay-box">
+            <div class="pay-amount" id="portal-pay-amount">$120.00</div>
+            <div class="pay-desc" id="portal-pay-desc">Annual membership — one-off yearly payment</div>
+          </div>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">Your account is registered. Activate your membership to access pool sessions at member rates.</p>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap">
+            <button class="btn-primary" onclick="payMembership('annual')">Activate Annual — $120/yr</button>
+            <button class="btn-outline" onclick="payMembership('student')">Student — $60/yr</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Personal Details -->
+      <div class="pcard">
+        <div class="pcard-title">Personal Details</div>
+        <div id="portal-view-details">
+          <div class="detail-row"><span class="detail-label">Name</span><span class="detail-val" id="pv-name">—</span></div>
+          <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-val" id="pv-phone">—</span></div>
+          <div class="detail-row"><span class="detail-label">Date of Birth</span><span class="detail-val" id="pv-dob">—</span></div>
+          <div class="detail-row"><span class="detail-label">Emergency Contact</span><span class="detail-val" id="pv-emergency">—</span></div>
+          <button class="btn-outline" style="width:100%;margin-top:1rem;padding:0.6rem" onclick="toggleEdit(true)">Edit Details</button>
+        </div>
+        <div id="portal-edit-details" style="display:none">
+          <label class="portal-edit-label">Full Name</label>
+          <input class="portal-edit-input" id="pe-name" type="text">
+          <label class="portal-edit-label">Phone</label>
+          <input class="portal-edit-input" id="pe-phone" type="tel">
+          <label class="portal-edit-label">Date of Birth</label>
+          <input class="portal-edit-input" id="pe-dob" type="date">
+          <label class="portal-edit-label">Emergency Contact</label>
+          <input class="portal-edit-input" id="pe-emergency" type="text" placeholder="Name & phone">
+          <div style="display:flex;gap:0.75rem;margin-top:0.5rem">
+            <button class="btn-primary" style="flex:1;padding:0.65rem" onclick="saveDetails()">Save</button>
+            <button class="btn-outline" style="flex:1;padding:0.65rem" onclick="toggleEdit(false)">Cancel</button>
+          </div>
+          <div id="edit-msg" style="font-size:0.8rem;margin-top:0.6rem;display:none"></div>
+        </div>
+      </div>
+
+      <!-- Qualifications -->
+      <div class="pcard">
+        <div class="pcard-title">My Qualifications</div>
+        <div id="portal-quals-view">
+          <div id="pv-quals" class="qual-tags"><span style="color:var(--muted);font-size:0.85rem">None recorded</span></div>
+          <button class="btn-outline" style="width:100%;margin-top:1.25rem;padding:0.6rem" onclick="toggleQualEdit(true)">Edit Qualifications</button>
+        </div>
+        <div id="portal-quals-edit" style="display:none">
+          <div id="portal-qual-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;max-height:220px;overflow-y:auto;margin-bottom:1rem"></div>
+          <div style="display:flex;gap:0.75rem">
+            <button class="btn-primary" style="flex:1;padding:0.65rem" onclick="saveQuals()">Save</button>
+            <button class="btn-outline" style="flex:1;padding:0.65rem" onclick="toggleQualEdit(false)">Cancel</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1136,23 +1260,221 @@
 <!-- ─── TOAST ─── -->
 <div class="toast" id="toast"></div>
 
+<script src="https://js.stripe.com/v3/"></script>
 <script>
-  // ─── CONFIG ──────────────────────────────────────────────────────────────
-  // Your Stripe publishable key — safe to expose in frontend
-  // Get from: Stripe Dashboard → Developers → API Keys → Publishable key
+  // ─── SUPABASE ────────────────────────────────────────────────────────────
+  const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
   const STRIPE_PUBLISHABLE_KEY = 'pk_test_REPLACE_WITH_YOUR_PUBLISHABLE_KEY';
 
-  // ─── STATE ───────────────────────────────────────────────────────────────
+  const QUALIFICATIONS = [
+    'AIDA2','AIDA3','AIDA4','AIDA Instructor','AIDA Master Instructor',
+    'AIDA Instructor Trainer','PADI Freediver','PADI Advanced Freediver',
+    'SSI Level 1','SSI Level 2','SSI Level 3','Ocean Hunter Int BH Course'
+  ];
+
   let stripe = null;
   let cardElement = null;
   let currentSessionId = null;
   let currentBookingTier = 'annual';
+  let currentUser = null;
+  let currentMember = null;
 
-  // ─── STRIPE INIT ─────────────────────────────────────────────────────────
-  // Stripe.js is loaded from the <script> tag at the bottom of the page
-  function initStripe() {
-    if (!stripe && window.Stripe) {
-      stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+  // ─── AUTH STATE ──────────────────────────────────────────────────────────
+  async function initAuth() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) {
+      currentUser = session.user;
+      await loadMemberProfile();
+    }
+    updateNav();
+    updateMembershipPage();
+  }
+
+  async function loadMemberProfile() {
+    if (!currentUser) return;
+    const { data } = await sb
+      .from('members')
+      .select('*')
+      .eq('auth_user_id', currentUser.id)
+      .maybeSingle();
+    currentMember = data;
+  }
+
+  function updateNav() {
+    const loggedIn = !!currentUser;
+    document.getElementById('nav-auth-guest').style.display  = loggedIn ? 'none' : 'list-item';
+    document.getElementById('nav-auth-guest2').style.display = loggedIn ? 'none' : 'list-item';
+    document.getElementById('nav-auth-user').style.display   = loggedIn ? 'list-item' : 'none';
+    document.getElementById('nav-auth-logout').style.display = loggedIn ? 'list-item' : 'none';
+  }
+
+  function updateMembershipPage() {
+    const guestView  = document.getElementById('membership-guest-view');
+    const memberView = document.getElementById('membership-member-view');
+    if (!currentUser || !currentMember) {
+      if (guestView)  guestView.style.display  = 'grid';
+      if (memberView) memberView.style.display = 'none';
+      return;
+    }
+    if (guestView)  guestView.style.display  = 'none';
+    if (memberView) memberView.style.display = 'block';
+    renderMembershipStatus('mem-status-badge', 'mem-details', 'mem-pay-section');
+  }
+
+  function renderMembershipStatus(badgeId, detailsId, paySectionId) {
+    const m = currentMember;
+    if (!m) return;
+    const badge = document.getElementById(badgeId);
+    const details = document.getElementById(detailsId);
+    const paySection = document.getElementById(paySectionId);
+
+    const statusMap = {
+      active:    { cls: 'status-active',  label: 'Active' },
+      pending:   { cls: 'status-pending', label: 'Payment Pending' },
+      expired:   { cls: 'status-pending', label: 'Expired' },
+      cancelled: { cls: 'status-casual',  label: 'Cancelled' },
+      casual:    { cls: 'status-casual',  label: 'Casual' },
+    };
+    const s = statusMap[m.status] || statusMap.casual;
+    if (badge) { badge.className = `status-badge ${s.cls}`; badge.textContent = s.label; }
+
+    const tierLabel = m.tier === 'annual' ? 'Annual Member' : m.tier === 'student' ? 'Student Member' : 'Casual';
+    let html = `<div class="detail-row"><span class="detail-label">Tier</span><span class="detail-val">${tierLabel}</span></div>`;
+    if (m.membership_start) html += `<div class="detail-row"><span class="detail-label">Member since</span><span class="detail-val">${fmt(m.membership_start)}</span></div>`;
+    if (m.membership_end)   html += `<div class="detail-row"><span class="detail-label">Renews</span><span class="detail-val">${fmt(m.membership_end)}</span></div>`;
+    if (details) details.innerHTML = html;
+
+    if (paySection) paySection.style.display = (m.status === 'pending' || m.status === 'expired') ? 'block' : 'none';
+  }
+
+  function fmt(d) {
+    if (!d) return '—';
+    return new Date(d + 'T12:00:00').toLocaleDateString('en-NZ', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  async function handleLogout() {
+    await sb.auth.signOut();
+    currentUser = null;
+    currentMember = null;
+    updateNav();
+    showPage('home');
+    showToast('Signed out successfully.');
+  }
+
+  // ─── PORTAL ──────────────────────────────────────────────────────────────
+  async function loadPortal() {
+    if (!currentUser) { window.location.href = '/auth.html'; return; }
+    if (!currentMember) await loadMemberProfile();
+    const m = currentMember;
+    if (!m) return;
+
+    document.getElementById('portal-greeting').textContent = `Welcome, ${m.full_name?.split(' ')[0] || 'Member'}`;
+    document.getElementById('portal-email').textContent = currentUser.email;
+
+    // Status
+    renderMembershipStatus('portal-status-badge', 'portal-membership-info', 'portal-pay-section');
+
+    // Personal details view
+    document.getElementById('pv-name').textContent      = m.full_name || '—';
+    document.getElementById('pv-phone').textContent     = m.phone || '—';
+    document.getElementById('pv-dob').textContent       = fmt(m.date_of_birth);
+    document.getElementById('pv-emergency').textContent = m.emergency_contact || '—';
+
+    // Personal details edit
+    document.getElementById('pe-name').value      = m.full_name || '';
+    document.getElementById('pe-phone').value     = m.phone || '';
+    document.getElementById('pe-dob').value       = m.date_of_birth || '';
+    document.getElementById('pe-emergency').value = m.emergency_contact || '';
+
+    // Qualifications view
+    const quals = m.qualifications || [];
+    const qv = document.getElementById('pv-quals');
+    qv.innerHTML = quals.length > 0
+      ? quals.map(q => `<span class="qual-tag">${q}</span>`).join('')
+      : '<span style="color:var(--muted);font-size:0.85rem">None recorded</span>';
+
+    // Qualifications edit grid
+    const qg = document.getElementById('portal-qual-grid');
+    qg.innerHTML = QUALIFICATIONS.map((q, i) => `
+      <label style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;border-radius:2px;cursor:pointer;font-size:0.78rem;color:var(--muted)">
+        <input type="checkbox" id="pq-${i}" value="${q}" ${quals.includes(q) ? 'checked' : ''} style="accent-color:var(--surge)">
+        ${q}
+      </label>`).join('');
+  }
+
+  function toggleEdit(show) {
+    document.getElementById('portal-view-details').style.display = show ? 'none' : 'block';
+    document.getElementById('portal-edit-details').style.display = show ? 'block' : 'none';
+    document.getElementById('edit-msg').style.display = 'none';
+  }
+
+  async function saveDetails() {
+    const name      = document.getElementById('pe-name').value.trim();
+    const phone     = document.getElementById('pe-phone').value.trim();
+    const dob       = document.getElementById('pe-dob').value;
+    const emergency = document.getElementById('pe-emergency').value.trim();
+    const msg = document.getElementById('edit-msg');
+    msg.style.display = 'none';
+
+    const { error } = await sb.from('members').update({
+      full_name: name, phone: phone || null,
+      date_of_birth: dob || null, emergency_contact: emergency || null
+    }).eq('auth_user_id', currentUser.id);
+
+    if (error) {
+      msg.style.cssText = 'display:block;color:#FF5C3A';
+      msg.textContent = 'Save failed: ' + error.message;
+    } else {
+      await loadMemberProfile();
+      await loadPortal();
+      toggleEdit(false);
+      showToast('Details saved.');
+    }
+  }
+
+  function toggleQualEdit(show) {
+    document.getElementById('portal-quals-view').style.display = show ? 'none' : 'block';
+    document.getElementById('portal-quals-edit').style.display = show ? 'block' : 'none';
+  }
+
+  async function saveQuals() {
+    const selected = Array.from(document.querySelectorAll('#portal-qual-grid input:checked')).map(c => c.value);
+    const { error } = await sb.from('members').update({
+      qualifications: selected.length > 0 ? selected : null
+    }).eq('auth_user_id', currentUser.id);
+
+    if (error) { showToast('Save failed: ' + error.message, true); return; }
+    await loadMemberProfile();
+    await loadPortal();
+    toggleQualEdit(false);
+    showToast('Qualifications saved.');
+  }
+
+  // ─── MEMBERSHIP PAYMENT ──────────────────────────────────────────────────
+  async function payMembership(tier) {
+    if (!currentUser || !currentMember) { window.location.href = '/auth.html'; return; }
+    showToast('Redirecting to payment...');
+    try {
+      const res = await fetch('/.netlify/functions/create-membership-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tier,
+          fullName: currentMember.full_name,
+          email: currentUser.email,
+          phone: currentMember.phone,
+          emergencyContact: currentMember.emergency_contact
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not start checkout');
+      window.location.href = data.url;
+    } catch (err) {
+      showToast('Payment error: ' + err.message, true);
     }
   }
 
@@ -1161,15 +1483,16 @@
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-' + id).classList.add('active');
     window.scrollTo(0, 0);
-    if (id === 'sessions') loadSessions();
+    if (id === 'sessions')   loadSessions();
+    if (id === 'portal')     loadPortal();
+    if (id === 'membership') updateMembershipPage();
   }
 
-  // ─── LOAD SESSIONS FROM API ───────────────────────────────────────────────
+  // ─── SESSIONS ────────────────────────────────────────────────────────────
   async function loadSessions() {
     const grid = document.getElementById('sessions-grid');
     if (!grid) return;
-    grid.innerHTML = '<p style="color:var(--muted);padding:2rem">Loading sessions...</p>';
-
+    grid.innerHTML = '<p style="color:var(--muted);padding:2rem;grid-column:1/-1">Loading sessions...</p>';
     try {
       const res = await fetch('/.netlify/functions/get-sessions');
       const { sessions, error } = await res.json();
@@ -1183,7 +1506,7 @@
   function renderSessions(sessions) {
     const grid = document.getElementById('sessions-grid');
     if (!sessions || sessions.length === 0) {
-      grid.innerHTML = '<p style="color:var(--muted);padding:2rem">No upcoming sessions scheduled yet.</p>';
+      grid.innerHTML = '<p style="color:var(--muted);padding:2rem;grid-column:1/-1">No upcoming sessions scheduled yet.</p>';
       return;
     }
     grid.innerHTML = sessions.map(s => {
@@ -1200,9 +1523,9 @@
         : `<span class="session-spots spots-ok">${s.spots_remaining} spots left</span>`;
       const bookBtn = isFull
         ? `<button class="book-btn full" disabled>Full</button>`
-        : `<button class="book-btn" onclick="event.stopPropagation();openBookingModal('${s.id}', '${s.title.replace(/'/g,'\\'')}', '${s.session_date}')">Book — $${s.casual_price}</button>`;
+        : `<button class="book-btn" onclick="event.stopPropagation();openBookingModal('${s.id}','${s.title.replace(/'/g,"\'")}','${s.session_date}')">Book — $${s.casual_price}</button>`;
       return `
-        <div class="session-card" onclick="openBookingModal('${s.id}', '${s.title.replace(/'/g,'\\'')}', '${s.session_date}')">
+        <div class="session-card" onclick="openBookingModal('${s.id}','${s.title.replace(/'/g,"\'")}','${s.session_date}')">
           <div class="session-card-header">
             <div><div class="session-card-date">${day}</div><div class="session-card-time">${time}</div></div>
             ${spotsBadge}
@@ -1223,22 +1546,25 @@
   }
 
   // ─── MODALS ───────────────────────────────────────────────────────────────
+  function initStripe() {
+    if (!stripe && window.Stripe) stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+  }
+
   function openBookingModal(sessionId, sessionTitle, sessionDate) {
     currentSessionId = sessionId;
     document.querySelector('#modal-book .modal-sub').textContent =
       `${new Date(sessionDate+'T12:00:00').toLocaleDateString('en-NZ',{weekday:'long',day:'numeric',month:'long'})} · ${sessionTitle}`;
+    // Pre-fill if logged in
+    if (currentMember) {
+      document.getElementById('book-name').value  = currentMember.full_name || '';
+      document.getElementById('book-email').value = currentUser.email || '';
+    }
     document.getElementById('modal-book').classList.add('open');
     initStripe();
     mountCard('card-element-book');
   }
 
   function openModal(id) {
-    const tierMap = { 'join': 'annual', 'join-casual': 'casual', 'join-student': 'student' };
-    if (tierMap[id]) {
-      currentBookingTier = tierMap[id];
-      document.getElementById('modal-join').classList.add('open');
-      return;
-    }
     if (id === 'book' || id === 'book-featured') {
       document.getElementById('modal-book').classList.add('open');
       initStripe();
@@ -1264,12 +1590,7 @@
     const elements = stripe.elements();
     cardElement = elements.create('card', {
       style: {
-        base: {
-          color: '#F0EDE6',
-          fontFamily: 'Barlow, sans-serif',
-          fontSize: '15px',
-          '::placeholder': { color: 'rgba(240,237,230,0.35)' }
-        },
+        base: { color: '#F0EDE6', fontFamily: 'Barlow, sans-serif', fontSize: '15px', '::placeholder': { color: 'rgba(240,237,230,0.35)' } },
         invalid: { color: '#FF5C3A' }
       }
     });
@@ -1292,7 +1613,7 @@
     btn.textContent = loading ? 'Processing...' : label;
   }
 
-  // ─── CONFIRM SESSION BOOKING + STRIPE PAYMENT ─────────────────────────────
+  // ─── BOOK SESSION ────────────────────────────────────────────────────────
   async function confirmBooking() {
     const email    = document.getElementById('book-email').value.trim();
     const fullName = document.getElementById('book-name').value.trim();
@@ -1301,41 +1622,29 @@
 
     setLoading('btn-pay-booking', true, 'Confirm & Pay');
     try {
-      // 1. Get a Payment Intent from our function
       const piRes = await fetch('/.netlify/functions/create-session-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: currentSessionId, email, fullName })
       });
       const piData = await piRes.json();
       if (!piRes.ok) throw new Error(piData.error || 'Could not create payment');
 
-      // 2. Confirm payment with Stripe (card details never touch our server)
       const { paymentIntent, error: stripeErr } = await stripe.confirmCardPayment(
         piData.clientSecret,
         { payment_method: { card: cardElement, billing_details: { name: fullName, email } } }
       );
       if (stripeErr) throw new Error(stripeErr.message);
 
-      // 3. Write booking to Supabase
       const bookRes = await fetch('/.netlify/functions/confirm-booking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentIntentId: paymentIntent.id,
-          sessionId: currentSessionId,
-          email,
-          fullName
-        })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentIntentId: paymentIntent.id, sessionId: currentSessionId, email, fullName })
       });
       const bookData = await bookRes.json();
       if (!bookRes.ok) throw new Error(bookData.error || 'Booking save failed');
 
-      // 4. Show success
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookData));
       closeModal('book');
       window.location.href = '/success.html?type=session';
-
     } catch (err) {
       showToast(`Payment failed: ${err.message}`, true);
     } finally {
@@ -1343,47 +1652,15 @@
     }
   }
 
-  // ─── JOIN MEMBERSHIP ──────────────────────────────────────────────────────
-  async function confirmJoin() {
-    const fullName        = document.getElementById('join-name').value.trim();
-    const email           = document.getElementById('join-email').value.trim();
-    const phone           = document.getElementById('join-phone').value.trim();
-    const emergency       = document.getElementById('join-emergency').value.trim();
-    if (!fullName || !email) { showToast('Please fill in your name and email.', true); return; }
-
-    setLoading('btn-pay-join', true, `Join — $${currentBookingTier === 'student' ? '60' : '120'}/year`);
-    try {
-      const res = await fetch('/.netlify/functions/create-membership-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier: currentBookingTier, fullName, email, phone, emergencyContact: emergency })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not start checkout');
-
-      // Redirect to Stripe Checkout (hosted page)
-      window.location.href = data.url;
-
-    } catch (err) {
-      showToast(`Error: ${err.message}`, true);
-    } finally {
-      setLoading('btn-pay-join', false, 'Join');
-    }
-  }
-
   // ─── INIT ────────────────────────────────────────────────────────────────
-  // Load sessions immediately if we start on sessions page
-  document.addEventListener('DOMContentLoaded', () => {
-    initStripe();
-    // Load sessions immediately — they show on the Sessions page
+  document.addEventListener('DOMContentLoaded', async () => {
+    await initAuth();
     loadSessions();
-    // Check if returning from Stripe cancel
     if (window.location.search.includes('cancelled=true')) {
       showToast('Checkout cancelled — no payment was taken.', true);
     }
+    if (window.location.hash === '#portal') showPage('portal');
   });
 </script>
-<!-- Stripe.js — must load before our script uses window.Stripe -->
-<script src="https://js.stripe.com/v3/"></script>
 </body>
 </html>

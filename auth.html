@@ -642,8 +642,8 @@
         return;
       }
 
-      // Redirect to member portal (or home for now)
-      window.location.href = '/';
+      // Redirect to member portal
+      window.location.href = '/#portal';
 
     } catch (err) {
       showAlert('signin', 'Something went wrong. Please try again.');
@@ -764,7 +764,7 @@
 
   // ─── CHECK IF ALREADY LOGGED IN ──────────────────────────────────────────
   sb.auth.getSession().then(({ data: { session } }) => {
-    if (session) window.location.href = '/';
+    if (session) window.location.href = '/#portal';
   });
 
   // ─── CHECK URL PARAMS (e.g. ?tab=signup from Join Now button) ────────────
