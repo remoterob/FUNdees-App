@@ -1,0 +1,8 @@
+{
+  "name": "spearfishing-fundamentals-functions",
+  "version": "1.0.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "stripe": "^14.14.0"
+  }
+}

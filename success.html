@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booking Confirmed — Spearfishing FUNdamentals</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --midnight: #0A1628; --surge: #00CFAD; --sand: #F0EDE6;
+    --muted: rgba(240,237,230,0.55); --deep: #0D2D4A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--midnight); color: var(--sand);
+    font-family: 'Barlow', sans-serif; font-weight: 300;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 2rem;
+  }
+  .card {
+    background: rgba(13,45,74,0.7);
+    border: 1px solid rgba(0,207,173,0.25);
+    border-radius: 6px; padding: 3rem 2.5rem;
+    max-width: 480px; width: 100%; text-align: center;
+  }
+  .icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(0,207,173,0.15); border: 1px solid rgba(0,207,173,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; margin: 0 auto 1.5rem;
+    animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes pop {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+  h1 {
+    font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem;
+    color: var(--sand); line-height: 1; margin-bottom: 0.5rem;
+  }
+  .sub { color: var(--muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 2rem; }
+  .detail-box {
+    background: rgba(10,22,40,0.6); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 4px; padding: 1.25rem; margin-bottom: 2rem; text-align: left;
+  }
+  .detail-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 0.45rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 0.85rem;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { color: var(--muted); }
+  .detail-val { color: var(--sand); font-weight: 500; text-align: right; }
+  .btn {
+    display: inline-block; background: var(--surge); color: var(--midnight);
+    padding: 0.85rem 2rem; border-radius: 2px; text-decoration: none;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+    font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .loading { color: var(--muted); font-size: 0.9rem; }
+  #error-msg { color: #FF5C3A; font-size: 0.85rem; margin-top: 1rem; display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon" id="icon">⏳</div>
+  <h1 id="title">Confirming...</h1>
+  <p class="sub loading" id="sub">Please wait while we confirm your booking.</p>
+  <div class="detail-box" id="details" style="display:none"></div>
+  <div id="error-msg"></div>
+  <a href="/" class="btn" id="home-btn" style="display:none">Back to Home</a>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const type = params.get('type');        // 'membership' or 'session'
+  const stripeSessionId = params.get('session_id');
+
+  async function init() {
+    if (type === 'membership' && stripeSessionId) {
+      // Membership checkout — already handled by webhook, just show success
+      showMembershipSuccess();
+    } else {
+      // Shouldn't reach here without params — just show generic success
+      showGenericSuccess();
+    }
+  }
+
+  function showMembershipSuccess() {
+    document.getElementById('icon').textContent = '🤿';
+    document.getElementById('title').textContent = 'Welcome Aboard!';
+    document.getElementById('sub').textContent = 'Your membership is now active. A confirmation email is on its way.';
+    document.getElementById('sub').classList.remove('loading');
+
+    const details = document.getElementById('details');
+    details.innerHTML = `
+      <div class="detail-row">
+        <span class="detail-label">Status</span>
+        <span class="detail-val" style="color:#00CFAD">Active ✓</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">What's next</span>
+        <span class="detail-val">Book your first pool session</span>
+      </div>
+    `;
+    details.style.display = 'block';
+    document.getElementById('home-btn').style.display = 'inline-block';
+    document.getElementById('home-btn').textContent = 'Book a Session →';
+    document.getElementById('home-btn').href = '/#sessions';
+  }
+
+  function showSessionSuccess(bookingData) {
+    document.getElementById('icon').textContent = '✓';
+    document.getElementById('title').textContent = 'You\'re In!';
+    document.getElementById('sub').textContent = 'Your pool session is confirmed. See you in the water.';
+    document.getElementById('sub').classList.remove('loading');
+
+    const fmt = (date) => new Date(date).toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long' });
+    const fmtTime = (t) => t?.slice(0, 5);
+
+    const details = document.getElementById('details');
+    details.innerHTML = `
+      <div class="detail-row">
+        <span class="detail-label">Session</span>
+        <span class="detail-val">${bookingData.session?.title || '—'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Date</span>
+        <span class="detail-val">${fmt(bookingData.session?.date)}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Time</span>
+        <span class="detail-val">${fmtTime(bookingData.session?.time)}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Location</span>
+        <span class="detail-val">${bookingData.session?.location || '—'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Amount charged</span>
+        <span class="detail-val">$${Number(bookingData.amountCharged).toFixed(2)} NZD</span>
+      </div>
+    `;
+    details.style.display = 'block';
+    document.getElementById('home-btn').style.display = 'inline-block';
+    document.getElementById('home-btn').textContent = 'View More Sessions →';
+    document.getElementById('home-btn').href = '/';
+  }
+
+  function showGenericSuccess() {
+    document.getElementById('icon').textContent = '✓';
+    document.getElementById('title').textContent = 'All Done!';
+    document.getElementById('sub').textContent = 'Your payment was successful. Check your email for confirmation.';
+    document.getElementById('sub').classList.remove('loading');
+    document.getElementById('home-btn').style.display = 'inline-block';
+  }
+
+  // Check for pending session booking data in sessionStorage (set by index.html after payment)
+  const pendingBooking = sessionStorage.getItem('pendingBooking');
+  if (pendingBooking) {
+    const data = JSON.parse(pendingBooking);
+    sessionStorage.removeItem('pendingBooking');
+    showSessionSuccess(data);
+  } else {
+    init();
+  }
+</script>
+</body>
+</html>
