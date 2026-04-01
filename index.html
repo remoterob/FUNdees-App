@@ -50,9 +50,9 @@
   }
 
   .nav-logo img {
-    height: 40px;
-    filter: brightness(0) invert(1);
-    opacity: 1;
+    height: 44px;
+    filter: invert(1);
+    opacity: 0.92;
   }
 
   .nav-wordmark {
@@ -966,12 +966,12 @@
     <div class="hero-bg"></div>
     <div class="depth-lines"></div>
     <div class="hero-inner">
-      <div class="hero-badge">Auckland's Premier Freediving Club</div>
-      <h1>Dive<br><span class="accent">Deeper.</span><br>Go Further.</h1>
-      <p class="hero-sub">From your first breath-hold to your first fish — we teach the skills, safety, and community to make spearfishing the adventure of your life.</p>
+      <div class="hero-badge">Auckland's Premier Spearfishing and Freediving Club</div>
+      <h1>Bringing back<br>the <span class="accent">FUN</span> into<br>FUNdamentals.</h1>
+      <p class="hero-sub">Structured peer training in a safe and supportive environment.</p>
       <div class="hero-actions">
-        <button class="btn-primary" onclick="showPage('sessions')">Book a Pool Session</button>
-        <button class="btn-outline" onclick="showPage('membership')">View Membership</button>
+        <button class="btn-primary" onclick="showPage('sessions')">Sign Up to a Training Session</button>
+        <button class="btn-outline" onclick="showPage('membership')">Membership</button>
       </div>
     </div>
   </div>
@@ -1004,132 +1004,7 @@
   </div>
 
   <div class="sessions-grid" id="sessions-grid">
-    <!-- Session cards -->
-    <div class="session-card" onclick="openModal('book')">
-      <div class="session-card-header">
-        <div>
-          <div class="session-card-date">Wed 9 Apr</div>
-          <div class="session-card-time">6:30 PM – 8:30 PM</div>
-        </div>
-        <span class="session-spots spots-ok">4 spots left</span>
-      </div>
-      <div class="session-card-body">
-        <div class="session-card-title">Block 2 — Static Apnea Fundamentals</div>
-        <div class="session-card-desc">Focus on diaphragmatic breathing, relaxation under water and CO₂ tolerance tables. Suitable for all levels in the current block.</div>
-      </div>
-      <div class="session-card-footer">
-        <div>
-          <div class="session-capacity">8 / 12 booked</div>
-          <div class="capacity-bar"><div class="capacity-fill" style="width:67%"></div></div>
-        </div>
-        <button class="book-btn" onclick="event.stopPropagation();openModal('book')">Book — $15</button>
-      </div>
-    </div>
-
-    <div class="session-card" onclick="openModal('book')">
-      <div class="session-card-header">
-        <div>
-          <div class="session-card-date">Wed 16 Apr</div>
-          <div class="session-card-time">6:30 PM – 8:30 PM</div>
-        </div>
-        <span class="session-spots spots-low">2 spots left</span>
-      </div>
-      <div class="session-card-body">
-        <div class="session-card-title">Block 2 — Dynamic Apnea + Turns</div>
-        <div class="session-card-desc">Lane swimming with fins, flip turns at depth, and underwater kick technique refinement. Intermediate level.</div>
-      </div>
-      <div class="session-card-footer">
-        <div>
-          <div class="session-capacity">10 / 12 booked</div>
-          <div class="capacity-bar"><div class="capacity-fill warn" style="width:83%"></div></div>
-        </div>
-        <button class="book-btn" onclick="event.stopPropagation();openModal('book')">Book — $15</button>
-      </div>
-    </div>
-
-    <div class="session-card">
-      <div class="session-card-header">
-        <div>
-          <div class="session-card-date">Wed 23 Apr</div>
-          <div class="session-card-time">6:30 PM – 8:30 PM</div>
-        </div>
-        <span class="session-spots spots-full">Full</span>
-      </div>
-      <div class="session-card-body">
-        <div class="session-card-title">Block 2 — Rescue & Buddy Protocols</div>
-        <div class="session-card-desc">Blackout recognition, rescue techniques, and buddy safety drills. Mandatory for all block participants before ocean dives.</div>
-      </div>
-      <div class="session-card-footer">
-        <div>
-          <div class="session-capacity">12 / 12 booked</div>
-          <div class="capacity-bar"><div class="capacity-fill warn" style="width:100%"></div></div>
-        </div>
-        <button class="book-btn full">Full</button>
-      </div>
-    </div>
-
-    <div class="session-card" onclick="openModal('book')">
-      <div class="session-card-header">
-        <div>
-          <div class="session-card-date">Wed 30 Apr</div>
-          <div class="session-card-time">6:30 PM – 8:30 PM</div>
-        </div>
-        <span class="session-spots spots-ok">8 spots left</span>
-      </div>
-      <div class="session-card-body">
-        <div class="session-card-title">Block 3 — Introductory Session</div>
-        <div class="session-card-desc">First session of the new training block. Open to beginners and returning members. Equipment orientation included.</div>
-      </div>
-      <div class="session-card-footer">
-        <div>
-          <div class="session-capacity">4 / 12 booked</div>
-          <div class="capacity-bar"><div class="capacity-fill" style="width:33%"></div></div>
-        </div>
-        <button class="book-btn" onclick="event.stopPropagation();openModal('book')">Book — $15</button>
-      </div>
-    </div>
-
-    <div class="session-card" onclick="openModal('book')">
-      <div class="session-card-header">
-        <div>
-          <div class="session-card-date">Wed 7 May</div>
-          <div class="session-card-time">6:30 PM – 8:30 PM</div>
-        </div>
-        <span class="session-spots spots-ok">9 spots left</span>
-      </div>
-      <div class="session-card-body">
-        <div class="session-card-title">Block 3 — Equalisation Techniques</div>
-        <div class="session-card-desc">Frenzel and mouthfill equalisation practised in pool environment. Ear health, depth progression and safe ascent rates.</div>
-      </div>
-      <div class="session-card-footer">
-        <div>
-          <div class="session-capacity">3 / 12 booked</div>
-          <div class="capacity-bar"><div class="capacity-fill" style="width:25%"></div></div>
-        </div>
-        <button class="book-btn" onclick="event.stopPropagation();openModal('book')">Book — $15</button>
-      </div>
-    </div>
-
-    <div class="session-card" onclick="openModal('book')">
-      <div class="session-card-header">
-        <div>
-          <div class="session-card-date">Wed 14 May</div>
-          <div class="session-card-time">6:30 PM – 8:30 PM</div>
-        </div>
-        <span class="session-spots spots-ok">11 spots left</span>
-      </div>
-      <div class="session-card-body">
-        <div class="session-card-title">Block 3 — Weight & Wetsuit Fitting</div>
-        <div class="session-card-desc">Neutral buoyancy at target depth, correct weighting for NZ waters and practical wetsuit selection workshop.</div>
-      </div>
-      <div class="session-card-footer">
-        <div>
-          <div class="session-capacity">1 / 12 booked</div>
-          <div class="capacity-bar"><div class="capacity-fill" style="width:8%"></div></div>
-        </div>
-        <button class="book-btn" onclick="event.stopPropagation();openModal('book')">Book — $15</button>
-      </div>
-    </div>
+    <p style="color:var(--muted);padding:2rem;grid-column:1/-1">Loading sessions...</p>
   </div>
 </div>
 
@@ -1500,6 +1375,8 @@
   // Load sessions immediately if we start on sessions page
   document.addEventListener('DOMContentLoaded', () => {
     initStripe();
+    // Load sessions immediately — they show on the Sessions page
+    loadSessions();
     // Check if returning from Stripe cancel
     if (window.location.search.includes('cancelled=true')) {
       showToast('Checkout cancelled — no payment was taken.', true);
