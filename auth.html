@@ -720,22 +720,23 @@
 
       if (authError) throw authError;
 
-      // 2. Insert member profile
-      const { error: profileError } = await sb
-        .from('members')
-        .insert({
+      // 2. Create member profile via server-side function (uses service role key to bypass RLS)
+      const profileRes = await fetch('/.netlify/functions/create-member-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           auth_user_id:      authData.user.id,
           full_name:         `${firstName} ${lastName}`,
           email,
           phone:             phone || null,
           date_of_birth:     dob   || null,
           emergency_contact: emergency || null,
-          qualifications:    quals.length > 0 ? quals : null,
-          tier:              'casual',
-          status:            'pending'
-        });
+          qualifications:    quals.length > 0 ? quals : null
+        })
+      });
 
-      if (profileError) throw new Error('Account created but profile save failed: ' + profileError.message + '. Please contact admin.');
+      const profileData = await profileRes.json();
+      if (!profileRes.ok) throw new Error('Profile save failed: ' + (profileData.error || 'unknown error'));
 
       // 3. Show success screen
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
