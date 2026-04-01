@@ -928,6 +928,82 @@
   .toast.show { transform: translateY(0); opacity: 1; }
 
   /* ─── RESPONSIVE ────────────────────────── */
+  .hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    z-index: 101;
+  }
+  .hamburger span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--sand);
+    border-radius: 2px;
+    transition: all 0.25s;
+  }
+  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  .mobile-menu {
+    display: none;
+    position: fixed;
+    top: 68px; left: 0; right: 0;
+    background: rgba(7, 16, 30, 0.98);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-dim);
+    z-index: 99;
+    padding: 1rem 1.5rem 1.5rem;
+    flex-direction: column;
+    gap: 0;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a, .mobile-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border-dim);
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 1rem;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .mobile-menu a:hover, .mobile-menu button:hover { color: var(--surge); }
+  .mobile-menu .mob-cta {
+    margin-top: 1rem;
+    background: var(--surge);
+    color: var(--midnight) !important;
+    text-align: center;
+    padding: 0.85rem !important;
+    border-radius: 2px;
+    font-weight: 600 !important;
+    border-bottom: none !important;
+  }
+  .mobile-menu .mob-logout {
+    margin-top: 0.5rem;
+    background: var(--coral);
+    color: white !important;
+    text-align: center;
+    padding: 0.85rem !important;
+    border-radius: 2px;
+    font-weight: 600 !important;
+    border-bottom: none !important;
+  }
+
   @media (max-width: 768px) {
     .features-grid { grid-template-columns: 1fr; }
     .metrics-row { grid-template-columns: repeat(2, 1fr); }
@@ -936,7 +1012,8 @@
     .sidebar { display: none; }
     .dash-grid { grid-template-columns: 1fr; }
     nav { padding: 0 1rem; }
-    .nav-links { display: none; }
+    .nav-links { display: none !important; }
+    .hamburger { display: flex; }
   }
 
   /* ─── MEMBER PORTAL ─────────────────────────── */
@@ -980,16 +1057,31 @@
     </div>
   </div>
   <ul class="nav-links" id="nav-links">
-    <li><a href="#" onclick="showPage('home')">Home</a></li>
-    <li><a href="#" onclick="showPage('sessions')">Pool Sessions</a></li>
-    <li><a href="#" onclick="showPage('membership')">Membership</a></li>
+    <li><a href="#" onclick="navTo('home')">Home</a></li>
+    <li><a href="#" onclick="navTo('sessions')">Pool Sessions</a></li>
     <!-- Auth state injected by JS -->
     <li id="nav-auth-guest" style="display:none"><a href="/auth.html">Sign In</a></li>
     <li id="nav-auth-guest2" style="display:none"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
     <li id="nav-auth-user" style="display:none"><a href="#" onclick="showPage('portal')">My Account</a></li>
     <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
+  <!-- Hamburger — mobile only -->
+  <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#" onclick="navTo('home')">Home</a>
+  <a href="#" onclick="navTo('sessions')">Pool Sessions</a>
+  <!-- Guest links -->
+  <a href="/auth.html" id="mob-signin" style="display:none">Sign In</a>
+  <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta" style="display:none">Join Now</a>
+  <!-- Auth links -->
+  <a href="#" id="mob-account" onclick="navTo('portal')" style="display:none">My Account</a>
+  <button id="mob-logout" onclick="handleLogout()" class="mob-logout" style="display:none">Log Out</button>
+</div>
 
 <!-- ─── HOME PAGE ─── -->
 <div id="page-home" class="page active">
@@ -1002,7 +1094,6 @@
       <p class="hero-sub">Structured peer training in a safe and supportive environment.</p>
       <div class="hero-actions">
         <button class="btn-primary" onclick="showPage('sessions')">Sign Up to a Training Session</button>
-        <button class="btn-outline" onclick="showPage('membership')">Membership</button>
       </div>
     </div>
   </div>
@@ -1039,82 +1130,7 @@
   </div>
 </div>
 
-<!-- ─── MEMBERSHIP PAGE ─── -->
-<div id="page-membership" class="page">
-  <div class="membership-hero">
-    <div class="section-label">Membership</div>
-    <div class="section-title">Choose Your Level</div>
-    <p style="color:var(--muted);font-size:0.9rem;line-height:1.7;margin-top:0.75rem">All memberships include access to pool training sessions, club gear, and our community network. Payments processed securely via Stripe.</p>
-  </div>
 
-  
-        <!-- Logged-in member view — shown by JS if authenticated -->
-        <div id="membership-member-view" style="display:none;max-width:600px;margin:0 auto;padding:2rem 2rem 4rem">
-          <div class="pcard">
-            <div class="pcard-title">Your Membership</div>
-            <div id="mem-status-badge" class="status-badge status-pending" style="margin-bottom:1rem">Pending</div>
-            <div id="mem-details"></div>
-            <div id="mem-pay-section" style="display:none;margin-top:1rem">
-              <p style="font-size:0.85rem;color:var(--muted);line-height:1.6;margin-bottom:1rem">Your account is set up but membership payment is outstanding. Pay now to unlock member session rates and full club access.</p>
-              <div style="display:flex;gap:1rem;flex-wrap:wrap">
-                <button class="btn-primary" onclick="payMembership('annual')">Pay Annual — $120/yr</button>
-                <button class="btn-outline" onclick="payMembership('student')">Student — $60/yr</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-  <div class="plans-grid" id="membership-guest-view">
-    <div class="plan-card">
-      <div class="plan-name">Casual</div>
-      <div class="plan-price">$5 <span>per session</span></div>
-      <div class="plan-period">Pay as you go — no commitment</div>
-      <ul class="plan-features">
-        <li>Book individual pool sessions</li>
-        <li>Access to session training plans</li>
-        <li>Club newsletter & updates</li>
-        <li class="dim">Discounted session rates</li>
-        <li class="dim">Gear library access</li>
-        <li class="dim">Ocean dive trip priority</li>
-        <li class="dim">Session leader eligibility</li>
-      </ul>
-      <button class="btn-outline" style="width:100%" onclick="window.location.href='/auth.html?tab=signup'">Get Started</button>
-    </div>
-
-    <div class="plan-card featured">
-      <div class="plan-badge">Most Popular</div>
-      <div class="plan-name">Annual Member</div>
-      <div class="plan-price">$120 <span>/ year</span></div>
-      <div class="plan-period">Billed once annually — best value</div>
-      <ul class="plan-features">
-        <li>Unlimited pool session booking</li>
-        <li>Session rate: $10 per session</li>
-        <li>Full gear library access</li>
-        <li>Ocean dive trip priority booking</li>
-        <li>Session training plans shared</li>
-        <li>Session leader eligibility</li>
-        <li>Vote at AGM & club events</li>
-      </ul>
-      <button class="btn-primary" style="width:100%" onclick="window.location.href='/auth.html?tab=signup'">Join Now</button>
-    </div>
-
-    <div class="plan-card">
-      <div class="plan-name">Student / Junior</div>
-      <div class="plan-price">$60 <span>/ year</span></div>
-      <div class="plan-period">Under 25 or full-time student</div>
-      <ul class="plan-features">
-        <li>Unlimited pool session booking</li>
-        <li>Session rate: $10 per session</li>
-        <li>Gear library access</li>
-        <li>Ocean dive trip access</li>
-        <li>Session training plans shared</li>
-        <li class="dim">Session leader eligibility</li>
-        <li class="dim">Vote at AGM</li>
-      </ul>
-      <button class="btn-outline" style="width:100%" onclick="window.location.href='/auth.html?tab=signup'">Join Now</button>
-    </div>
-  </div>
-</div>
 
 
 <!-- ─── MEMBER PORTAL PAGE ─── -->
@@ -1306,10 +1322,36 @@
 
   function updateNav() {
     const loggedIn = !!currentUser;
+    // Desktop nav
     document.getElementById('nav-auth-guest').style.display  = loggedIn ? 'none' : 'list-item';
     document.getElementById('nav-auth-guest2').style.display = loggedIn ? 'none' : 'list-item';
     document.getElementById('nav-auth-user').style.display   = loggedIn ? 'list-item' : 'none';
     document.getElementById('nav-auth-logout').style.display = loggedIn ? 'list-item' : 'none';
+    // Mobile nav
+    document.getElementById('mob-signin').style.display  = loggedIn ? 'none' : 'block';
+    document.getElementById('mob-join').style.display    = loggedIn ? 'none' : 'block';
+    document.getElementById('mob-account').style.display = loggedIn ? 'block' : 'none';
+    document.getElementById('mob-logout').style.display  = loggedIn ? 'block' : 'none';
+  }
+
+  function toggleMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    const btn  = document.getElementById('hamburger');
+    const open = menu.classList.toggle('open');
+    btn.classList.toggle('open', open);
+    // Prevent body scroll when menu open
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+
+  function closeMobileMenu() {
+    document.getElementById('mobile-menu').classList.remove('open');
+    document.getElementById('hamburger').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function navTo(page) {
+    closeMobileMenu();
+    showPage(page);
   }
 
   function updateMembershipPage() {
@@ -1660,6 +1702,14 @@
       showToast('Checkout cancelled — no payment was taken.', true);
     }
     if (window.location.hash === '#portal') showPage('portal');
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', e => {
+      const menu = document.getElementById('mobile-menu');
+      const btn  = document.getElementById('hamburger');
+      if (menu.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) {
+        closeMobileMenu();
+      }
+    });
   });
 </script>
 </body>
