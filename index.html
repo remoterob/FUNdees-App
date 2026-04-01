@@ -1471,8 +1471,19 @@
       msg.style.cssText = 'display:block;color:#FF5C3A';
       msg.textContent = 'Save failed: ' + error.message;
     } else {
-      await loadMemberProfile();
-      await loadPortal();
+      // Update currentMember in memory immediately
+      currentMember.full_name        = name;
+      currentMember.phone            = phone || null;
+      currentMember.date_of_birth    = dob || null;
+      currentMember.emergency_contact = emergency || null;
+
+      // Update the view fields directly
+      document.getElementById('pv-name').textContent      = name || '—';
+      document.getElementById('pv-phone').textContent     = phone || '—';
+      document.getElementById('pv-dob').textContent       = fmt(dob);
+      document.getElementById('pv-emergency').textContent = emergency || '—';
+      document.getElementById('portal-greeting').textContent = `Welcome, ${name?.split(' ')[0] || 'Member'}`;
+
       toggleEdit(false);
       showToast('Details saved.');
     }
@@ -1490,8 +1501,14 @@
     }).eq('auth_user_id', currentUser.id);
 
     if (error) { showToast('Save failed: ' + error.message, true); return; }
-    await loadMemberProfile();
-    await loadPortal();
+
+    // Update in memory and re-render tags immediately
+    currentMember.qualifications = selected.length > 0 ? selected : null;
+    const qv = document.getElementById('pv-quals');
+    qv.innerHTML = selected.length > 0
+      ? selected.map(q => `<span class="qual-tag">${q}</span>`).join('')
+      : '<span style="color:var(--muted);font-size:0.85rem">None recorded</span>';
+
     toggleQualEdit(false);
     showToast('Qualifications saved.');
   }
