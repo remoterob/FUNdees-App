@@ -60,8 +60,7 @@
 
   .brand img {
     height: 48px;
-    filter: invert(1);
-    opacity: 0.9;
+    opacity: 0.92;
   }
 
   .brand-text {
@@ -372,7 +371,7 @@
 <!-- LEFT PANEL -->
 <div class="left-panel">
   <a href="/" class="brand">
-    <img src="/logo.jpg" alt="Fundees Logo">
+    <img src="/logo-white.png" alt="Fundees Logo">
     <div class="brand-text">
       Spearfishing
       <span>FUNdamentals</span>
@@ -528,15 +527,15 @@
 </div>
 
 <!-- Load Supabase from CDN -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
   // ─── CONFIG ──────────────────────────────────────────────────────────────
-  // Replace these with your actual values from Supabase → Settings → API
-  const SUPABASE_URL  = 'https://YOURPROJECT.supabase.co';
-  const SUPABASE_ANON = 'eyJ...your-anon-key';
+  const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
 
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
   // ─── QUALIFICATIONS LIST ─────────────────────────────────────────────────
   const QUALIFICATIONS = [
@@ -634,7 +633,7 @@
     clearAlerts();
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
 
       if (error) {
         showAlert('signin', error.message === 'Invalid login credentials'
@@ -662,7 +661,7 @@
     clearAlerts();
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password.html`
       });
 
@@ -709,7 +708,7 @@
 
     try {
       // 1. Create Supabase Auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await sb.auth.signUp({
         email,
         password,
         options: {
@@ -722,7 +721,7 @@
       if (authError) throw authError;
 
       // 2. Insert member profile into members table
-      const { error: profileError } = await supabase
+      const { error: profileError } = await sb
         .from('members')
         .insert({
           auth_user_id:       authData.user.id,
@@ -764,7 +763,7 @@
   });
 
   // ─── CHECK IF ALREADY LOGGED IN ──────────────────────────────────────────
-  supabase.auth.getSession().then(({ data: { session } }) => {
+  sb.auth.getSession().then(({ data: { session } }) => {
     if (session) window.location.href = '/';
   });
 
