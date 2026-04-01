@@ -1150,13 +1150,12 @@
         <div id="portal-membership-info"></div>
         <div id="portal-pay-section" style="display:none">
           <div class="pay-box">
-            <div class="pay-amount" id="portal-pay-amount">$120.00</div>
-            <div class="pay-desc" id="portal-pay-desc">Annual membership — one-off yearly payment</div>
+            <div class="pay-amount" id="portal-pay-amount">$20.00</div>
+            <div class="pay-desc" id="portal-pay-desc">Annual membership — required to train at the pool, lake and vote at AGM</div>
           </div>
-          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">Your account is registered. Activate your membership to access pool sessions at member rates.</p>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">An active membership is required to train at the pool, lake and to vote at the AGM.</p>
           <div style="display:flex;gap:1rem;flex-wrap:wrap">
-            <button class="btn-primary" onclick="payMembership('annual')">Activate Annual — $120/yr</button>
-            <button class="btn-outline" onclick="payMembership('student')">Student — $60/yr</button>
+            <button class="btn-primary" onclick="payMembership('annual')">Activate Membership — $20/yr</button>
           </div>
         </div>
       </div>
@@ -1243,7 +1242,7 @@
   <div class="modal">
     <button class="modal-close" onclick="closeModal('join')">✕</button>
     <div class="modal-title">Join the Club</div>
-    <div class="modal-sub">Annual Membership · Includes all pool session access</div>
+    <div class="modal-sub">Annual Membership · $20/year</div>
     <div class="form-group">
       <label class="form-label">Full Name</label>
       <input id="join-name" class="form-input" type="text" placeholder="Your full name">
@@ -1263,12 +1262,12 @@
     <div class="payment-box">
       <div>
         <div class="payment-label">Annual Membership</div>
-        <div style="font-size:0.75rem;color:rgba(240,237,230,0.35);margin-top:2px">Auto-renews annually · Cancel anytime</div>
+        <div style="font-size:0.75rem;color:rgba(240,237,230,0.35);margin-top:2px">Billed annually · Cancel anytime</div>
       </div>
-      <div class="payment-amount">$120.00</div>
+      <div class="payment-amount">$20.00</div>
     </div>
     <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">You'll be taken to a secure Stripe checkout page to enter your card details.</p>
-    <button id="btn-pay-join" class="btn-primary" style="width:100%;margin-top:0.5rem" onclick="confirmJoin()">Join — $120/year</button>
+    <button id="btn-pay-join" class="btn-primary" style="width:100%;margin-top:0.5rem" onclick="confirmJoin()">Join — $20/year</button>
     <div class="stripe-notice">🔒 Secured by Stripe · Your card details are never stored on our servers</div>
   </div>
 </div>
@@ -1558,7 +1557,7 @@
       window.location.href = data.url;
     } catch(err) {
       showToast('Payment error: ' + err.message, true);
-      btn.disabled = false; btn.textContent = tier === 'annual' ? 'Activate Annual — $120/yr' : 'Student — $60/yr';
+      btn.disabled = false; btn.textContent = tier === 'annual' ? 'Activate Membership — $20/yr';
     }
   }
 
