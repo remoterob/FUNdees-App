@@ -1060,8 +1060,8 @@
     <li><a href="#" onclick="navTo('home')">Home</a></li>
     <li><a href="#" onclick="navTo('sessions')">Pool Sessions</a></li>
     <!-- Auth state injected by JS -->
-    <li id="nav-auth-guest" style="display:none"><a href="/auth.html">Sign In</a></li>
-    <li id="nav-auth-guest2" style="display:none"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
+    <li id="nav-auth-guest"><a href="/auth.html">Sign In</a></li>
+    <li id="nav-auth-guest2"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
     <li id="nav-auth-user" style="display:none"><a href="#" onclick="showPage('portal')">My Account</a></li>
     <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
@@ -1076,8 +1076,8 @@
   <a href="#" onclick="navTo('home')">Home</a>
   <a href="#" onclick="navTo('sessions')">Pool Sessions</a>
   <!-- Guest links -->
-  <a href="/auth.html" id="mob-signin" style="display:none">Sign In</a>
-  <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta" style="display:none">Join Now</a>
+  <a href="/auth.html" id="mob-signin">Sign In</a>
+  <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta">Join Now</a>
   <!-- Auth links -->
   <a href="#" id="mob-account" onclick="navTo('portal')" style="display:none">My Account</a>
   <button id="mob-logout" onclick="handleLogout()" class="mob-logout" style="display:none">Log Out</button>
@@ -1334,23 +1334,16 @@
 
   function renderNav() {
     const in_ = !!currentUser;
-    ['nav-auth-guest','nav-auth-guest2'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = in_ ? 'none' : 'list-item';
-    });
-    const u = document.getElementById('nav-auth-user');
-    const lo = document.getElementById('nav-auth-logout');
-    if (u)  u.style.display  = in_ ? 'list-item' : 'none';
-    if (lo) lo.style.display = in_ ? 'list-item' : 'none';
+    // Desktop
+    document.getElementById('nav-auth-guest').style.display  = in_ ? 'none' : 'list-item';
+    document.getElementById('nav-auth-guest2').style.display = in_ ? 'none' : 'list-item';
+    document.getElementById('nav-auth-user').style.display   = in_ ? 'list-item' : 'none';
+    document.getElementById('nav-auth-logout').style.display = in_ ? 'list-item' : 'none';
     // Mobile
-    ['mob-signin','mob-join'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = in_ ? 'none' : 'block';
-    });
-    ['mob-account','mob-logout'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = in_ ? 'block' : 'none';
-    });
+    document.getElementById('mob-signin').style.display  = in_ ? 'none' : 'block';
+    document.getElementById('mob-join').style.display    = in_ ? 'none' : 'block';
+    document.getElementById('mob-account').style.display = in_ ? 'block' : 'none';
+    document.getElementById('mob-logout').style.display  = in_ ? 'block' : 'none';
   }
 
   async function handleLogout() {
