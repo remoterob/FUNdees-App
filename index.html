@@ -50,10 +50,9 @@
   }
 
   .nav-logo img {
-    height: 36px;
-    filter: invert(1) brightness(2);
-    mix-blend-mode: screen;
-    opacity: 0.9;
+    height: 40px;
+    filter: brightness(0) invert(1);
+    opacity: 1;
   }
 
   .nav-wordmark {
@@ -957,7 +956,6 @@
     <li><a href="#" onclick="showPage('home')">Home</a></li>
     <li><a href="#" onclick="showPage('sessions')">Pool Sessions</a></li>
     <li><a href="#" onclick="showPage('membership')">Membership</a></li>
-    <li><a href="#" onclick="showPage('dashboard')">Dashboard</a></li>
     <li><a href="#" class="nav-cta" onclick="openModal('join')">Join Now</a></li>
   </ul>
 </nav>
@@ -990,43 +988,6 @@
     <div class="stat-item">
       <div class="stat-num">6</div>
       <div class="stat-label">Qualified Instructors</div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-label">What We Offer</div>
-    <div class="section-title">Everything You Need<br>To Spear With Confidence</div>
-    <div class="features-grid">
-      <div class="feature-card" onclick="showPage('membership')">
-        <div class="feature-icon">🏅</div>
-        <h3>Club Membership</h3>
-        <p>Annual and casual membership options with full access to club resources, gear library, and member-only dive trips.</p>
-      </div>
-      <div class="feature-card" onclick="showPage('sessions')">
-        <div class="feature-icon">🏊</div>
-        <h3>Pool Training Blocks</h3>
-        <p>Structured 8-week training blocks in a 50m pool. Breath-hold technique, equalisation, safety buddy protocols.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📋</div>
-        <h3>Session Plans Shared</h3>
-        <p>Each pool session plan is published in advance. Know exactly what you're training before you arrive.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🎯</div>
-        <h3>Led by Qualified Coaches</h3>
-        <p>Sessions run by approved, trained session leaders — rotated fairly across qualified club members.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔔</div>
-        <h3>Smart Notifications</h3>
-        <p>Automatic alerts when you're rostered to lead. Easy swaps with other qualified members. Coming soon.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🐟</div>
-        <h3>Ocean Dive Trips</h3>
-        <p>Regular club ocean sessions and trips for members who have completed their pool training foundations.</p>
-      </div>
     </div>
   </div>
 </div>
@@ -1232,141 +1193,6 @@
   </div>
 </div>
 
-<!-- ─── DASHBOARD PAGE ─── -->
-<div id="page-dashboard" class="page">
-  <div class="dash-layout">
-    <div class="sidebar">
-      <div class="sidebar-section">
-        <div class="sidebar-label">Overview</div>
-        <button class="sidebar-link active"><span class="icon">📊</span> Dashboard</button>
-        <button class="sidebar-link"><span class="icon">👥</span> Members</button>
-        <button class="sidebar-link" onclick="showPage('sessions')"><span class="icon">🏊</span> Sessions</button>
-        <button class="sidebar-link"><span class="icon">💳</span> Payments</button>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Management</div>
-        <button class="sidebar-link"><span class="icon">📋</span> Session Plans</button>
-        <button class="sidebar-link"><span class="icon">🎯</span> Leaders</button>
-        <button class="sidebar-link"><span class="icon">🔔</span> Notifications</button>
-        <button class="sidebar-link"><span class="icon">⚙️</span> Settings</button>
-      </div>
-    </div>
-    <div class="dash-main">
-      <div class="dash-header">
-        <div>
-          <div class="dash-greeting">Good Evening, Admin</div>
-          <div class="dash-sub">Tuesday 8 April 2025 · Next session in 2 days</div>
-        </div>
-        <button class="btn-primary" onclick="openModal('add-session')">+ Add Session</button>
-      </div>
-
-      <div class="metrics-row">
-        <div class="metric-card">
-          <div class="metric-label">Total Members</div>
-          <div class="metric-value">143</div>
-          <div class="metric-change">↑ 12 this month</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Sessions This Month</div>
-          <div class="metric-value">6</div>
-          <div class="metric-change">↑ 2 vs last month</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Revenue MTD</div>
-          <div class="metric-value">$2,840</div>
-          <div class="metric-change">↑ 18% vs last month</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Avg Fill Rate</div>
-          <div class="metric-value">78%</div>
-          <div class="metric-change down">↓ 4% vs last block</div>
-        </div>
-      </div>
-
-      <div class="dash-grid">
-        <div class="card">
-          <div class="card-title">
-            Upcoming Sessions
-            <span class="card-title-action" onclick="showPage('sessions')">View all →</span>
-          </div>
-          <div class="session-item">
-            <div class="session-date"><div class="session-day">9</div><div class="session-month">Apr</div></div>
-            <div class="session-info">
-              <div class="session-name">Static Apnea Fundamentals</div>
-              <div class="session-meta">6:30 PM · WaterWorld 50m · Lead: Sarah M.</div>
-            </div>
-            <span class="session-spots spots-ok">4 left</span>
-          </div>
-          <div class="session-item">
-            <div class="session-date"><div class="session-day">16</div><div class="session-month">Apr</div></div>
-            <div class="session-info">
-              <div class="session-name">Dynamic Apnea + Turns</div>
-              <div class="session-meta">6:30 PM · WaterWorld 50m · Lead: James R.</div>
-            </div>
-            <span class="session-spots spots-low">2 left</span>
-          </div>
-          <div class="session-item">
-            <div class="session-date"><div class="session-day">23</div><div class="session-month">Apr</div></div>
-            <div class="session-info">
-              <div class="session-name">Rescue & Buddy Protocols</div>
-              <div class="session-meta">6:30 PM · WaterWorld 50m · Lead: TBC</div>
-            </div>
-            <span class="session-spots spots-full">Full</span>
-          </div>
-          <div class="session-item">
-            <div class="session-date"><div class="session-day">30</div><div class="session-month">Apr</div></div>
-            <div class="session-info">
-              <div class="session-name">Block 3 — Intro Session</div>
-              <div class="session-meta">6:30 PM · WaterWorld 50m · Lead: TBC</div>
-            </div>
-            <span class="session-spots spots-ok">8 left</span>
-          </div>
-        </div>
-
-        <div>
-          <div class="card" style="margin-bottom:1rem">
-            <div class="card-title">
-              Recent Members
-              <span class="card-title-action">View all →</span>
-            </div>
-            <div class="member-row">
-              <div class="member-avatar">KT</div>
-              <div class="member-name">Kiri Taufa</div>
-              <span class="member-tier tier-annual">Annual</span>
-            </div>
-            <div class="member-row">
-              <div class="member-avatar">BM</div>
-              <div class="member-name">Ben Mackenzie</div>
-              <span class="member-tier tier-annual">Annual</span>
-            </div>
-            <div class="member-row">
-              <div class="member-avatar">LP</div>
-              <div class="member-name">Lena Parata</div>
-              <span class="member-tier tier-casual">Casual</span>
-            </div>
-            <div class="member-row">
-              <div class="member-avatar">AC</div>
-              <div class="member-name">Arun Chandra</div>
-              <span class="member-tier tier-annual">Annual</span>
-            </div>
-            <div class="member-row">
-              <div class="member-avatar">SN</div>
-              <div class="member-name">Sophie Ngata</div>
-              <span class="member-tier tier-casual">Casual</span>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-title">Quick Actions</div>
-            <button class="btn-outline" style="width:100%;margin-bottom:0.6rem;padding:0.65rem" onclick="openModal('book')">Export Member List</button>
-            <button class="btn-outline" style="width:100%;padding:0.65rem" onclick="openModal('add-session')">Send Bulk Notification</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ─── MODAL: BOOK SESSION ─── -->
 <div class="modal-overlay" id="modal-book">
   <div class="modal">
@@ -1439,7 +1265,7 @@
   // ─── CONFIG ──────────────────────────────────────────────────────────────
   // Your Stripe publishable key — safe to expose in frontend
   // Get from: Stripe Dashboard → Developers → API Keys → Publishable key
-  const STRIPE_PUBLISHABLE_KEY = 'pk_live_51SNQ7EPaYA7lI4Zb5B2ZK4ZqonnioSWz7QEH2JoXSd6oSt4L64EGhiHuhWzjNQiJ6ftBZ916Rc2Y4YiPAdOxoaFK00cMPtn0U3';
+  const STRIPE_PUBLISHABLE_KEY = 'pk_test_REPLACE_WITH_YOUR_PUBLISHABLE_KEY';
 
   // ─── STATE ───────────────────────────────────────────────────────────────
   let stripe = null;
