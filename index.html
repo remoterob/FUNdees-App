@@ -1278,13 +1278,13 @@
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-  // ─── SUPABASE ────────────────────────────────────────────────────────────
+  // ─── SUPABASE + STRIPE ───────────────────────────────────────────────────
   const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  const STRIPE_PUBLISHABLE_KEY = 'pk_test_REPLACE_WITH_YOUR_PUBLISHABLE_KEY';
+  const STRIPE_KEY = 'pk_test_REPLACE_WITH_YOUR_PUBLISHABLE_KEY';
 
   const QUALIFICATIONS = [
     'AIDA2','AIDA3','AIDA4','AIDA Instructor','AIDA Master Instructor',
@@ -1292,305 +1292,274 @@
     'SSI Level 1','SSI Level 2','SSI Level 3','Ocean Hunter Int BH Course'
   ];
 
-  let stripe = null;
-  let cardElement = null;
+  let stripeObj = null, cardElement = null;
   let currentSessionId = null;
-  let currentBookingTier = 'annual';
-  let currentUser = null;
-  let currentMember = null;
+  let currentUser = null, currentMember = null;
 
-  // ─── AUTH STATE ──────────────────────────────────────────────────────────
+  // ─── HELPERS ─────────────────────────────────────────────────────────────
+  function fmt(d) {
+    if (!d) return '—';
+    try { return new Date(d + 'T12:00:00').toLocaleDateString('en-NZ', { day:'numeric', month:'long', year:'numeric' }); }
+    catch(e) { return d; }
+  }
+
+  function showToast(msg, isError=false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = isError ? '#993C1D' : 'var(--teal)';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+
+  // ─── AUTH INIT ───────────────────────────────────────────────────────────
   async function initAuth() {
     const { data: { session } } = await sb.auth.getSession();
     if (session?.user) {
       currentUser = session.user;
-      await loadMemberProfile();
+      await fetchMember();
     }
-    updateNav();
-    updateMembershipPage();
+    renderNav();
+    if (window.location.hash === '#portal') showPage('portal');
   }
 
-  async function loadMemberProfile() {
+  async function fetchMember() {
     if (!currentUser) return;
-    const { data } = await sb
+    const { data, error } = await sb
       .from('members')
       .select('*')
       .eq('auth_user_id', currentUser.id)
       .maybeSingle();
-    currentMember = data;
+    if (error) console.error('fetchMember error:', error.message);
+    currentMember = data || null;
   }
 
-  function updateNav() {
-    const loggedIn = !!currentUser;
-    // Desktop nav
-    document.getElementById('nav-auth-guest').style.display  = loggedIn ? 'none' : 'list-item';
-    document.getElementById('nav-auth-guest2').style.display = loggedIn ? 'none' : 'list-item';
-    document.getElementById('nav-auth-user').style.display   = loggedIn ? 'list-item' : 'none';
-    document.getElementById('nav-auth-logout').style.display = loggedIn ? 'list-item' : 'none';
-    // Mobile nav
-    document.getElementById('mob-signin').style.display  = loggedIn ? 'none' : 'block';
-    document.getElementById('mob-join').style.display    = loggedIn ? 'none' : 'block';
-    document.getElementById('mob-account').style.display = loggedIn ? 'block' : 'none';
-    document.getElementById('mob-logout').style.display  = loggedIn ? 'block' : 'none';
+  function renderNav() {
+    const in_ = !!currentUser;
+    ['nav-auth-guest','nav-auth-guest2'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = in_ ? 'none' : 'list-item';
+    });
+    const u = document.getElementById('nav-auth-user');
+    const lo = document.getElementById('nav-auth-logout');
+    if (u)  u.style.display  = in_ ? 'list-item' : 'none';
+    if (lo) lo.style.display = in_ ? 'list-item' : 'none';
+    // Mobile
+    ['mob-signin','mob-join'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = in_ ? 'none' : 'block';
+    });
+    ['mob-account','mob-logout'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = in_ ? 'block' : 'none';
+    });
   }
+
+  async function handleLogout() {
+    await sb.auth.signOut();
+    currentUser = null; currentMember = null;
+    renderNav(); closeMobileMenu(); showPage('home');
+    showToast('Signed out.');
+  }
+
+  // ─── NAVIGATION ──────────────────────────────────────────────────────────
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const pg = document.getElementById('page-' + id);
+    if (pg) pg.classList.add('active');
+    window.scrollTo(0,0);
+    if (id === 'sessions') loadSessions();
+    if (id === 'portal')   loadPortal();
+  }
+
+  function navTo(page) { closeMobileMenu(); showPage(page); }
 
   function toggleMobileMenu() {
     const menu = document.getElementById('mobile-menu');
     const btn  = document.getElementById('hamburger');
     const open = menu.classList.toggle('open');
     btn.classList.toggle('open', open);
-    // Prevent body scroll when menu open
     document.body.style.overflow = open ? 'hidden' : '';
   }
 
   function closeMobileMenu() {
-    document.getElementById('mobile-menu').classList.remove('open');
-    document.getElementById('hamburger').classList.remove('open');
+    const menu = document.getElementById('mobile-menu');
+    const btn  = document.getElementById('hamburger');
+    if (menu) menu.classList.remove('open');
+    if (btn)  btn.classList.remove('open');
     document.body.style.overflow = '';
-  }
-
-  function navTo(page) {
-    closeMobileMenu();
-    showPage(page);
-  }
-
-  function updateMembershipPage() {
-    const guestView  = document.getElementById('membership-guest-view');
-    const memberView = document.getElementById('membership-member-view');
-    if (!currentUser || !currentMember) {
-      if (guestView)  guestView.style.display  = 'grid';
-      if (memberView) memberView.style.display = 'none';
-      return;
-    }
-    if (guestView)  guestView.style.display  = 'none';
-    if (memberView) memberView.style.display = 'block';
-    renderMembershipStatus('mem-status-badge', 'mem-details', 'mem-pay-section');
-  }
-
-  function renderMembershipStatus(badgeId, detailsId, paySectionId) {
-    const m = currentMember;
-    if (!m) return;
-    const badge = document.getElementById(badgeId);
-    const details = document.getElementById(detailsId);
-    const paySection = document.getElementById(paySectionId);
-
-    const statusMap = {
-      active:    { cls: 'status-active',  label: 'Active' },
-      pending:   { cls: 'status-pending', label: 'Payment Pending' },
-      expired:   { cls: 'status-pending', label: 'Expired' },
-      cancelled: { cls: 'status-casual',  label: 'Cancelled' },
-      casual:    { cls: 'status-casual',  label: 'Casual' },
-    };
-    const s = statusMap[m.status] || statusMap.casual;
-    if (badge) { badge.className = `status-badge ${s.cls}`; badge.textContent = s.label; }
-
-    const tierLabel = m.tier === 'annual' ? 'Annual Member' : m.tier === 'student' ? 'Student Member' : 'Casual';
-    let html = `<div class="detail-row"><span class="detail-label">Tier</span><span class="detail-val">${tierLabel}</span></div>`;
-    if (m.membership_start) html += `<div class="detail-row"><span class="detail-label">Member since</span><span class="detail-val">${fmt(m.membership_start)}</span></div>`;
-    if (m.membership_end)   html += `<div class="detail-row"><span class="detail-label">Renews</span><span class="detail-val">${fmt(m.membership_end)}</span></div>`;
-    if (details) details.innerHTML = html;
-
-    if (paySection) paySection.style.display = (m.status === 'pending' || m.status === 'expired') ? 'block' : 'none';
-  }
-
-  function fmt(d) {
-    if (!d) return '—';
-    return new Date(d + 'T12:00:00').toLocaleDateString('en-NZ', { day: 'numeric', month: 'long', year: 'numeric' });
-  }
-
-  async function handleLogout() {
-    await sb.auth.signOut();
-    currentUser = null;
-    currentMember = null;
-    updateNav();
-    showPage('home');
-    showToast('Signed out successfully.');
   }
 
   // ─── PORTAL ──────────────────────────────────────────────────────────────
   async function loadPortal() {
     if (!currentUser) { window.location.href = '/auth.html'; return; }
-    if (!currentMember) await loadMemberProfile();
-    const m = currentMember;
-    if (!m) return;
 
-    document.getElementById('portal-greeting').textContent = `Welcome, ${m.full_name?.split(' ')[0] || 'Member'}`;
+    // Always re-fetch fresh from DB when opening portal
+    await fetchMember();
+
+    if (!currentMember) {
+      document.getElementById('portal-greeting').textContent = 'My Account';
+      document.getElementById('portal-email').textContent = currentUser.email;
+      showToast('Member profile not found. Please contact admin.', true);
+      return;
+    }
+
+    const m = currentMember;
+    document.getElementById('portal-greeting').textContent = 'Welcome, ' + (m.full_name?.split(' ')[0] || 'Member');
     document.getElementById('portal-email').textContent = currentUser.email;
 
-    // Status
-    renderMembershipStatus('portal-status-badge', 'portal-membership-info', 'portal-pay-section');
+    // Membership status
+    const statusMap = {
+      active:    { cls:'status-active',  label:'Active' },
+      pending:   { cls:'status-pending', label:'Payment Pending' },
+      expired:   { cls:'status-pending', label:'Expired' },
+      cancelled: { cls:'status-casual',  label:'Cancelled' },
+    };
+    const s = statusMap[m.status] || { cls:'status-casual', label: m.status || 'Unknown' };
+    const badge = document.getElementById('portal-status-badge');
+    badge.className = 'status-badge ' + s.cls;
+    badge.textContent = s.label;
 
-    // Personal details view
+    let infoHtml = '';
+    if (m.tier) infoHtml += `<div class="detail-row"><span class="detail-label">Tier</span><span class="detail-val">${m.tier}</span></div>`;
+    if (m.membership_start) infoHtml += `<div class="detail-row"><span class="detail-label">Member since</span><span class="detail-val">${fmt(m.membership_start)}</span></div>`;
+    if (m.membership_end)   infoHtml += `<div class="detail-row"><span class="detail-label">Renews</span><span class="detail-val">${fmt(m.membership_end)}</span></div>`;
+    document.getElementById('portal-membership-info').innerHTML = infoHtml;
+
+    const paySection = document.getElementById('portal-pay-section');
+    paySection.style.display = (m.status === 'pending' || m.status === 'expired') ? 'block' : 'none';
+
+    // Personal details — view
     document.getElementById('pv-name').textContent      = m.full_name || '—';
     document.getElementById('pv-phone').textContent     = m.phone || '—';
     document.getElementById('pv-dob').textContent       = fmt(m.date_of_birth);
     document.getElementById('pv-emergency').textContent = m.emergency_contact || '—';
 
-    // Personal details edit
+    // Personal details — edit inputs pre-filled
     document.getElementById('pe-name').value      = m.full_name || '';
     document.getElementById('pe-phone').value     = m.phone || '';
     document.getElementById('pe-dob').value       = m.date_of_birth || '';
     document.getElementById('pe-emergency').value = m.emergency_contact || '';
 
     // Qualifications view
-    const quals = m.qualifications || [];
+    renderQualTags(m.qualifications || []);
+
+    // Make sure we're in view mode
+    toggleEdit(false);
+    toggleQualEdit(false);
+  }
+
+  function renderQualTags(quals) {
     const qv = document.getElementById('pv-quals');
-    qv.innerHTML = quals.length > 0
+    if (!qv) return;
+    qv.innerHTML = quals && quals.length > 0
       ? quals.map(q => `<span class="qual-tag">${q}</span>`).join('')
       : '<span style="color:var(--muted);font-size:0.85rem">None recorded</span>';
-
-    // Qualifications edit grid
-    const qg = document.getElementById('portal-qual-grid');
-    qg.innerHTML = QUALIFICATIONS.map((q, i) => `
-      <label style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;border-radius:2px;cursor:pointer;font-size:0.78rem;color:var(--muted)">
-        <input type="checkbox" id="pq-${i}" value="${q}" ${quals.includes(q) ? 'checked' : ''} style="accent-color:var(--surge)">
-        ${q}
-      </label>`).join('');
   }
 
   function toggleEdit(show) {
     document.getElementById('portal-view-details').style.display = show ? 'none' : 'block';
     document.getElementById('portal-edit-details').style.display = show ? 'block' : 'none';
-    document.getElementById('edit-msg').style.display = 'none';
-  }
-
-  async function saveDetails() {
-    const name      = document.getElementById('pe-name').value.trim();
-    const phone     = document.getElementById('pe-phone').value.trim();
-    const dob       = document.getElementById('pe-dob').value;
-    const emergency = document.getElementById('pe-emergency').value.trim();
-    const msg       = document.getElementById('edit-msg');
-
-    if (!name) {
-      msg.style.cssText = 'display:block;color:#FF5C3A;font-size:0.82rem;margin-top:0.5rem';
-      msg.textContent = 'Name cannot be empty.';
-      return;
-    }
-
-    msg.style.cssText = 'display:block;color:var(--muted);font-size:0.82rem;margin-top:0.5rem';
-    msg.textContent = 'Saving...';
-
-    // Fetch the member's row id first to do the update by primary key (most reliable)
-    const { data: row, error: fetchErr } = await sb
-      .from('members')
-      .select('id')
-      .eq('auth_user_id', currentUser.id)
-      .single();
-
-    if (fetchErr || !row) {
-      msg.style.cssText = 'display:block;color:#FF5C3A;font-size:0.82rem;margin-top:0.5rem';
-      msg.textContent = 'Could not find your member record: ' + (fetchErr?.message || 'unknown error');
-      return;
-    }
-
-    const { error } = await sb
-      .from('members')
-      .update({
-        full_name:         name,
-        phone:             phone || null,
-        date_of_birth:     dob   || null,
-        emergency_contact: emergency || null
-      })
-      .eq('id', row.id);
-
-    if (error) {
-      msg.style.cssText = 'display:block;color:#FF5C3A;font-size:0.82rem;margin-top:0.5rem';
-      msg.textContent = 'Save failed: ' + error.message;
-      return;
-    }
-
-    // Update in-memory record
-    currentMember.full_name         = name;
-    currentMember.phone             = phone || null;
-    currentMember.date_of_birth     = dob   || null;
-    currentMember.emergency_contact = emergency || null;
-
-    // Update view fields immediately
-    document.getElementById('pv-name').textContent      = name      || '—';
-    document.getElementById('pv-phone').textContent     = phone     || '—';
-    document.getElementById('pv-dob').textContent       = fmt(dob);
-    document.getElementById('pv-emergency').textContent = emergency || '—';
-    document.getElementById('portal-greeting').textContent = `Welcome, ${name.split(' ')[0]}`;
-
-    msg.style.display = 'none';
-    toggleEdit(false);
-    showToast('Details saved ✓');
+    const msg = document.getElementById('edit-msg');
+    if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
   }
 
   function toggleQualEdit(show) {
     document.getElementById('portal-quals-view').style.display = show ? 'none' : 'block';
     document.getElementById('portal-quals-edit').style.display = show ? 'block' : 'none';
-
     if (show) {
-      // Always rebuild the grid fresh when opening so checkboxes are correct
       const quals = currentMember?.qualifications || [];
       const qg = document.getElementById('portal-qual-grid');
-      qg.innerHTML = QUALIFICATIONS.map((q, i) => `
-        <label style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:2px;cursor:pointer;font-size:0.8rem;color:var(--muted);line-height:1.3">
-          <input type="checkbox" value="${q}" ${quals.includes(q) ? 'checked' : ''} style="accent-color:var(--surge);width:15px;height:15px;flex-shrink:0;cursor:pointer">
+      qg.innerHTML = QUALIFICATIONS.map(q => `
+        <label style="display:flex;align-items:center;gap:0.6rem;padding:0.45rem 0.5rem;cursor:pointer;font-size:0.82rem;color:var(--muted)">
+          <input type="checkbox" value="${q}" ${quals.includes(q) ? 'checked' : ''}
+            style="accent-color:var(--surge);width:16px;height:16px;flex-shrink:0;cursor:pointer">
           ${q}
         </label>`).join('');
     }
   }
 
+  async function saveDetails() {
+    const msg = document.getElementById('edit-msg');
+    const showMsg = (txt, err=false) => {
+      msg.style.cssText = `display:block;font-size:0.82rem;margin-top:0.5rem;color:${err ? '#FF5C3A' : 'var(--surge)'}`;
+      msg.textContent = txt;
+    };
+
+    const name      = document.getElementById('pe-name').value.trim();
+    const phone     = document.getElementById('pe-phone').value.trim();
+    const dob       = document.getElementById('pe-dob').value;
+    const emergency = document.getElementById('pe-emergency').value.trim();
+
+    if (!name) { showMsg('Name cannot be empty.', true); return; }
+    showMsg('Saving...');
+
+    const { data, error } = await sb
+      .from('members')
+      .update({ full_name: name, phone: phone||null, date_of_birth: dob||null, emergency_contact: emergency||null })
+      .eq('auth_user_id', currentUser.id)
+      .select()
+      .maybeSingle();
+
+    if (error) { showMsg('Save failed: ' + error.message, true); return; }
+    if (!data)  { showMsg('No rows updated — contact admin.', true); return; }
+
+    // Update local cache
+    currentMember = { ...currentMember, ...data };
+
+    // Refresh view
+    document.getElementById('pv-name').textContent      = name || '—';
+    document.getElementById('pv-phone').textContent     = phone || '—';
+    document.getElementById('pv-dob').textContent       = fmt(dob);
+    document.getElementById('pv-emergency').textContent = emergency || '—';
+    document.getElementById('portal-greeting').textContent = 'Welcome, ' + name.split(' ')[0];
+
+    toggleEdit(false);
+    showToast('Details saved ✓');
+  }
+
   async function saveQuals() {
     const selected = Array.from(document.querySelectorAll('#portal-qual-grid input:checked')).map(c => c.value);
 
-    const { data: row, error: fetchErr } = await sb
-      .from('members').select('id').eq('auth_user_id', currentUser.id).single();
-
-    if (fetchErr || !row) { showToast('Could not find member record.', true); return; }
-
-    const { error } = await sb
+    const { data, error } = await sb
       .from('members')
       .update({ qualifications: selected.length > 0 ? selected : null })
-      .eq('id', row.id);
+      .eq('auth_user_id', currentUser.id)
+      .select()
+      .maybeSingle();
 
     if (error) { showToast('Save failed: ' + error.message, true); return; }
+    if (!data)  { showToast('No rows updated — contact admin.', true); return; }
 
-    currentMember.qualifications = selected.length > 0 ? selected : null;
-
-    const qv = document.getElementById('pv-quals');
-    qv.innerHTML = selected.length > 0
-      ? selected.map(q => `<span class="qual-tag">${q}</span>`).join('')
-      : '<span style="color:var(--muted);font-size:0.85rem">None recorded</span>';
-
+    currentMember = { ...currentMember, ...data };
+    renderQualTags(selected);
     toggleQualEdit(false);
     showToast('Qualifications saved ✓');
   }
 
   // ─── MEMBERSHIP PAYMENT ──────────────────────────────────────────────────
   async function payMembership(tier) {
-    if (!currentUser || !currentMember) { window.location.href = '/auth.html'; return; }
-    showToast('Redirecting to payment...');
+    if (!currentUser) { window.location.href = '/auth.html'; return; }
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = 'Redirecting...';
     try {
       const res = await fetch('/.netlify/functions/create-membership-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tier,
-          fullName: currentMember.full_name,
+          fullName: currentMember?.full_name || '',
           email: currentUser.email,
-          phone: currentMember.phone,
-          emergencyContact: currentMember.emergency_contact
+          phone: currentMember?.phone || '',
+          emergencyContact: currentMember?.emergency_contact || ''
         })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not start checkout');
       window.location.href = data.url;
-    } catch (err) {
+    } catch(err) {
       showToast('Payment error: ' + err.message, true);
+      btn.disabled = false; btn.textContent = tier === 'annual' ? 'Activate Annual — $120/yr' : 'Student — $60/yr';
     }
-  }
-
-  // ─── NAVIGATION ──────────────────────────────────────────────────────────
-  function showPage(id) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + id).classList.add('active');
-    window.scrollTo(0, 0);
-    if (id === 'sessions')   loadSessions();
-    if (id === 'portal')     loadPortal();
-    if (id === 'membership') updateMembershipPage();
   }
 
   // ─── SESSIONS ────────────────────────────────────────────────────────────
@@ -1603,8 +1572,8 @@
       const { sessions, error } = await res.json();
       if (error) throw new Error(error);
       renderSessions(sessions);
-    } catch (err) {
-      grid.innerHTML = `<p style="color:#FF5C3A;padding:2rem">Could not load sessions: ${err.message}</p>`;
+    } catch(err) {
+      grid.innerHTML = `<p style="color:#FF5C3A;padding:2rem;grid-column:1/-1">Could not load sessions: ${err.message}</p>`;
     }
   }
 
@@ -1617,143 +1586,93 @@
     grid.innerHTML = sessions.map(s => {
       const isFull = s.spots_remaining <= 0;
       const isLow  = !isFull && s.spots_remaining <= 2;
-      const pct    = Math.round((s.booked_count / s.capacity) * 100);
-      const dateObj = new Date(s.session_date + 'T12:00:00');
-      const day   = dateObj.toLocaleDateString('en-NZ', { weekday: 'short', day: 'numeric', month: 'short' });
-      const time  = s.start_time?.slice(0,5) + ' – ' + s.end_time?.slice(0,5);
-      const spotsBadge = isFull
-        ? `<span class="session-spots spots-full">Full</span>`
-        : isLow
-        ? `<span class="session-spots spots-low">${s.spots_remaining} spot${s.spots_remaining===1?'':'s'} left</span>`
-        : `<span class="session-spots spots-ok">${s.spots_remaining} spots left</span>`;
-      const bookBtn = isFull
+      const pct    = Math.min(100, Math.round((s.booked_count / s.capacity) * 100));
+      const day    = new Date(s.session_date + 'T12:00:00').toLocaleDateString('en-NZ', { weekday:'short', day:'numeric', month:'short' });
+      const time   = (s.start_time||'').slice(0,5) + ' – ' + (s.end_time||'').slice(0,5);
+      const badge  = isFull ? `<span class="session-spots spots-full">Full</span>`
+                   : isLow  ? `<span class="session-spots spots-low">${s.spots_remaining} left</span>`
+                            : `<span class="session-spots spots-ok">${s.spots_remaining} spots left</span>`;
+      const btn    = isFull
         ? `<button class="book-btn full" disabled>Full</button>`
         : `<button class="book-btn" onclick="event.stopPropagation();openBookingModal('${s.id}','${s.title.replace(/'/g,"\'")}','${s.session_date}')">Book — $${s.casual_price}</button>`;
-      return `
-        <div class="session-card" onclick="openBookingModal('${s.id}','${s.title.replace(/'/g,"\'")}','${s.session_date}')">
-          <div class="session-card-header">
-            <div><div class="session-card-date">${day}</div><div class="session-card-time">${time}</div></div>
-            ${spotsBadge}
-          </div>
-          <div class="session-card-body">
-            <div class="session-card-title">${s.title}</div>
-            <div class="session-card-desc">${s.description || ''}</div>
-          </div>
-          <div class="session-card-footer">
-            <div>
-              <div class="session-capacity">${s.booked_count} / ${s.capacity} booked</div>
-              <div class="capacity-bar"><div class="capacity-fill ${pct>=80?'warn':''}" style="width:${pct}%"></div></div>
-            </div>
-            ${bookBtn}
-          </div>
-        </div>`;
+      return `<div class="session-card" onclick="openBookingModal('${s.id}','${s.title.replace(/'/g,"\'")}','${s.session_date}')">
+        <div class="session-card-header"><div><div class="session-card-date">${day}</div><div class="session-card-time">${time}</div></div>${badge}</div>
+        <div class="session-card-body"><div class="session-card-title">${s.title}</div><div class="session-card-desc">${s.description||''}</div></div>
+        <div class="session-card-footer">
+          <div><div class="session-capacity">${s.booked_count} / ${s.capacity} booked</div>
+          <div class="capacity-bar"><div class="capacity-fill ${pct>=80?'warn':''}" style="width:${pct}%"></div></div></div>
+          ${btn}
+        </div></div>`;
     }).join('');
   }
 
-  // ─── MODALS ───────────────────────────────────────────────────────────────
+  // ─── BOOKING MODAL ───────────────────────────────────────────────────────
   function initStripe() {
-    if (!stripe && window.Stripe) stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+    if (!stripeObj && window.Stripe) stripeObj = Stripe(STRIPE_KEY);
   }
 
-  function openBookingModal(sessionId, sessionTitle, sessionDate) {
+  function openBookingModal(sessionId, title, date) {
     currentSessionId = sessionId;
     document.querySelector('#modal-book .modal-sub').textContent =
-      `${new Date(sessionDate+'T12:00:00').toLocaleDateString('en-NZ',{weekday:'long',day:'numeric',month:'long'})} · ${sessionTitle}`;
-    // Pre-fill if logged in
+      new Date(date+'T12:00:00').toLocaleDateString('en-NZ',{weekday:'long',day:'numeric',month:'long'}) + ' · ' + title;
     if (currentMember) {
       document.getElementById('book-name').value  = currentMember.full_name || '';
       document.getElementById('book-email').value = currentUser.email || '';
     }
     document.getElementById('modal-book').classList.add('open');
     initStripe();
-    mountCard('card-element-book');
-  }
-
-  function openModal(id) {
-    if (id === 'book' || id === 'book-featured') {
-      document.getElementById('modal-book').classList.add('open');
-      initStripe();
-      mountCard('card-element-book');
+    if (stripeObj) {
+      if (cardElement) cardElement.unmount();
+      cardElement = stripeObj.elements().create('card', {
+        style: { base: { color:'#F0EDE6', fontFamily:'Barlow,sans-serif', fontSize:'15px', '::placeholder':{ color:'rgba(240,237,230,0.35)' } }, invalid:{ color:'#FF5C3A' } }
+      });
+      cardElement.mount('#card-element-book');
     }
   }
 
-  function closeModal(id) {
-    document.getElementById(id === 'book' ? 'modal-book' : 'modal-join').classList.remove('open');
-    if (cardElement) { cardElement.unmount(); cardElement = null; }
+  function openModal(id) {
+    if (id === 'book' || id === 'book-featured') openBookingModal(null, '', '');
   }
 
-  document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => {
-      if (e.target === overlay) overlay.classList.remove('open');
-    });
+  function closeModal(id) {
+    const el = document.getElementById(id === 'book' ? 'modal-book' : 'modal-join');
+    if (el) el.classList.remove('open');
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
   });
 
-  function mountCard(elementId) {
-    const el = document.getElementById(elementId);
-    if (!el || !stripe) return;
-    if (cardElement) cardElement.unmount();
-    const elements = stripe.elements();
-    cardElement = elements.create('card', {
-      style: {
-        base: { color: '#F0EDE6', fontFamily: 'Barlow, sans-serif', fontSize: '15px', '::placeholder': { color: 'rgba(240,237,230,0.35)' } },
-        invalid: { color: '#FF5C3A' }
-      }
-    });
-    cardElement.mount(`#${elementId}`);
-  }
-
-  // ─── TOAST ────────────────────────────────────────────────────────────────
-  function showToast(msg, isError = false) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.style.background = isError ? '#993C1D' : 'var(--teal)';
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 4000);
-  }
-
-  function setLoading(btnId, loading, label) {
-    const btn = document.getElementById(btnId);
-    if (!btn) return;
-    btn.disabled = loading;
-    btn.textContent = loading ? 'Processing...' : label;
-  }
-
-  // ─── BOOK SESSION ────────────────────────────────────────────────────────
   async function confirmBooking() {
     const email    = document.getElementById('book-email').value.trim();
     const fullName = document.getElementById('book-name').value.trim();
+    const btn      = document.getElementById('btn-pay-booking');
     if (!email || !fullName) { showToast('Please fill in your name and email.', true); return; }
     if (!currentSessionId)   { showToast('No session selected.', true); return; }
-
-    setLoading('btn-pay-booking', true, 'Confirm & Pay');
+    btn.disabled = true; btn.textContent = 'Processing...';
     try {
       const piRes = await fetch('/.netlify/functions/create-session-payment', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ sessionId: currentSessionId, email, fullName })
       });
       const piData = await piRes.json();
-      if (!piRes.ok) throw new Error(piData.error || 'Could not create payment');
-
-      const { paymentIntent, error: stripeErr } = await stripe.confirmCardPayment(
-        piData.clientSecret,
-        { payment_method: { card: cardElement, billing_details: { name: fullName, email } } }
-      );
+      if (!piRes.ok) throw new Error(piData.error || 'Payment setup failed');
+      const { paymentIntent, error: stripeErr } = await stripeObj.confirmCardPayment(piData.clientSecret, {
+        payment_method: { card: cardElement, billing_details: { name: fullName, email } }
+      });
       if (stripeErr) throw new Error(stripeErr.message);
-
       const bookRes = await fetch('/.netlify/functions/confirm-booking', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ paymentIntentId: paymentIntent.id, sessionId: currentSessionId, email, fullName })
       });
       const bookData = await bookRes.json();
       if (!bookRes.ok) throw new Error(bookData.error || 'Booking save failed');
-
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookData));
       closeModal('book');
       window.location.href = '/success.html?type=session';
-    } catch (err) {
-      showToast(`Payment failed: ${err.message}`, true);
-    } finally {
-      setLoading('btn-pay-booking', false, 'Confirm & Pay');
+    } catch(err) {
+      showToast('Payment failed: ' + err.message, true);
+      btn.disabled = false; btn.textContent = 'Confirm & Pay';
     }
   }
 
@@ -1761,17 +1680,11 @@
   document.addEventListener('DOMContentLoaded', async () => {
     await initAuth();
     loadSessions();
-    if (window.location.search.includes('cancelled=true')) {
-      showToast('Checkout cancelled — no payment was taken.', true);
-    }
-    if (window.location.hash === '#portal') showPage('portal');
-    // Close mobile menu when clicking outside
+    if (window.location.search.includes('cancelled=true')) showToast('Checkout cancelled — no charge made.', true);
     document.addEventListener('click', e => {
       const menu = document.getElementById('mobile-menu');
       const btn  = document.getElementById('hamburger');
-      if (menu.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) {
-        closeMobileMenu();
-      }
+      if (menu?.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) closeMobileMenu();
     });
   });
 </script>

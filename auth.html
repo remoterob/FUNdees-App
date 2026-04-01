@@ -720,26 +720,22 @@
 
       if (authError) throw authError;
 
-      // 2. Insert member profile into members table
+      // 2. Insert member profile
       const { error: profileError } = await sb
         .from('members')
         .insert({
-          auth_user_id:       authData.user.id,
-          full_name:          `${firstName} ${lastName}`,
+          auth_user_id:      authData.user.id,
+          full_name:         `${firstName} ${lastName}`,
           email,
-          phone:              phone || null,
-          date_of_birth:      dob   || null,
-          emergency_contact:  emergency || null,
-          qualifications:     quals.length > 0 ? quals : null,
-          tier:               'casual',
-          status:             'pending'
+          phone:             phone || null,
+          date_of_birth:     dob   || null,
+          emergency_contact: emergency || null,
+          qualifications:    quals.length > 0 ? quals : null,
+          tier:              'casual',
+          status:            'pending'
         });
 
-      if (profileError) {
-        // Auth user was created but profile failed — still show success
-        // Admin can fix manually via Supabase dashboard
-        console.error('Profile insert error:', profileError);
-      }
+      if (profileError) throw new Error('Account created but profile save failed: ' + profileError.message + '. Please contact admin.');
 
       // 3. Show success screen
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
