@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account — Spearfishing FUNdamentals</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--midnight:#0A1628;--deep:#0D2D4A;--surge:#00CFAD;--coral:#FF5C3A;--sand:#F0EDE6;--muted:rgba(240,237,230,0.55);--dim:rgba(255,255,255,0.07);--surge-dim:rgba(0,207,173,0.12)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#07101e;color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:64px;background:rgba(10,22,40,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--dim)}
+.nav-brand{display:flex;align-items:center;gap:0.75rem;text-decoration:none}
+.nav-brand img{height:36px;opacity:0.9}
+.nav-brand-text{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.95rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--sand);line-height:1.1}
+.nav-brand-text span{display:block;font-size:0.55rem;letter-spacing:0.2em;color:var(--surge)}
+.nav-right{display:flex;gap:1rem;align-items:center}
+.nav-link{color:var(--muted);text-decoration:none;font-size:0.82rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:500;transition:color 0.2s;background:none;border:none;cursor:pointer}
+.nav-link:hover{color:var(--surge)}
+.nav-btn{background:var(--coral);color:white;padding:0.45rem 1.1rem;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.1em;text-transform:uppercase;border:none;cursor:pointer;transition:opacity 0.2s}
+.nav-btn:hover{opacity:0.85}
+.wrap{max-width:860px;margin:0 auto;padding:5rem 2rem 3rem}
+.greeting{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--sand);line-height:1}
+.email-sub{color:var(--muted);font-size:0.85rem;margin-top:0.25rem;margin-bottom:2rem}
+.card{background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;padding:1.5rem;margin-bottom:1.5rem}
+.card-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--surge);margin-bottom:1.25rem}
+.badge{display:inline-block;padding:0.3rem 0.9rem;border-radius:2px;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1rem}
+.badge-pending{background:rgba(245,166,35,0.15);color:#F5A623;border:1px solid rgba(245,166,35,0.3)}
+.badge-active{background:rgba(0,207,173,0.15);color:var(--surge);border:1px solid rgba(0,207,173,0.3)}
+.badge-expired{background:rgba(255,92,58,0.12);color:var(--coral);border:1px solid rgba(255,92,58,0.3)}
+.row{display:flex;justify-content:space-between;align-items:baseline;padding:0.5rem 0;border-bottom:1px solid var(--dim);font-size:0.85rem}
+.row:last-child{border-bottom:none}
+.row-label{color:var(--muted)}
+.row-val{color:var(--sand);font-weight:400;text-align:right}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.lbl{display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.3rem;margin-top:0.85rem}
+.lbl:first-child{margin-top:0}
+input.field{width:100%;background:rgba(10,22,40,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:3px;padding:0.65rem 0.8rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:300;outline:none;transition:border-color 0.2s}
+input.field:focus{border-color:var(--surge)}
+input.field::placeholder{color:rgba(240,237,230,0.25)}
+.btn-row{display:flex;gap:0.75rem;margin-top:1rem}
+.btn-p{flex:1;background:var(--surge);color:var(--midnight);border:none;padding:0.65rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.88rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:opacity 0.2s}
+.btn-p:hover:not(:disabled){opacity:0.85}
+.btn-p:disabled{opacity:0.5;cursor:not-allowed}
+.btn-o{flex:1;background:transparent;color:var(--sand);border:1px solid rgba(255,255,255,0.2);padding:0.65rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.88rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:all 0.2s}
+.btn-o:hover{border-color:var(--surge);color:var(--surge)}
+.msg{font-size:0.8rem;margin-top:0.6rem;display:none}
+.msg.err{color:var(--coral);display:block}
+.msg.ok{color:var(--surge);display:block}
+.qual-tags{display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.25rem}
+.tag{background:var(--surge-dim);border:1px solid rgba(0,207,173,0.2);color:var(--surge);font-size:0.7rem;padding:0.2rem 0.6rem;border-radius:2px;font-weight:500}
+.tag-none{color:var(--muted);font-size:0.85rem}
+.qual-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;max-height:220px;overflow-y:auto;padding:0.5rem;background:rgba(10,22,40,0.5);border:1px solid rgba(255,255,255,0.1);border-radius:3px;margin-top:0.5rem}
+.qi{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:2px;cursor:pointer;font-size:0.8rem;color:var(--muted)}
+.qi input{width:15px;height:15px;flex-shrink:0;accent-color:var(--surge);cursor:pointer}
+.qi:has(input:checked){background:var(--surge-dim);color:var(--sand)}
+.pay-box{background:rgba(10,22,40,0.5);border:1px solid rgba(0,207,173,0.2);border-radius:3px;padding:1.25rem;margin:1rem 0}
+.pay-amount{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--surge);line-height:1}
+.pay-desc{font-size:0.78rem;color:var(--muted);margin-top:0.2rem}
+#loading{text-align:center;padding:4rem;color:var(--muted)}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-brand">
+    <img src="/logo-white.png" alt="Logo">
+    <div class="nav-brand-text">Spearfishing<span>FUNdamentals</span></div>
+  </a>
+  <div class="nav-right">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/#sessions" class="nav-link" onclick="window.location='/?page=sessions'">Pool Sessions</a>
+    <button class="nav-btn" onclick="doLogout()">Log Out</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div id="loading">Loading your account...</div>
+  <div id="content" style="display:none">
+
+    <div class="greeting" id="greeting">My Account</div>
+    <div class="email-sub" id="useremail"></div>
+
+    <!-- MEMBERSHIP STATUS -->
+    <div class="card">
+      <div class="card-title">Membership Status</div>
+      <div id="status-badge" class="badge badge-pending">Pending</div>
+      <div id="status-rows"></div>
+      <div id="pay-section" style="display:none">
+        <div class="pay-box">
+          <div class="pay-amount">$20.00</div>
+          <div class="pay-desc">Annual membership — required to train at the pool, lake and vote at AGM</div>
+        </div>
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">Activate your membership to get full club access.</p>
+        <button class="btn-p" onclick="doPayment()" style="max-width:260px">Activate Membership — $20/yr</button>
+      </div>
+    </div>
+
+    <!-- PERSONAL DETAILS -->
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Personal Details</div>
+
+        <!-- VIEW MODE -->
+        <div id="details-view">
+          <div class="row"><span class="row-label">Name</span><span class="row-val" id="v-name">—</span></div>
+          <div class="row"><span class="row-label">Phone</span><span class="row-val" id="v-phone">—</span></div>
+          <div class="row"><span class="row-label">Date of Birth</span><span class="row-val" id="v-dob">—</span></div>
+          <div class="row"><span class="row-label">Emergency Contact</span><span class="row-val" id="v-ec">—</span></div>
+          <button class="btn-o" style="width:100%;margin-top:1rem" onclick="editMode(true)">Edit Details</button>
+        </div>
+
+        <!-- EDIT MODE -->
+        <div id="details-edit" style="display:none">
+          <label class="lbl">Full Name</label>
+          <input class="field" id="e-name" type="text" autocomplete="name">
+          <label class="lbl">Phone</label>
+          <input class="field" id="e-phone" type="tel" autocomplete="tel">
+          <label class="lbl">Date of Birth</label>
+          <input class="field" id="e-dob" type="date">
+          <label class="lbl">Emergency Contact</label>
+          <input class="field" id="e-ec" type="text" placeholder="Name & phone">
+          <div class="btn-row">
+            <button class="btn-p" id="btn-save" onclick="doSave()">Save</button>
+            <button class="btn-o" onclick="editMode(false)">Cancel</button>
+          </div>
+          <div class="msg" id="save-msg"></div>
+        </div>
+      </div>
+
+      <!-- QUALIFICATIONS -->
+      <div class="card">
+        <div class="card-title">My Qualifications</div>
+
+        <!-- VIEW MODE -->
+        <div id="quals-view">
+          <div class="qual-tags" id="qual-tags"><span class="tag-none">None recorded</span></div>
+          <button class="btn-o" style="width:100%;margin-top:1.25rem" onclick="qualMode(true)">Edit Qualifications</button>
+        </div>
+
+        <!-- EDIT MODE -->
+        <div id="quals-edit" style="display:none">
+          <div class="qual-edit-grid" id="qual-edit-grid"></div>
+          <div class="btn-row" style="margin-top:0.75rem">
+            <button class="btn-p" id="btn-save-quals" onclick="doSaveQuals()">Save</button>
+            <button class="btn-o" onclick="qualMode(false)">Cancel</button>
+          </div>
+          <div class="msg" id="quals-msg"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const QUALS = ['AIDA2','AIDA3','AIDA4','AIDA Instructor','AIDA Master Instructor','AIDA Instructor Trainer','PADI Freediver','PADI Advanced Freediver','SSI Level 1','SSI Level 2','SSI Level 3','Ocean Hunter Int BH Course'];
+
+let user = null;
+let member = null;
+
+function fmt(d) {
+  if (!d) return '—';
+  return new Date(d + 'T12:00:00').toLocaleDateString('en-NZ', {day:'numeric',month:'long',year:'numeric'});
+}
+
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = '/auth.html'; return; }
+  user = session.user;
+
+  const { data, error } = await sb.from('members').select('*').eq('auth_user_id', user.id).maybeSingle();
+  if (error) { alert('Error loading profile: ' + error.message); return; }
+
+  member = data;
+  render();
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+}
+
+function render() {
+  document.getElementById('greeting').textContent = 'Welcome, ' + (member?.full_name?.split(' ')[0] || 'Member');
+  document.getElementById('useremail').textContent = user.email;
+
+  // Status badge
+  const statusMap = { active:'badge-active', pending:'badge-pending', expired:'badge-expired', cancelled:'badge-expired' };
+  const labelMap  = { active:'Active', pending:'Payment Pending', expired:'Expired', cancelled:'Cancelled' };
+  const st = member?.status || 'pending';
+  const badge = document.getElementById('status-badge');
+  badge.className = 'badge ' + (statusMap[st] || 'badge-pending');
+  badge.textContent = labelMap[st] || st;
+
+  let rows = '';
+  if (member?.tier)             rows += `<div class="row"><span class="row-label">Tier</span><span class="row-val">${member.tier}</span></div>`;
+  if (member?.membership_start) rows += `<div class="row"><span class="row-label">Member since</span><span class="row-val">${fmt(member.membership_start)}</span></div>`;
+  if (member?.membership_end)   rows += `<div class="row"><span class="row-label">Renews</span><span class="row-val">${fmt(member.membership_end)}</span></div>`;
+  document.getElementById('status-rows').innerHTML = rows;
+  document.getElementById('pay-section').style.display = (st === 'pending' || st === 'expired') ? 'block' : 'none';
+
+  // Personal details view
+  document.getElementById('v-name').textContent  = member?.full_name || '—';
+  document.getElementById('v-phone').textContent = member?.phone || '—';
+  document.getElementById('v-dob').textContent   = fmt(member?.date_of_birth);
+  document.getElementById('v-ec').textContent    = member?.emergency_contact || '—';
+
+  // Pre-fill edit inputs
+  document.getElementById('e-name').value  = member?.full_name || '';
+  document.getElementById('e-phone').value = member?.phone || '';
+  document.getElementById('e-dob').value   = member?.date_of_birth || '';
+  document.getElementById('e-ec').value    = member?.emergency_contact || '';
+
+  // Qualifications view
+  renderQualTags(member?.qualifications || []);
+}
+
+function renderQualTags(quals) {
+  const el = document.getElementById('qual-tags');
+  el.innerHTML = quals.length > 0
+    ? quals.map(q => `<span class="tag">${q}</span>`).join('')
+    : '<span class="tag-none">None recorded</span>';
+}
+
+function editMode(on) {
+  document.getElementById('details-view').style.display = on ? 'none' : 'block';
+  document.getElementById('details-edit').style.display = on ? 'block' : 'none';
+  const msg = document.getElementById('save-msg');
+  msg.className = 'msg'; msg.textContent = '';
+}
+
+function qualMode(on) {
+  document.getElementById('quals-view').style.display = on ? 'none' : 'block';
+  document.getElementById('quals-edit').style.display = on ? 'block' : 'none';
+  if (on) {
+    const cur = member?.qualifications || [];
+    document.getElementById('qual-edit-grid').innerHTML = QUALS.map((q,i) =>
+      `<label class="qi"><input type="checkbox" value="${q}" ${cur.includes(q)?'checked':''}>${q}</label>`
+    ).join('');
+  }
+  const msg = document.getElementById('quals-msg');
+  msg.className = 'msg'; msg.textContent = '';
+}
+
+async function doSave() {
+  const name  = document.getElementById('e-name').value.trim();
+  const phone = document.getElementById('e-phone').value.trim();
+  const dob   = document.getElementById('e-dob').value;
+  const ec    = document.getElementById('e-ec').value.trim();
+  const msg   = document.getElementById('save-msg');
+  const btn   = document.getElementById('btn-save');
+
+  msg.className = 'msg'; msg.textContent = '';
+  if (!name) { msg.className = 'msg err'; msg.textContent = 'Name cannot be empty.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  const { data, error } = await sb
+    .from('members')
+    .update({ full_name: name, phone: phone||null, date_of_birth: dob||null, emergency_contact: ec||null })
+    .eq('auth_user_id', user.id)
+    .select()
+    .maybeSingle();
+
+  btn.disabled = false; btn.textContent = 'Save';
+
+  if (error || !data) {
+    msg.className = 'msg err';
+    msg.textContent = error ? 'Save failed: ' + error.message : 'No rows updated. Please try again.';
+    return;
+  }
+
+  member = { ...member, ...data };
+  render();
+  editMode(false);
+}
+
+async function doSaveQuals() {
+  const selected = Array.from(document.querySelectorAll('#qual-edit-grid input:checked')).map(c => c.value);
+  const msg = document.getElementById('quals-msg');
+  const btn = document.getElementById('btn-save-quals');
+
+  msg.className = 'msg'; msg.textContent = '';
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  const { data, error } = await sb
+    .from('members')
+    .update({ qualifications: selected.length > 0 ? selected : null })
+    .eq('auth_user_id', user.id)
+    .select()
+    .maybeSingle();
+
+  btn.disabled = false; btn.textContent = 'Save';
+
+  if (error || !data) {
+    msg.className = 'msg err';
+    msg.textContent = error ? 'Save failed: ' + error.message : 'No rows updated. Please try again.';
+    return;
+  }
+
+  member = { ...member, ...data };
+  render();
+  qualMode(false);
+}
+
+async function doPayment() {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Redirecting...';
+  try {
+    const res = await fetch('/.netlify/functions/create-membership-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tier: 'annual',
+        fullName: member?.full_name || '',
+        email: user.email,
+        phone: member?.phone || '',
+        emergencyContact: member?.emergency_contact || ''
+      })
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Checkout failed');
+    window.location.href = d.url;
+  } catch(e) {
+    alert('Payment error: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Activate Membership — $20/yr';
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.href = '/';
+}
+
+init();
+</script>
+</body>
+</html>

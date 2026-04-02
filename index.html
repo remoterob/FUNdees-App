@@ -1062,7 +1062,7 @@
     <!-- Auth state injected by JS -->
     <li id="nav-auth-guest"><a href="/auth.html">Sign In</a></li>
     <li id="nav-auth-guest2"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
-    <li id="nav-auth-user" style="display:none"><a href="#" onclick="showPage('portal')">My Account</a></li>
+    <li id="nav-auth-user" style="display:none"><a href="/portal.html">My Account</a></li>
     <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
   <!-- Hamburger — mobile only -->
@@ -1079,7 +1079,7 @@
   <a href="/auth.html" id="mob-signin">Sign In</a>
   <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta">Join Now</a>
   <!-- Auth links -->
-  <a href="#" id="mob-account" onclick="navTo('portal')" style="display:none">My Account</a>
+  <a href="/portal.html" id="mob-account" style="display:none">My Account</a>
   <button id="mob-logout" onclick="handleLogout()" class="mob-logout" style="display:none">Log Out</button>
 </div>
 
@@ -1318,7 +1318,7 @@
       await fetchMember();
     }
     renderNav();
-    if (window.location.hash === '#portal') showPage('portal');
+    
   }
 
   async function fetchMember() {

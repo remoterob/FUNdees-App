@@ -4,776 +4,284 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sign In — Spearfishing FUNdamentals</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --midnight: #0A1628;
-    --deep: #0D2D4A;
-    --teal: #0C7C6A;
-    --surge: #00CFAD;
-    --coral: #FF5C3A;
-    --sand: #F0EDE6;
-    --muted: rgba(240,237,230,0.55);
-    --border-dim: rgba(255,255,255,0.07);
-    --border-surge: rgba(0,207,173,0.25);
-    --surge-dim: rgba(0,207,173,0.1);
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--midnight);
-    color: var(--sand);
-    font-family: 'Barlow', sans-serif;
-    font-weight: 300;
-    min-height: 100vh;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  /* ─── LEFT PANEL ─── */
-  .left-panel {
-    background: linear-gradient(160deg, #0D2D4A 0%, #0A1628 60%, #071018 100%);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 3rem;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .left-panel::before {
-    content: '';
-    position: absolute;
-    width: 400px; height: 400px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(0,207,173,0.12) 0%, transparent 70%);
-    bottom: -100px; right: -100px;
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    text-decoration: none;
-  }
-
-  .brand img {
-    height: 48px;
-    opacity: 0.92;
-  }
-
-  .brand-text {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 1.1rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--sand);
-    line-height: 1.1;
-  }
-
-  .brand-text span {
-    display: block;
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
-    color: var(--surge);
-  }
-
-  .left-hero {
-    position: relative; z-index: 1;
-  }
-
-  .left-hero h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(3rem, 5vw, 4.5rem);
-    line-height: 0.95;
-    color: var(--sand);
-    margin-bottom: 1rem;
-  }
-
-  .left-hero h2 span { color: var(--surge); }
-
-  .left-hero p {
-    font-size: 0.95rem;
-    color: var(--muted);
-    line-height: 1.65;
-    max-width: 340px;
-  }
-
-  .left-footer {
-    font-size: 0.78rem;
-    color: rgba(240,237,230,0.25);
-  }
-
-  /* ─── RIGHT PANEL ─── */
-  .right-panel {
-    background: #070f1c;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem 2rem;
-  }
-
-  .auth-box {
-    width: 100%;
-    max-width: 420px;
-  }
-
-  /* ─── TABS ─── */
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border-dim);
-    margin-bottom: 2rem;
-  }
-
-  .tab {
-    flex: 1;
-    padding: 0.85rem;
-    text-align: center;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 0.9rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: -1px;
-  }
-
-  .tab.active {
-    color: var(--surge);
-    border-bottom-color: var(--surge);
-  }
-
-  /* ─── PANELS ─── */
-  .panel { display: none; }
-  .panel.active { display: block; }
-
-  .panel-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    color: var(--sand);
-    margin-bottom: 0.25rem;
-  }
-
-  .panel-sub {
-    font-size: 0.85rem;
-    color: var(--muted);
-    margin-bottom: 1.75rem;
-  }
-
-  /* ─── FORM ─── */
-  .form-group { margin-bottom: 1rem; }
-
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-
-  .form-label {
-    display: block;
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-weight: 500;
-    margin-bottom: 0.35rem;
-  }
-
-  .form-input {
-    width: 100%;
-    background: rgba(13,45,74,0.5);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 3px;
-    padding: 0.7rem 0.9rem;
-    color: var(--sand);
-    font-family: 'Barlow', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 300;
-    outline: none;
-    transition: border-color 0.2s;
-    -webkit-appearance: none;
-  }
-
-  .form-input:focus { border-color: var(--surge); }
-  .form-input::placeholder { color: rgba(240,237,230,0.25); }
-
-  /* multiselect for qualifications */
-  .qual-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.4rem;
-    max-height: 220px;
-    overflow-y: auto;
-    padding: 0.5rem;
-    background: rgba(13,45,74,0.5);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 3px;
-  }
-
-  .qual-grid::-webkit-scrollbar { width: 4px; }
-  .qual-grid::-webkit-scrollbar-track { background: transparent; }
-  .qual-grid::-webkit-scrollbar-thumb { background: rgba(0,207,173,0.3); border-radius: 2px; }
-
-  .qual-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.5rem;
-    border-radius: 2px;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-
-  .qual-item:hover { background: rgba(0,207,173,0.08); }
-
-  .qual-item input[type="checkbox"] {
-    width: 14px; height: 14px;
-    accent-color: var(--surge);
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-
-  .qual-item label {
-    font-size: 0.78rem;
-    color: var(--muted);
-    cursor: pointer;
-    line-height: 1.3;
-  }
-
-  .qual-item:has(input:checked) label { color: var(--sand); }
-  .qual-item:has(input:checked) { background: var(--surge-dim); }
-
-  /* password strength */
-  .pw-strength {
-    display: flex;
-    gap: 3px;
-    margin-top: 0.4rem;
-  }
-
-  .pw-bar {
-    height: 2px;
-    flex: 1;
-    border-radius: 2px;
-    background: rgba(255,255,255,0.08);
-    transition: background 0.3s;
-  }
-
-  .pw-bar.weak { background: var(--coral); }
-  .pw-bar.medium { background: #F5A623; }
-  .pw-bar.strong { background: var(--surge); }
-
-  /* ─── BUTTONS ─── */
-  .btn-primary {
-    width: 100%;
-    background: var(--surge);
-    color: var(--midnight);
-    border: none;
-    padding: 0.85rem;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 0.95rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: 0.5rem;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: #00e8c0;
-    transform: translateY(-1px);
-  }
-
-  .btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .divider {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin: 1.25rem 0;
-    font-size: 0.72rem;
-    color: rgba(240,237,230,0.2);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  .divider::before, .divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border-dim);
-  }
-
-  .back-link {
-    display: block;
-    text-align: center;
-    margin-top: 1.5rem;
-    font-size: 0.8rem;
-    color: var(--muted);
-    text-decoration: none;
-  }
-
-  .back-link:hover { color: var(--surge); }
-
-  /* ─── ALERTS ─── */
-  .alert {
-    padding: 0.75rem 1rem;
-    border-radius: 3px;
-    font-size: 0.83rem;
-    margin-bottom: 1rem;
-    display: none;
-    line-height: 1.4;
-  }
-
-  .alert.error {
-    background: rgba(255,92,58,0.12);
-    border: 1px solid rgba(255,92,58,0.3);
-    color: #ff8a70;
-    display: block;
-  }
-
-  .alert.success {
-    background: rgba(0,207,173,0.1);
-    border: 1px solid rgba(0,207,173,0.3);
-    color: var(--surge);
-    display: block;
-  }
-
-  /* ─── SECTION HEADER ─── */
-  .section-header {
-    font-size: 0.65rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--surge);
-    font-weight: 600;
-    margin: 1.25rem 0 0.6rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid var(--border-dim);
-  }
-
-  /* ─── RESPONSIVE ─── */
-  @media (max-width: 768px) {
-    body { grid-template-columns: 1fr; }
-    .left-panel { display: none; }
-    .right-panel { padding: 2rem 1.25rem; align-items: flex-start; padding-top: 3rem; }
-  }
+:root{--midnight:#0A1628;--deep:#0D2D4A;--surge:#00CFAD;--coral:#FF5C3A;--sand:#F0EDE6;--muted:rgba(240,237,230,0.55);--dim:rgba(255,255,255,0.08);--surge-dim:rgba(0,207,173,0.1)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--midnight);color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+.box{width:100%;max-width:440px}
+.logo{display:flex;align-items:center;gap:0.75rem;margin-bottom:2rem;text-decoration:none}
+.logo img{height:40px;opacity:0.9}
+.logo-text{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--sand);line-height:1.1}
+.logo-text span{display:block;font-size:0.6rem;letter-spacing:0.2em;color:var(--surge)}
+.tabs{display:flex;border-bottom:1px solid var(--dim);margin-bottom:2rem}
+.tab{flex:1;padding:0.85rem;text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-1px;transition:all 0.2s}
+.tab.active{color:var(--surge);border-bottom-color:var(--surge)}
+.panel{display:none}.panel.active{display:block}
+.title{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--sand);margin-bottom:0.25rem}
+.sub{font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem}
+.label{display:block;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem;margin-top:0.85rem}
+input{width:100%;background:rgba(13,45,74,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:3px;padding:0.75rem 0.9rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.9rem;font-weight:300;outline:none;transition:border-color 0.2s;-webkit-appearance:none}
+input:focus{border-color:var(--surge)}
+input::placeholder{color:rgba(240,237,230,0.25)}
+.qual-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;max-height:200px;overflow-y:auto;padding:0.5rem;background:rgba(13,45,74,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:3px;margin-top:0.35rem}
+.qual-item{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:2px;cursor:pointer}
+.qual-item input{width:15px;height:15px;flex-shrink:0;accent-color:var(--surge);cursor:pointer}
+.qual-item label{font-size:0.78rem;color:var(--muted);cursor:pointer;line-height:1.3;width:auto}
+.qual-item:has(input:checked){background:var(--surge-dim)}
+.qual-item:has(input:checked) label{color:var(--sand)}
+.pw-bars{display:flex;gap:3px;margin-top:0.4rem}
+.pw-bar{height:2px;flex:1;border-radius:2px;background:rgba(255,255,255,0.08);transition:background 0.3s}
+.pw-bar.weak{background:var(--coral)}.pw-bar.med{background:#F5A623}.pw-bar.ok{background:var(--surge)}
+.btn{width:100%;background:var(--surge);color:var(--midnight);border:none;padding:0.85rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.95rem;letter-spacing:0.12em;text-transform:uppercase;border-radius:3px;cursor:pointer;margin-top:1.25rem;transition:opacity 0.2s}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+.err{background:rgba(255,92,58,0.12);border:1px solid rgba(255,92,58,0.3);color:#ff8a70;padding:0.75rem 1rem;border-radius:3px;font-size:0.83rem;margin-bottom:1rem;display:none}
+.err.show{display:block}
+.ok{background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.3);color:var(--surge);padding:0.75rem 1rem;border-radius:3px;font-size:0.83rem;margin-bottom:1rem;display:none}
+.ok.show{display:block}
+.link{display:block;text-align:center;margin-top:1rem;font-size:0.8rem;color:var(--muted);cursor:pointer;text-decoration:none}
+.link:hover{color:var(--surge)}
+.sec-header{font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--surge);font-weight:600;margin-top:1.5rem;margin-bottom:0.25rem;padding-bottom:0.4rem;border-bottom:1px solid var(--dim)}
+.success-wrap{text-align:center;padding:2rem 0}
+.success-icon{width:64px;height:64px;border-radius:50%;background:rgba(0,207,173,0.15);border:1px solid rgba(0,207,173,0.4);display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto 1.5rem}
 </style>
 </head>
 <body>
+<div class="box">
 
-<!-- LEFT PANEL -->
-<div class="left-panel">
-  <a href="/" class="brand">
-    <img src="/logo-white.png" alt="Fundees Logo">
-    <div class="brand-text">
-      Spearfishing
-      <span>FUNdamentals</span>
-    </div>
+  <a href="/" class="logo">
+    <img src="/logo-white.png" alt="Logo">
+    <div class="logo-text">Spearfishing<span>FUNdamentals</span></div>
   </a>
 
-  <div class="left-hero">
-    <h2>Dive with<br>your <span>crew.</span><br>Train smart.</h2>
-    <p>Sign in to book training sessions, manage your membership, and connect with the club.</p>
+  <div class="tabs">
+    <button class="tab active" onclick="show('signin')">Sign In</button>
+    <button class="tab" onclick="show('signup')">Sign Up</button>
   </div>
 
-  <div class="left-footer">
-    © 2025 Spearfishing FUNdamentals. Auckland, NZ.
+  <!-- SIGN IN -->
+  <div id="panel-signin" class="panel active">
+    <div class="title">Welcome back</div>
+    <div class="sub">Sign in to your member account.</div>
+    <div id="signin-err" class="err"></div>
+    <label class="label">Email</label>
+    <input id="si-email" type="email" placeholder="you@email.com" autocomplete="email">
+    <label class="label">Password</label>
+    <input id="si-pw" type="password" placeholder="Your password" autocomplete="current-password">
+    <button class="btn" id="btn-signin" onclick="doSignIn()">Sign In</button>
+    <a class="link" onclick="show('forgot')">Forgot password?</a>
+    <a class="link" href="/">← Back to home</a>
   </div>
+
+  <!-- FORGOT PASSWORD -->
+  <div id="panel-forgot" class="panel">
+    <div class="title">Reset Password</div>
+    <div class="sub">We'll send a reset link to your email.</div>
+    <div id="forgot-err" class="err"></div>
+    <div id="forgot-ok" class="ok"></div>
+    <label class="label">Email</label>
+    <input id="fo-email" type="email" placeholder="you@email.com">
+    <button class="btn" id="btn-forgot" onclick="doForgot()">Send Reset Link</button>
+    <a class="link" onclick="show('signin')">← Back to sign in</a>
+  </div>
+
+  <!-- SIGN UP -->
+  <div id="panel-signup" class="panel">
+    <div class="title">Join the Club</div>
+    <div class="sub">Create your account. Membership payment is separate.</div>
+    <div id="signup-err" class="err"></div>
+
+    <div class="sec-header">Personal Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+      <div><label class="label" style="margin-top:0">First Name</label><input id="su-fn" type="text" placeholder="First name" autocomplete="given-name"></div>
+      <div><label class="label" style="margin-top:0">Last Name</label><input id="su-ln" type="text" placeholder="Last name" autocomplete="family-name"></div>
+    </div>
+    <label class="label">Email</label>
+    <input id="su-email" type="email" placeholder="you@email.com" autocomplete="email">
+    <label class="label">Phone</label>
+    <input id="su-phone" type="tel" placeholder="+64 21 000 0000" autocomplete="tel">
+    <label class="label">Date of Birth</label>
+    <input id="su-dob" type="date">
+
+    <div class="sec-header">Emergency Contact</div>
+    <label class="label" style="margin-top:0">Name &amp; Phone</label>
+    <input id="su-ec" type="text" placeholder="e.g. Jane Smith — +64 21 555 0000">
+
+    <div class="sec-header">Freediving Qualifications</div>
+    <div class="label" style="margin-top:0">Select all that apply</div>
+    <div class="qual-grid" id="qual-grid"></div>
+
+    <div class="sec-header">Password</div>
+    <label class="label" style="margin-top:0">Password (min 8 characters)</label>
+    <input id="su-pw" type="password" placeholder="Min 8 characters" autocomplete="new-password" oninput="pwStrength(this.value)">
+    <div class="pw-bars"><div class="pw-bar" id="b1"></div><div class="pw-bar" id="b2"></div><div class="pw-bar" id="b3"></div><div class="pw-bar" id="b4"></div></div>
+    <label class="label">Confirm Password</label>
+    <input id="su-pw2" type="password" placeholder="Repeat password" autocomplete="new-password">
+
+    <button class="btn" id="btn-signup" onclick="doSignUp()">Create Account</button>
+    <a class="link" href="/">← Back to home</a>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="panel-success" class="panel">
+    <div class="success-wrap">
+      <div class="success-icon">🤿</div>
+      <div class="title">You're in!</div>
+      <p style="color:var(--muted);font-size:0.88rem;line-height:1.65;margin:0.75rem 0 2rem">Account created successfully. Sign in now to access your account.</p>
+      <button class="btn" onclick="show('signin')" style="max-width:200px;margin:0 auto;display:block">Sign In Now</button>
+    </div>
+  </div>
+
 </div>
 
-<!-- RIGHT PANEL -->
-<div class="right-panel">
-  <div class="auth-box">
-
-    <!-- TABS -->
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('signin')">Sign In</button>
-      <button class="tab" onclick="switchTab('signup')">Sign Up</button>
-    </div>
-
-    <!-- ─── SIGN IN PANEL ─── -->
-    <div id="panel-signin" class="panel active">
-      <div class="panel-title">Welcome back</div>
-      <div class="panel-sub">Sign in to your member account.</div>
-
-      <div id="signin-alert" class="alert"></div>
-
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="signin-email" class="form-input" type="email" placeholder="you@email.com" autocomplete="email">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input id="signin-password" class="form-input" type="password" placeholder="Your password" autocomplete="current-password">
-      </div>
-
-      <button id="btn-signin" class="btn-primary" onclick="handleSignIn()">Sign In</button>
-
-      <a href="#" class="back-link" onclick="showForgotPassword(); return false;">Forgot your password?</a>
-      <a href="/" class="back-link">← Back to home</a>
-    </div>
-
-    <!-- ─── FORGOT PASSWORD ─── -->
-    <div id="panel-forgot" class="panel">
-      <div class="panel-title">Reset Password</div>
-      <div class="panel-sub">Enter your email and we'll send a reset link.</div>
-
-      <div id="forgot-alert" class="alert"></div>
-
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="forgot-email" class="form-input" type="email" placeholder="you@email.com">
-      </div>
-
-      <button id="btn-forgot" class="btn-primary" onclick="handleForgotPassword()">Send Reset Link</button>
-      <a href="#" class="back-link" onclick="switchTab('signin'); return false;">← Back to sign in</a>
-    </div>
-
-    <!-- ─── SIGN UP PANEL ─── -->
-    <div id="panel-signup" class="panel">
-      <div class="panel-title">Join the Club</div>
-      <div class="panel-sub">Create your member account. Membership payment is separate.</div>
-
-      <div id="signup-alert" class="alert"></div>
-
-      <!-- Personal Details -->
-      <div class="section-header">Personal Details</div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">First Name</label>
-          <input id="su-firstname" class="form-input" type="text" placeholder="First name" autocomplete="given-name">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Last Name</label>
-          <input id="su-lastname" class="form-input" type="text" placeholder="Last name" autocomplete="family-name">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="su-email" class="form-input" type="email" placeholder="you@email.com" autocomplete="email">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Phone</label>
-        <input id="su-phone" class="form-input" type="tel" placeholder="+64 21 000 0000" autocomplete="tel">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Date of Birth</label>
-        <input id="su-dob" class="form-input" type="date">
-      </div>
-
-      <!-- Emergency Contact -->
-      <div class="section-header">Emergency Contact</div>
-
-      <div class="form-group">
-        <label class="form-label">Emergency Contact Name & Phone</label>
-        <input id="su-emergency" class="form-input" type="text" placeholder="e.g. Jane Smith — +64 21 555 0000">
-      </div>
-
-      <!-- Qualifications -->
-      <div class="section-header">Freediving Qualifications</div>
-      <div class="form-group">
-        <label class="form-label" style="margin-bottom:0.5rem">Select all that apply</label>
-        <div class="qual-grid" id="qual-grid">
-          <!-- populated by JS -->
-        </div>
-      </div>
-
-      <!-- Account Security -->
-      <div class="section-header">Account Security</div>
-
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input id="su-password" class="form-input" type="password" placeholder="Min. 8 characters" autocomplete="new-password" oninput="updatePasswordStrength(this.value)">
-        <div class="pw-strength">
-          <div class="pw-bar" id="pw-bar-1"></div>
-          <div class="pw-bar" id="pw-bar-2"></div>
-          <div class="pw-bar" id="pw-bar-3"></div>
-          <div class="pw-bar" id="pw-bar-4"></div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Confirm Password</label>
-        <input id="su-confirm" class="form-input" type="password" placeholder="Repeat password" autocomplete="new-password">
-      </div>
-
-      <button id="btn-signup" class="btn-primary" onclick="handleSignUp()">Create Account</button>
-      <a href="/" class="back-link">← Back to home</a>
-    </div>
-
-    <!-- ─── SUCCESS PANEL ─── -->
-    <div id="panel-success" class="panel">
-      <div style="text-align:center;padding:2rem 0">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(0,207,173,0.15);border:1px solid rgba(0,207,173,0.4);display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto 1.5rem;animation:pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both">🤿</div>
-        <div class="panel-title">You're in!</div>
-        <p style="color:var(--muted);font-size:0.88rem;line-height:1.65;margin:0.75rem 0 2rem">Account created. Check your email to verify your address, then sign in.</p>
-        <button class="btn-primary" onclick="switchTab('signin')" style="max-width:200px;margin:0 auto;display:block">Sign In Now</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- Load Supabase from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
-  // ─── CONFIG ──────────────────────────────────────────────────────────────
-  const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  const { createClient } = supabase;
-  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+const QUALS = ['AIDA2','AIDA3','AIDA4','AIDA Instructor','AIDA Master Instructor','AIDA Instructor Trainer','PADI Freediver','PADI Advanced Freediver','SSI Level 1','SSI Level 2','SSI Level 3','Ocean Hunter Int BH Course'];
 
-  // ─── QUALIFICATIONS LIST ─────────────────────────────────────────────────
-  const QUALIFICATIONS = [
-    'AIDA2',
-    'AIDA3',
-    'AIDA4',
-    'AIDA Instructor',
-    'AIDA Master Instructor',
-    'AIDA Instructor Trainer',
-    'PADI Freediver',
-    'PADI Advanced Freediver',
-    'SSI Level 1',
-    'SSI Level 2',
-    'SSI Level 3',
-    'Ocean Hunter Int BH Course'
-  ];
+// Build qual checkboxes
+QUALS.forEach((q,i) => {
+  const d = document.createElement('div');
+  d.className = 'qual-item';
+  d.innerHTML = `<input type="checkbox" id="q${i}" value="${q}"><label for="q${i}">${q}</label>`;
+  document.getElementById('qual-grid').appendChild(d);
+});
 
-  // Build qualification checkboxes
-  const qualGrid = document.getElementById('qual-grid');
-  QUALIFICATIONS.forEach((q, i) => {
-    const id = `qual-${i}`;
-    qualGrid.innerHTML += `
-      <div class="qual-item">
-        <input type="checkbox" id="${id}" value="${q}">
-        <label for="${id}">${q}</label>
-      </div>`;
+// Tab switching - NO session check on load, just show the page
+function show(panel) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + panel).classList.add('active');
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', (panel === 'signin' && i === 0) || (panel === 'signup' && i === 1));
+  });
+  // Clear errors
+  document.querySelectorAll('.err,.ok').forEach(e => e.classList.remove('show'));
+}
+
+function err(panelId, msg) {
+  const el = document.getElementById(panelId + '-err');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function loading(btnId, on) {
+  const b = document.getElementById(btnId);
+  b.disabled = on;
+  b.textContent = on ? 'Please wait...' : b.getAttribute('data-label');
+}
+
+// Save labels
+document.querySelectorAll('.btn[id]').forEach(b => b.setAttribute('data-label', b.textContent));
+
+function pwStrength(pw) {
+  let s = 0;
+  if (pw.length >= 8) s++;
+  if (pw.length >= 12) s++;
+  if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) s++;
+  if (/[^A-Za-z0-9]/.test(pw)) s++;
+  const cls = s <= 1 ? 'weak' : s <= 2 ? 'med' : 'ok';
+  [1,2,3,4].forEach(n => {
+    document.getElementById('b'+n).className = 'pw-bar' + (n <= s ? ' '+cls : '');
+  });
+}
+
+// SIGN IN
+async function doSignIn() {
+  const email = document.getElementById('si-email').value.trim();
+  const pw    = document.getElementById('si-pw').value;
+  document.getElementById('signin-err').classList.remove('show');
+
+  if (!email || !pw) { err('signin', 'Please enter your email and password.'); return; }
+  loading('btn-signin', true);
+
+  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+  loading('btn-signin', false);
+
+  if (error) {
+    err('signin', error.message.includes('Invalid') ? 'Email or password is incorrect.' : error.message);
+    return;
+  }
+  // Success - go to portal
+  window.location.href = '/portal.html';
+}
+
+// FORGOT PASSWORD
+async function doForgot() {
+  const email = document.getElementById('fo-email').value.trim();
+  document.getElementById('forgot-err').classList.remove('show');
+  document.getElementById('forgot-ok').classList.remove('show');
+  if (!email) { err('forgot', 'Please enter your email.'); return; }
+  loading('btn-forgot', true);
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password.html' });
+  loading('btn-forgot', false);
+  if (error) { err('forgot', error.message); return; }
+  const ok = document.getElementById('forgot-ok');
+  ok.textContent = 'Reset link sent! Check your email.';
+  ok.classList.add('show');
+}
+
+// SIGN UP
+async function doSignUp() {
+  const fn    = document.getElementById('su-fn').value.trim();
+  const ln    = document.getElementById('su-ln').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const phone = document.getElementById('su-phone').value.trim();
+  const dob   = document.getElementById('su-dob').value;
+  const ec    = document.getElementById('su-ec').value.trim();
+  const pw    = document.getElementById('su-pw').value;
+  const pw2   = document.getElementById('su-pw2').value;
+  const quals = Array.from(document.querySelectorAll('#qual-grid input:checked')).map(c => c.value);
+
+  document.getElementById('signup-err').classList.remove('show');
+
+  if (!fn || !ln || !email || !pw) { err('signup', 'Please fill in name, email and password.'); return; }
+  if (pw.length < 8)               { err('signup', 'Password must be at least 8 characters.'); return; }
+  if (pw !== pw2)                  { err('signup', 'Passwords do not match.'); return; }
+
+  loading('btn-signup', true);
+
+  // Step 1: Create auth user
+  const { data: authData, error: authErr } = await sb.auth.signUp({ email, password: pw });
+
+  if (authErr) {
+    loading('btn-signup', false);
+    err('signup', authErr.message.includes('already registered') ? 'An account with this email already exists.' : authErr.message);
+    return;
+  }
+
+  // Step 2: Create member profile via server function (bypasses RLS)
+  const res = await fetch('/.netlify/functions/create-member-profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      auth_user_id: authData.user.id,
+      full_name: fn + ' ' + ln,
+      email, phone: phone||null, date_of_birth: dob||null,
+      emergency_contact: ec||null,
+      qualifications: quals.length > 0 ? quals : null
+    })
   });
 
-  // ─── TAB SWITCHING ───────────────────────────────────────────────────────
-  function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach((t, i) => {
-      t.classList.toggle('active', (i === 0 && tab === 'signin') || (i === 1 && tab === 'signup'));
-    });
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.getElementById(`panel-${tab}`).classList.add('active');
-    clearAlerts();
+  loading('btn-signup', false);
+
+  if (!res.ok) {
+    const d = await res.json();
+    err('signup', 'Account created but profile failed: ' + (d.error || 'unknown'));
+    return;
   }
 
-  function showForgotPassword() {
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('panel-forgot').classList.add('active');
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  }
+  // Show success
+  show('success');
+}
 
-  function clearAlerts() {
-    document.querySelectorAll('.alert').forEach(a => {
-      a.className = 'alert';
-      a.textContent = '';
-    });
-  }
+// Check URL for ?tab=signup
+if (new URLSearchParams(window.location.search).get('tab') === 'signup') show('signup');
 
-  function showAlert(panelId, message, type = 'error') {
-    const el = document.getElementById(`${panelId}-alert`);
-    el.textContent = message;
-    el.className = `alert ${type}`;
-  }
-
-  function setLoading(btnId, loading) {
-    const btn = document.getElementById(btnId);
-    btn.disabled = loading;
-    btn.textContent = loading ? 'Please wait...' : btn.dataset.label || btn.textContent;
-  }
-
-  // Store original button labels
-  document.querySelectorAll('.btn-primary[id]').forEach(btn => {
-    btn.dataset.label = btn.textContent;
-  });
-
-  // ─── PASSWORD STRENGTH ───────────────────────────────────────────────────
-  function updatePasswordStrength(pw) {
-    let score = 0;
-    if (pw.length >= 8) score++;
-    if (pw.length >= 12) score++;
-    if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) score++;
-    if (/[^A-Za-z0-9]/.test(pw)) score++;
-
-    const bars = [1,2,3,4].map(n => document.getElementById(`pw-bar-${n}`));
-    const cls = score <= 1 ? 'weak' : score <= 2 ? 'medium' : 'strong';
-    bars.forEach((bar, i) => {
-      bar.className = 'pw-bar' + (i < score ? ` ${cls}` : '');
-    });
-  }
-
-  // ─── SIGN IN ─────────────────────────────────────────────────────────────
-  async function handleSignIn() {
-    const email    = document.getElementById('signin-email').value.trim();
-    const password = document.getElementById('signin-password').value;
-
-    if (!email || !password) {
-      showAlert('signin', 'Please enter your email and password.');
-      return;
-    }
-
-    setLoading('btn-signin', true);
-    clearAlerts();
-
-    try {
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
-
-      if (error) {
-        showAlert('signin', error.message === 'Invalid login credentials'
-          ? 'Email or password is incorrect. Please try again.'
-          : error.message);
-        return;
-      }
-
-      // Redirect to member portal
-      window.location.href = '/#portal';
-
-    } catch (err) {
-      showAlert('signin', 'Something went wrong. Please try again.');
-    } finally {
-      setLoading('btn-signin', false);
-    }
-  }
-
-  // ─── FORGOT PASSWORD ─────────────────────────────────────────────────────
-  async function handleForgotPassword() {
-    const email = document.getElementById('forgot-email').value.trim();
-    if (!email) { showAlert('forgot', 'Please enter your email address.'); return; }
-
-    setLoading('btn-forgot', true);
-    clearAlerts();
-
-    try {
-      const { error } = await sb.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password.html`
-      });
-
-      if (error) throw error;
-
-      showAlert('forgot', 'Reset link sent! Check your email inbox.', 'success');
-    } catch (err) {
-      showAlert('forgot', err.message || 'Failed to send reset email.');
-    } finally {
-      setLoading('btn-forgot', false);
-    }
-  }
-
-  // ─── SIGN UP ─────────────────────────────────────────────────────────────
-  async function handleSignUp() {
-    const firstName  = document.getElementById('su-firstname').value.trim();
-    const lastName   = document.getElementById('su-lastname').value.trim();
-    const email      = document.getElementById('su-email').value.trim();
-    const phone      = document.getElementById('su-phone').value.trim();
-    const dob        = document.getElementById('su-dob').value;
-    const emergency  = document.getElementById('su-emergency').value.trim();
-    const password   = document.getElementById('su-password').value;
-    const confirm    = document.getElementById('su-confirm').value;
-
-    // Get selected qualifications
-    const quals = Array.from(document.querySelectorAll('#qual-grid input:checked')).map(c => c.value);
-
-    // Validation
-    if (!firstName || !lastName || !email || !password) {
-      showAlert('signup', 'Please fill in all required fields (name, email, password).');
-      return;
-    }
-    if (password.length < 8) {
-      showAlert('signup', 'Password must be at least 8 characters.');
-      return;
-    }
-    if (password !== confirm) {
-      showAlert('signup', 'Passwords do not match.');
-      return;
-    }
-
-    setLoading('btn-signup', true);
-    clearAlerts();
-
-    try {
-      // 1. Create Supabase Auth user
-      const { data: authData, error: authError } = await sb.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: `${firstName} ${lastName}`
-          }
-        }
-      });
-
-      if (authError) throw authError;
-
-      // 2. Create member profile via server-side function (uses service role key to bypass RLS)
-      const profileRes = await fetch('/.netlify/functions/create-member-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          auth_user_id:      authData.user.id,
-          full_name:         `${firstName} ${lastName}`,
-          email,
-          phone:             phone || null,
-          date_of_birth:     dob   || null,
-          emergency_contact: emergency || null,
-          qualifications:    quals.length > 0 ? quals : null
-        })
-      });
-
-      const profileData = await profileRes.json();
-      if (!profileRes.ok) throw new Error('Profile save failed: ' + (profileData.error || 'unknown error'));
-
-      // 3. Show success screen
-      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      document.getElementById('panel-success').classList.add('active');
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-
-    } catch (err) {
-      if (err.message?.includes('already registered')) {
-        showAlert('signup', 'An account with this email already exists. Try signing in instead.');
-      } else {
-        showAlert('signup', err.message || 'Sign up failed. Please try again.');
-      }
-    } finally {
-      setLoading('btn-signup', false);
-    }
-  }
-
-  // ─── ENTER KEY ───────────────────────────────────────────────────────────
-  document.getElementById('signin-password').addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleSignIn();
-  });
-
-  // ─── CHECK IF ALREADY LOGGED IN ──────────────────────────────────────────
-  sb.auth.getSession().then(({ data: { session } }) => {
-    if (session) window.location.href = '/#portal';
-  });
-
-  // ─── CHECK URL PARAMS (e.g. ?tab=signup from Join Now button) ────────────
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('tab') === 'signup') switchTab('signup');
+// Enter key on sign in
+document.getElementById('si-pw').addEventListener('keydown', e => { if (e.key === 'Enter') doSignIn(); });
 </script>
-
-<style>
-  @keyframes pop {
-    from { transform: scale(0); opacity: 0; }
-    to   { transform: scale(1); opacity: 1; }
-  }
-</style>
 </body>
 </html>
