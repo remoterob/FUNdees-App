@@ -3,6 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FUNdamentals">
+  <meta name="theme-color" content="#0A1628">
+  <link rel="apple-touch-icon" href="/icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
 <title>Spearfishing FUNdamentals</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
@@ -937,6 +946,8 @@
     cursor: pointer;
     padding: 0.5rem;
     z-index: 101;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   .hamburger span {
     display: block;
@@ -1067,7 +1078,7 @@
     <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
   <!-- Hamburger — mobile only -->
-  <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+  <button class="hamburger" id="hamburger" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
 </nav>
@@ -1698,6 +1709,16 @@
 
   // ─── INIT ────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
+    // Wire hamburger for iOS compatibility
+    const hbBtn = document.getElementById('hamburger');
+    if (hbBtn) {
+      hbBtn.addEventListener('click', toggleMobileMenu);
+      hbBtn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        toggleMobileMenu();
+      });
+    }
+
     await initAuth();
     loadSessions();
     if (window.location.search.includes('cancelled=true')) showToast('Checkout cancelled — no charge made.', true);
@@ -1707,6 +1728,13 @@
       if (menu?.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) closeMobileMenu();
     });
   });
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js");
+    });
+  }
 </script>
 </body>
 </html>
