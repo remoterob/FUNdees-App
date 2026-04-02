@@ -406,6 +406,79 @@ async function doLogout() {
   window.location.href = '/';
 }
 
+// ─── IMAGE MANAGEMENT ────────────────────────────────────────────────────
+async function loadImages() {
+  const grid = document.getElementById('img-grid');
+  if (!grid) return;
+
+  const { data, error } = await sb.storage.from('fundees').list('media', {
+    sortBy: { column: 'created_at', order: 'asc' }
+  });
+
+  if (error) { grid.innerHTML = `<div style="color:var(--coral)">${error.message}</div>`; return; }
+
+  const images = (data || []).filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f.name));
+
+  if (images.length === 0) {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;grid-column:1/-1">No photos uploaded yet.</div>';
+    return;
+  }
+
+  grid.innerHTML = images.map(f => {
+    const { data: { publicUrl } } = sb.storage.from('fundees').getPublicUrl('media/' + f.name);
+    return `
+      <div class="img-card">
+        <img src="${publicUrl}" alt="${f.name}" loading="lazy">
+        <div class="img-card-del" onclick="deleteImage('${f.name}')" title="Delete">✕</div>
+      </div>`;
+  }).join('');
+}
+
+async function uploadImages(files) {
+  if (!files || files.length === 0) return;
+  const msg      = document.getElementById('upload-msg');
+  const progress = document.getElementById('upload-progress');
+  const bar      = document.getElementById('upload-bar');
+
+  progress.style.display = 'block';
+  msg.style.color = 'var(--muted)';
+  msg.textContent = `Uploading ${files.length} file${files.length > 1 ? 's' : ''}...`;
+
+  let done = 0;
+  for (const file of files) {
+    const ext  = file.name.split('.').pop();
+    const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error } = await sb.storage.from('fundees').upload(`media/${name}`, file, {
+      cacheControl: '3600', upsert: false
+    });
+
+    done++;
+    bar.style.width = `${(done / files.length) * 100}%`;
+
+    if (error) {
+      msg.style.color = 'var(--coral)';
+      msg.textContent = `Upload failed: ${error.message}`;
+      progress.style.display = 'none';
+      return;
+    }
+  }
+
+  msg.style.color = 'var(--surge)';
+  msg.textContent = `${files.length} photo${files.length > 1 ? 's' : ''} uploaded ✓`;
+  setTimeout(() => { progress.style.display = 'none'; msg.textContent = ''; bar.style.width = '0'; }, 3000);
+  document.getElementById('img-upload').value = '';
+  loadImages();
+}
+
+async function deleteImage(name) {
+  if (!confirm('Delete this photo? This cannot be undone.')) return;
+  const { error } = await sb.storage.from('fundees').remove([`media/${name}`]);
+  if (error) { toast('Delete failed: ' + error.message, true); return; }
+  toast('Photo deleted.');
+  loadImages();
+}
+
 init();
 </script>
 <script>
