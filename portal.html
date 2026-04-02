@@ -54,6 +54,14 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
 .qi{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:2px;cursor:pointer;font-size:0.8rem;color:var(--muted)}
 .qi input{width:15px;height:15px;flex-shrink:0;accent-color:var(--surge);cursor:pointer}
 .qi:has(input:checked){background:var(--surge-dim);color:var(--sand)}
+.enr-table{width:100%;border-collapse:collapse}
+.enr-table th{text-align:left;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:0.5rem 0.75rem;border-bottom:1px solid var(--dim)}
+.enr-table td{padding:0.75rem;font-size:0.85rem;border-bottom:1px solid var(--dim);vertical-align:middle}
+.enr-table tr:last-child td{border-bottom:none}
+.enr-table tr:hover td{background:rgba(0,207,173,0.04)}
+.b-enrolled{background:rgba(0,207,173,0.12);color:var(--surge);font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:600;padding:0.2rem 0.55rem;border-radius:2px}
+.b-pending{background:rgba(245,166,35,0.12);color:#F5A623;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:600;padding:0.2rem 0.55rem;border-radius:2px}
+.b-cancelled{background:rgba(255,255,255,0.06);color:var(--muted);font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:600;padding:0.2rem 0.55rem;border-radius:2px}
 .pay-box{background:rgba(10,22,40,0.5);border:1px solid rgba(0,207,173,0.2);border-radius:3px;padding:1.25rem;margin:1rem 0}
 .pay-amount{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--surge);line-height:1}
 .pay-desc{font-size:0.78rem;color:var(--muted);margin-top:0.2rem}
@@ -151,6 +159,12 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
       </div>
     </div>
 
+    <!-- MY ENROLMENTS -->
+    <div class="card" style="margin-top:1.5rem">
+      <div class="card-title">My Session Enrolments</div>
+      <div id="enrolments-content"><div style="color:var(--muted);font-size:0.85rem">Loading...</div></div>
+    </div>
+
   </div>
 </div>
 
@@ -171,17 +185,89 @@ function fmt(d) {
 }
 
 async function init() {
+  // Try direct session first
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.href = '/auth.html'; return; }
-  user = session.user;
+  if (session?.user) {
+    user = session.user;
+    await loadMember();
+    return;
+  }
 
+  // If no session yet, wait briefly for async restore (happens after Stripe redirect)
+  await new Promise(resolve => {
+    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, s) => {
+      if (s?.user) {
+        user = s.user;
+        subscription.unsubscribe();
+        resolve();
+      }
+    });
+    // Timeout after 3s — if still no session, redirect to login
+    setTimeout(() => { subscription.unsubscribe(); resolve(); }, 3000);
+  });
+
+  if (!user) { window.location.href = '/auth.html'; return; }
+  await loadMember();
+}
+
+async function loadMember() {
   const { data, error } = await sb.from('members').select('*').eq('auth_user_id', user.id).maybeSingle();
   if (error) { alert('Error loading profile: ' + error.message); return; }
-
   member = data;
   render();
+  await loadEnrolments();
   document.getElementById('loading').style.display = 'none';
   document.getElementById('content').style.display = 'block';
+}
+
+async function loadEnrolments() {
+  if (!member) return;
+  const el = document.getElementById('enrolments-content');
+
+  const { data, error } = await sb
+    .from('enrolments')
+    .select('status, amount_paid, enrolled_at, created_at, sessions(title, type, date_start, date_end, location)')
+    .eq('member_id', member.id)
+    .order('created_at', { ascending: false });
+
+  if (error) { el.innerHTML = `<div style="color:var(--coral);font-size:0.85rem">Could not load enrolments: ${error.message}</div>`; return; }
+
+  if (!data || data.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem">No session enrolments yet. <a href="/sessions.html" style="color:var(--surge)">Browse sessions →</a></div>';
+    return;
+  }
+
+  const statusBadge = s => {
+    if (s === 'enrolled')        return '<span class="b-enrolled">Enrolled</span>';
+    if (s === 'pending_payment') return '<span class="b-pending">Payment Pending</span>';
+    return '<span class="b-cancelled">Cancelled</span>';
+  };
+
+  el.innerHTML = `
+    <table class="enr-table">
+      <thead>
+        <tr>
+          <th>Session</th>
+          <th>Type</th>
+          <th>Dates</th>
+          <th>Status</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.map(e => `
+        <tr>
+          <td>
+            <strong>${e.sessions?.title || '—'}</strong>
+            ${e.sessions?.location ? `<br><span style="font-size:0.75rem;color:var(--muted)">${e.sessions.location}</span>` : ''}
+          </td>
+          <td>${e.sessions?.type ? `<span style="text-transform:capitalize">${e.sessions.type}</span>` : '—'}</td>
+          <td style="font-size:0.8rem">${fmt(e.sessions?.date_start)}<br>${fmt(e.sessions?.date_end)}</td>
+          <td>${statusBadge(e.status)}</td>
+          <td>${e.amount_paid ? `$${Number(e.amount_paid).toFixed(2)}` : '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
 }
 
 function render() {

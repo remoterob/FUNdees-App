@@ -1317,13 +1317,27 @@
 
   // ─── AUTH INIT ───────────────────────────────────────────────────────────
   async function initAuth() {
+    // First try getSession (handles existing sessions)
     const { data: { session } } = await sb.auth.getSession();
     if (session?.user) {
       currentUser = session.user;
       await fetchMember();
     }
     renderNav();
-    
+
+    // Also listen for auth state changes — catches session restore after
+    // Stripe redirect (Supabase sometimes restores session asynchronously)
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user && !currentUser) {
+        currentUser = session.user;
+        await fetchMember();
+        renderNav();
+      } else if (!session && currentUser) {
+        currentUser = null;
+        currentMember = null;
+        renderNav();
+      }
+    });
   }
 
   async function fetchMember() {
