@@ -945,9 +945,12 @@
     border: none;
     cursor: pointer;
     padding: 0.5rem;
-    z-index: 101;
+    z-index: 200;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    position: relative;
   }
   .hamburger span {
     display: block;
@@ -967,6 +970,7 @@
     top: 68px; left: 0; right: 0;
     background: rgba(7, 16, 30, 0.98);
     backdrop-filter: blur(16px);
+    z-index: 150;
     border-bottom: 1px solid var(--border-dim);
     z-index: 99;
     padding: 1rem 1.5rem 1.5rem;
@@ -1078,7 +1082,9 @@
     <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
   <!-- Hamburger — mobile only -->
-  <button class="hamburger" id="hamburger" aria-label="Menu">
+  <button type="button" class="hamburger" id="hamburger" aria-label="Menu"
+    onclick="toggleMobileMenu()"
+    ontouchend="event.preventDefault();toggleMobileMenu()">
     <span></span><span></span><span></span>
   </button>
 </nav>
@@ -1709,16 +1715,6 @@
 
   // ─── INIT ────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
-    // Wire hamburger for iOS compatibility
-    const hbBtn = document.getElementById('hamburger');
-    if (hbBtn) {
-      hbBtn.addEventListener('click', toggleMobileMenu);
-      hbBtn.addEventListener('touchend', function(e) {
-        e.preventDefault();
-        toggleMobileMenu();
-      });
-    }
-
     await initAuth();
     loadSessions();
     if (window.location.search.includes('cancelled=true')) showToast('Checkout cancelled — no charge made.', true);
