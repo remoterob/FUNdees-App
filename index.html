@@ -122,6 +122,102 @@
     padding: 4rem 2.5rem;
   }
 
+  .hero-layout {
+    position: relative; z-index: 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Desktop image panel */
+  .hero-images {
+    position: relative;
+    height: 480px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 0.75rem;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .hero-images.single { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+  .hero-images.two    { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+  .hero-images.three  { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  .hero-images.three .hero-img:first-child { grid-row: 1 / 3; }
+
+  .hero-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 3px;
+    display: block;
+  }
+
+  .hero-img-placeholder {
+    width: 100%; height: 100%;
+    background: rgba(13,45,74,0.5);
+    border: 1px dashed rgba(0,207,173,0.2);
+    border-radius: 3px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--muted); font-size: 0.82rem; text-align: center; gap: 0.5rem;
+  }
+
+  /* Mobile carousel */
+  .hero-carousel {
+    display: none;
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 4px;
+    margin-top: 2rem;
+    height: 220px;
+  }
+
+  .carousel-track {
+    display: flex;
+    transition: transform 0.4s ease;
+    height: 100%;
+  }
+
+  .carousel-slide {
+    min-width: 100%;
+    height: 100%;
+  }
+
+  .carousel-slide img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .carousel-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+  }
+
+  .carousel-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .carousel-dot.active { background: var(--surge); }
+
+  @media (max-width: 768px) {
+    .hero-layout { grid-template-columns: 1fr; gap: 0; }
+    .hero-images { display: none; }
+    .hero-carousel { display: block; }
+  }
+
   .hero-bg {
     position: absolute; inset: 0;
     background:
@@ -976,7 +1072,6 @@
     backdrop-filter: blur(16px);
     z-index: 150;
     border-bottom: 1px solid var(--border-dim);
-    z-index: 99;
     padding: 1rem 1.5rem 1.5rem;
     flex-direction: column;
     gap: 0;
@@ -1090,8 +1185,8 @@
     <li><a href="#" onclick="navTo('home')">Home</a></li>
     <li><a href="/sessions.html">Pool Sessions</a></li>
     <!-- Auth state injected by JS -->
-    <li id="nav-auth-guest" style="display:none"><a href="/auth.html">Sign In</a></li>
-    <li id="nav-auth-guest2" style="display:none"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
+    <li id="nav-auth-guest"><a href="/auth.html">Sign In</a></li>
+    <li id="nav-auth-guest2"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
     <li id="nav-auth-user" style="display:none"><a href="/portal.html">My Account</a></li>
     <li id="nav-auth-admin" style="display:none"><a href="/admin.html">Admin</a></li>
     <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
@@ -1106,15 +1201,13 @@
 
 <!-- Mobile menu -->
 <div class="mobile-menu" id="mobile-menu">
-  <a href="#" onclick="navTo('home')">Home</a>
-  <a href="/sessions.html">Pool Sessions</a>
-  <!-- Guest links -->
-  <a href="/auth.html" id="mob-signin" style="display:none">Sign In</a>
-  <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta" style="display:none">Join Now</a>
-  <!-- Auth links -->
+  <a href="/" onclick="closeMobileMenu()">Home</a>
+  <a href="/sessions.html" onclick="closeMobileMenu()">Pool Sessions</a>
+  <a href="/auth.html" id="mob-signin">Sign In</a>
+  <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta">Join Now</a>
   <a href="/portal.html" id="mob-account" style="display:none">My Account</a>
   <a href="/admin.html" id="mob-admin" style="display:none">Admin</a>
-  <button id="mob-logout" onclick="handleLogout()" class="mob-logout" style="display:none">Log Out</button>
+  <a href="#" id="mob-logout" onclick="handleLogout()" class="mob-logout" style="display:none">Log Out</a>
 </div>
 
 <!-- ─── HOME PAGE ─── -->
@@ -1122,15 +1215,30 @@
   <div class="hero">
     <div class="hero-bg"></div>
     <div class="depth-lines"></div>
-    <div class="hero-inner">
-      <div class="hero-badge">Auckland's Premier Spearfishing and Freediving Club</div>
-      <div id="hero-welcome" style="display:none;margin-bottom:1rem">
-        <span style="background:rgba(0,207,173,0.15);border:1px solid rgba(0,207,173,0.3);color:var(--surge);padding:0.3rem 0.9rem;border-radius:2px;font-size:0.78rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase" id="hero-welcome-text"></span>
+    <div class="hero-layout">
+      <!-- Left: text -->
+      <div class="hero-inner" style="max-width:100%">
+        <div class="hero-badge">Auckland's Premier Spearfishing and Freediving Club</div>
+        <div id="hero-welcome" style="display:none;margin-bottom:1rem">
+          <span style="background:rgba(0,207,173,0.15);border:1px solid rgba(0,207,173,0.3);color:var(--surge);padding:0.3rem 0.9rem;border-radius:2px;font-size:0.78rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase" id="hero-welcome-text"></span>
+        </div>
+        <h1>Bringing fun to<br><span class="accent">FUN</span>damentals.</h1>
+        <p class="hero-sub">Structured peer training in a safe and supportive environment.</p>
+        <div class="hero-actions">
+          <a class="btn-primary" href="/sessions.html">Sign Up to a Training Session</a>
+        </div>
+        <!-- Mobile carousel -->
+        <div class="hero-carousel" id="hero-carousel">
+          <div class="carousel-track" id="carousel-track"></div>
+        </div>
+        <div class="carousel-dots" id="carousel-dots"></div>
       </div>
-      <h1>Bringing fun to<br><span class="accent">FUN</span>damentals.</h1>
-      <p class="hero-sub">Structured peer training in a safe and supportive environment.</p>
-      <div class="hero-actions">
-        <a class="btn-primary" href="/sessions.html">Sign Up to a Training Session</a>
+      <!-- Right: image grid (desktop only) -->
+      <div class="hero-images" id="hero-images">
+        <div class="hero-img-placeholder" style="grid-column:1/-1;grid-row:1/-1">
+          <span style="font-size:1.5rem">📸</span>
+          <span>Club photos will appear here</span>
+        </div>
       </div>
     </div>
   </div>
@@ -1335,55 +1443,60 @@
   }
 
   // ─── AUTH INIT ───────────────────────────────────────────────────────────
-  // Hide nav auth items until we know the auth state
   async function initAuth() {
-    return new Promise(resolve => {
-      sb.auth.onAuthStateChange(async (event, session) => {
-        if (session?.user) {
-          currentUser = session.user;
-          await fetchMember();
-        } else {
-          currentUser = null;
-          currentMember = null;
-        }
+    // Use getSession first — it's synchronous from localStorage on page load
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) {
+      currentUser = session.user;
+      await fetchMember();
+    }
+    renderNav();
+
+    // Then keep listening for changes (logout, token refresh etc)
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        currentUser = null; currentMember = null; renderNav();
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        currentUser = session.user;
+        await fetchMember();
         renderNav();
-        resolve(); // resolves on first fire, which is immediate
-      });
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        currentUser = session.user;
+        renderNav();
+      }
     });
   }
 
   async function fetchMember() {
     if (!currentUser) return;
-    const { data, error } = await sb
-      .from('members')
-      .select('*')
-      .eq('auth_user_id', currentUser.id)
-      .maybeSingle();
-    if (error) console.error('fetchMember error:', error.message);
+    const { data } = await sb.from('members').select('*').eq('auth_user_id', currentUser.id).maybeSingle();
     currentMember = data || null;
   }
 
   function renderNav() {
-    const in_ = !!currentUser;
-    const isAdmin = !!currentMember?.is_admin;
+    const loggedIn = !!currentUser;
+    const isAdmin  = !!currentMember?.is_admin;
+
     // Desktop
-    document.getElementById('nav-auth-guest').style.display  = in_ ? 'none' : 'list-item';
-    document.getElementById('nav-auth-guest2').style.display = in_ ? 'none' : 'list-item';
-    document.getElementById('nav-auth-user').style.display   = in_ ? 'list-item' : 'none';
-    document.getElementById('nav-auth-admin').style.display  = isAdmin ? 'list-item' : 'none';
-    document.getElementById('nav-auth-logout').style.display = in_ ? 'list-item' : 'none';
+    document.getElementById('nav-auth-guest').style.display  = loggedIn ? 'none' : 'list-item';
+    document.getElementById('nav-auth-guest2').style.display = loggedIn ? 'none' : 'list-item';
+    document.getElementById('nav-auth-user').style.display   = loggedIn ? 'list-item' : 'none';
+    document.getElementById('nav-auth-admin').style.display  = isAdmin  ? 'list-item' : 'none';
+    document.getElementById('nav-auth-logout').style.display = loggedIn ? 'list-item' : 'none';
+
     // Mobile
-    document.getElementById('mob-signin').style.display  = in_ ? 'none' : 'block';
-    document.getElementById('mob-join').style.display    = in_ ? 'none' : 'block';
-    document.getElementById('mob-account').style.display = in_ ? 'block' : 'none';
-    document.getElementById('mob-admin').style.display   = isAdmin ? 'block' : 'none';
-    document.getElementById('mob-logout').style.display  = in_ ? 'block' : 'none';
+    document.getElementById('mob-signin').style.display  = loggedIn ? 'none' : 'block';
+    document.getElementById('mob-join').style.display    = loggedIn ? 'none' : 'block';
+    document.getElementById('mob-account').style.display = loggedIn ? 'block' : 'none';
+    document.getElementById('mob-admin').style.display   = isAdmin  ? 'block' : 'none';
+    document.getElementById('mob-logout').style.display  = loggedIn ? 'block' : 'none';
+
     // Hero welcome strip
     const strip = document.getElementById('hero-welcome');
     const txt   = document.getElementById('hero-welcome-text');
     if (strip && txt) {
-      if (in_ && currentMember) {
-        const name = currentMember.full_name?.split(' ')[0] || 'Member';
+      if (loggedIn && currentMember) {
+        const name   = currentMember.full_name?.split(' ')[0] || 'Member';
         const status = currentMember.status === 'active' ? '✓ Active Member' : '⚠ Membership Pending';
         txt.textContent = `Welcome back, ${name} — ${status}`;
         strip.style.display = 'block';
@@ -1396,7 +1509,7 @@
   async function handleLogout() {
     await sb.auth.signOut();
     currentUser = null; currentMember = null;
-    renderNav(); closeMobileMenu(); showPage('home');
+    renderNav(); closeMobileMenu();
     showToast('Signed out.');
   }
 
@@ -1407,7 +1520,6 @@
     if (pg) pg.classList.add('active');
     window.scrollTo(0,0);
     if (id === 'sessions') loadSessions();
-    if (id === 'portal')   loadPortal();
   }
 
   function navTo(page) { closeMobileMenu(); showPage(page); }
@@ -1415,9 +1527,10 @@
   function toggleMobileMenu() {
     const menu = document.getElementById('mobile-menu');
     const btn  = document.getElementById('hamburger');
-    const open = menu.classList.toggle('open');
-    btn.classList.toggle('open', open);
-    document.body.style.overflow = open ? 'hidden' : '';
+    const opening = !menu.classList.contains('open');
+    menu.classList.toggle('open', opening);
+    btn.classList.toggle('open', opening);
+    document.body.style.overflow = opening ? 'hidden' : '';
   }
 
   function closeMobileMenu() {
@@ -1715,26 +1828,92 @@
     }
   }
 
+  // ─── HERO IMAGES ─────────────────────────────────────────────────────────
+  let carouselIndex = 0;
+  let carouselImages = [];
+
+  async function loadHeroImages() {
+    const { data, error } = await sb.storage.from('fundees').list('media', {
+      sortBy: { column: 'created_at', order: 'asc' }
+    });
+
+    if (error || !data || data.length === 0) return;
+
+    // Filter to image files only
+    const images = data.filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f.name));
+    if (images.length === 0) return;
+
+    carouselImages = images.map(f => {
+      const { data: { publicUrl } } = sb.storage.from('fundees').getPublicUrl('media/' + f.name);
+      return publicUrl;
+    });
+
+    renderHeroImages(carouselImages);
+    renderCarousel(carouselImages);
+  }
+
+  function renderHeroImages(urls) {
+    const grid = document.getElementById('hero-images');
+    if (!grid) return;
+    const count = Math.min(urls.length, 4);
+    const cls = count === 1 ? 'single' : count === 2 ? 'two' : 'three';
+    grid.className = 'hero-images ' + cls;
+    grid.innerHTML = urls.slice(0, count).map(url =>
+      `<img class="hero-img" src="${url}" alt="Club photo" loading="lazy">`
+    ).join('');
+  }
+
+  function renderCarousel(urls) {
+    const track = document.getElementById('carousel-track');
+    const dots  = document.getElementById('carousel-dots');
+    if (!track || !dots || urls.length === 0) return;
+
+    track.innerHTML = urls.map(url =>
+      `<div class="carousel-slide"><img src="${url}" alt="Club photo" loading="lazy"></div>`
+    ).join('');
+
+    dots.innerHTML = urls.map((_, i) =>
+      `<div class="carousel-dot ${i===0?'active':''}" onclick="goToSlide(${i})"></div>`
+    ).join('');
+
+    // Auto-advance
+    if (urls.length > 1) {
+      setInterval(() => goToSlide((carouselIndex + 1) % urls.length), 4000);
+    }
+  }
+
+  function goToSlide(i) {
+    carouselIndex = i;
+    const track = document.getElementById('carousel-track');
+    if (track) track.style.transform = `translateX(-${i * 100}%)`;
+    document.querySelectorAll('.carousel-dot').forEach((d, idx) => {
+      d.classList.toggle('active', idx === i);
+    });
+  }
+
+
   // ─── INIT ────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
     await initAuth();
     loadSessions();
-    // Show PWA install banner on iOS if not installed and not dismissed
+    loadHeroImages();
+
+    // PWA install banner on iOS
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const isStandalone = window.navigator.standalone === true;
-    const dismissed = localStorage.getItem('pwa-dismissed');
-    if (isIOS && !isStandalone && !dismissed) {
+    if (isIOS && !isStandalone && !localStorage.getItem('pwa-dismissed')) {
       setTimeout(() => {
-        document.getElementById('pwa-banner').style.display = 'flex';
+        const b = document.getElementById('pwa-banner');
+        if (b) b.style.display = 'flex';
       }, 3000);
     }
 
-    if (window.location.search.includes('cancelled=true')) showToast('Checkout cancelled — no charge made.', true);
-    document.addEventListener('click', e => {
-      const menu = document.getElementById('mobile-menu');
-      const btn  = document.getElementById('hamburger');
-      if (menu?.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) closeMobileMenu();
-    });
+    if (window.location.search.includes('cancelled=true')) {
+      showToast('Checkout cancelled — no charge made.', true);
+    }
+    if (window.location.search.includes('deleted=1')) {
+      showToast('Your account has been deleted.');
+    }
   });
 </script>
 <script>

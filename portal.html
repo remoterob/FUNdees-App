@@ -174,6 +174,13 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
       <div id="enrolments-content"><div style="color:var(--muted);font-size:0.85rem">Loading...</div></div>
     </div>
 
+    <!-- DELETE ACCOUNT -->
+    <div style="margin-top:2.5rem;padding:1.5rem;border:1px solid rgba(255,92,58,0.2);border-radius:4px;background:rgba(255,92,58,0.04)">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--coral);margin-bottom:0.5rem">Danger Zone</div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;line-height:1.55">Permanently delete your account and all associated data. This cannot be undone.</p>
+      <button onclick="confirmDeleteAccount()" style="background:none;border:1px solid rgba(255,92,58,0.4);color:var(--coral);padding:0.6rem 1.25rem;border-radius:3px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(255,92,58,0.12)'" onmouseout="this.style.background='none'">Delete My Account</button>
+    </div>
+
   </div>
 </div>
 
@@ -429,6 +436,44 @@ async function doPayment() {
 async function doLogout() {
   await sb.auth.signOut();
   window.location.href = '/';
+}
+
+async function confirmDeleteAccount() {
+  // First confirmation
+  const first = confirm('Are you sure you want to delete your account?\n\nThis will permanently remove all your data including membership, qualifications and enrolment history.');
+  if (!first) return;
+
+  // Second confirmation with name check
+  const name = member?.full_name?.split(' ')[0] || 'your name';
+  const typed = window.prompt(`To confirm, type DELETE below:`);
+  if (typed !== 'DELETE') {
+    alert('Account deletion cancelled — text did not match.');
+    return;
+  }
+
+  try {
+    // Get current session token to send with request
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { alert('You must be logged in to delete your account.'); return; }
+
+    const res = await fetch('/.netlify/functions/delete-account', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      }
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Delete failed');
+
+    // Sign out locally and redirect
+    await sb.auth.signOut();
+    window.location.href = '/?deleted=1';
+
+  } catch(err) {
+    alert('Could not delete account: ' + err.message);
+  }
 }
 
 // Handle payment return
