@@ -55,45 +55,36 @@
   }
 
   .nav-logo {
-    display: flex; align-items: center; gap: 0.75rem;
+    display: flex; align-items: center; gap: 0.75rem; cursor: pointer;
   }
 
-  .nav-logo img {
-    height: 44px;
-    opacity: 0.92;
-  }
+  .nav-logo img { height: 44px; opacity: 0.92; }
 
   .nav-wordmark {
     font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 1.1rem;
-    letter-spacing: 0.08em;
-    color: var(--sand);
-    text-transform: uppercase;
-    line-height: 1.1;
+    font-weight: 700; font-size: 1.1rem;
+    letter-spacing: 0.08em; color: var(--sand);
+    text-transform: uppercase; line-height: 1.1;
   }
 
   .nav-wordmark span {
-    display: block;
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
-    color: var(--surge);
-    font-weight: 600;
+    display: block; font-size: 0.6rem;
+    letter-spacing: 0.2em; color: var(--surge); font-weight: 600;
   }
 
+  /* Nav links — flex row, each item inline */
   .nav-links {
-    display: flex; align-items: center; gap: 2rem;
-    list-style: none;
+    display: flex; align-items: center; gap: 2rem; list-style: none;
   }
+
+  /* Each li is flex item — use display:flex/none to show/hide */
+  .nav-links li { display: flex; align-items: center; }
+  .nav-links li.hidden { display: none; }
 
   .nav-links a {
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 0.82rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    font-weight: 500;
-    transition: color 0.2s;
+    color: var(--muted); text-decoration: none;
+    font-size: 0.82rem; letter-spacing: 0.1em;
+    text-transform: uppercase; font-weight: 500; transition: color 0.2s;
   }
 
   .nav-links a:hover { color: var(--surge); }
@@ -1184,19 +1175,17 @@
   <ul class="nav-links" id="nav-links">
     <li><a href="#" onclick="navTo('home')">Home</a></li>
     <li><a href="/sessions.html">Pool Sessions</a></li>
-    <!-- Auth state injected by JS -->
     <li id="nav-auth-guest"><a href="/auth.html">Sign In</a></li>
     <li id="nav-auth-guest2"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
-    <li id="nav-auth-user" style="display:none"><a href="/portal.html">My Account</a></li>
-    <li id="nav-auth-admin" style="display:none"><a href="/admin.html">Admin</a></li>
-    <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
+    <li id="nav-auth-user" class="hidden"><a href="/portal.html">My Account</a></li>
+    <li id="nav-auth-admin" class="hidden"><a href="/admin.html">Admin</a></li>
+    <li id="nav-auth-logout" class="hidden"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
   <!-- Hamburger — mobile only -->
-  <div id="hamburger" class="hamburger" role="button" aria-label="Open menu"
-    onclick="toggleMobileMenu()"
-    ontouchstart="toggleMobileMenu();return false;">
+  <a id="hamburger" class="hamburger" href="javascript:void(0)" aria-label="Open menu"
+    onclick="toggleMobileMenu();return false;">
     <span></span><span></span><span></span>
-  </div>
+  </a>
 </nav>
 
 <!-- Mobile menu -->
@@ -1477,12 +1466,12 @@
     const loggedIn = !!currentUser;
     const isAdmin  = !!currentMember?.is_admin;
 
-    // Desktop
-    document.getElementById('nav-auth-guest').style.display  = loggedIn ? 'none' : 'list-item';
-    document.getElementById('nav-auth-guest2').style.display = loggedIn ? 'none' : 'list-item';
-    document.getElementById('nav-auth-user').style.display   = loggedIn ? 'list-item' : 'none';
-    document.getElementById('nav-auth-admin').style.display  = isAdmin  ? 'list-item' : 'none';
-    document.getElementById('nav-auth-logout').style.display = loggedIn ? 'list-item' : 'none';
+    // Desktop — toggle .hidden class (works with display:flex parent)
+    document.getElementById('nav-auth-guest').classList.toggle('hidden',  loggedIn);
+    document.getElementById('nav-auth-guest2').classList.toggle('hidden', loggedIn);
+    document.getElementById('nav-auth-user').classList.toggle('hidden',   !loggedIn);
+    document.getElementById('nav-auth-admin').classList.toggle('hidden',  !isAdmin);
+    document.getElementById('nav-auth-logout').classList.toggle('hidden', !loggedIn);
 
     // Mobile
     document.getElementById('mob-signin').style.display  = loggedIn ? 'none' : 'block';
