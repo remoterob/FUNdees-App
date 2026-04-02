@@ -1060,8 +1060,8 @@
     <li><a href="#" onclick="navTo('home')">Home</a></li>
     <li><a href="/sessions.html">Pool Sessions</a></li>
     <!-- Auth state injected by JS -->
-    <li id="nav-auth-guest"><a href="/auth.html">Sign In</a></li>
-    <li id="nav-auth-guest2"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
+    <li id="nav-auth-guest" style="display:none"><a href="/auth.html">Sign In</a></li>
+    <li id="nav-auth-guest2" style="display:none"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
     <li id="nav-auth-user" style="display:none"><a href="/portal.html">My Account</a></li>
     <li id="nav-auth-admin" style="display:none"><a href="/admin.html">Admin</a></li>
     <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
@@ -1077,8 +1077,8 @@
   <a href="#" onclick="navTo('home')">Home</a>
   <a href="/sessions.html">Pool Sessions</a>
   <!-- Guest links -->
-  <a href="/auth.html" id="mob-signin">Sign In</a>
-  <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta">Join Now</a>
+  <a href="/auth.html" id="mob-signin" style="display:none">Sign In</a>
+  <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta" style="display:none">Join Now</a>
   <!-- Auth links -->
   <a href="/portal.html" id="mob-account" style="display:none">My Account</a>
   <a href="/admin.html" id="mob-admin" style="display:none">Admin</a>
@@ -1316,27 +1316,20 @@
   }
 
   // ─── AUTH INIT ───────────────────────────────────────────────────────────
+  // Hide nav auth items until we know the auth state
   async function initAuth() {
-    // First try getSession (handles existing sessions)
-    const { data: { session } } = await sb.auth.getSession();
-    if (session?.user) {
-      currentUser = session.user;
-      await fetchMember();
-    }
-    renderNav();
-
-    // Also listen for auth state changes — catches session restore after
-    // Stripe redirect (Supabase sometimes restores session asynchronously)
-    sb.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user && !currentUser) {
-        currentUser = session.user;
-        await fetchMember();
+    return new Promise(resolve => {
+      sb.auth.onAuthStateChange(async (event, session) => {
+        if (session?.user) {
+          currentUser = session.user;
+          await fetchMember();
+        } else {
+          currentUser = null;
+          currentMember = null;
+        }
         renderNav();
-      } else if (!session && currentUser) {
-        currentUser = null;
-        currentMember = null;
-        renderNav();
-      }
+        resolve(); // resolves on first fire, which is immediate
+      });
     });
   }
 
