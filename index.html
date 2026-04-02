@@ -1205,11 +1205,7 @@
         <div class="carousel-dots" id="carousel-dots"></div>
       </div>
       <!-- Right: image grid (desktop only) -->
-      <div class="hero-images" id="hero-images">
-        <div class="hero-img-placeholder" style="grid-column:1/-1;grid-row:1/-1">
-          <span style="font-size:1.5rem">📸</span>
-          <span>Club photos will appear here</span>
-        </div>
+      <div class="hero-images" id="hero-images" style="display:none">
       </div>
     </div>
   </div>
@@ -1827,10 +1823,11 @@
 
   function renderHeroImages(urls) {
     const grid = document.getElementById('hero-images');
-    if (!grid) return;
+    if (!grid || urls.length === 0) return;
     const count = Math.min(urls.length, 4);
-    const cls = count === 1 ? 'single' : count === 2 ? 'two' : 'three';
+    const cls = count === 1 ? 'single' : count === 2 ? 'two' : count === 3 ? 'three' : 'four';
     grid.className = 'hero-images ' + cls;
+    grid.style.display = '';
     grid.innerHTML = urls.slice(0, count).map(url =>
       `<img class="hero-img" src="${url}" alt="Club photo" loading="lazy">`
     ).join('');
