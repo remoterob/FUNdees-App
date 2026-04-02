@@ -30,9 +30,10 @@ body{background:var(--midnight);color:var(--sand);font-family:'Barlow',sans-seri
 .title{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--sand);margin-bottom:0.25rem}
 .sub{font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem}
 .label{display:block;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem;margin-top:0.85rem}
-input{width:100%;background:rgba(13,45,74,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:3px;padding:0.75rem 0.9rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.9rem;font-weight:300;outline:none;transition:border-color 0.2s;-webkit-appearance:none}
-input:focus{border-color:var(--surge)}
+input:not([type="checkbox"]){width:100%;background:rgba(13,45,74,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:3px;padding:0.75rem 0.9rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.9rem;font-weight:300;outline:none;transition:border-color 0.2s;-webkit-appearance:none}
+input:not([type="checkbox"]):focus{border-color:var(--surge)}
 input::placeholder{color:rgba(240,237,230,0.25)}
+input[type="checkbox"]{width:18px;height:18px;flex-shrink:0;accent-color:#00CFAD;cursor:pointer;-webkit-appearance:checkbox;appearance:checkbox;background:none;border:none;padding:0;margin:0}
 .qual-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;max-height:200px;overflow-y:auto;padding:0.5rem;background:rgba(13,45,74,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:3px;margin-top:0.35rem}
 .qual-item{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:2px;cursor:pointer}
 .qual-item input{width:15px;height:15px;flex-shrink:0;accent-color:var(--surge);cursor:pointer}
@@ -137,7 +138,7 @@ input::placeholder{color:rgba(240,237,230,0.25)}
         <div class="dec-item">☐ Currently pregnant</div>
       </div>
       <label style="display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer">
-        <input type="checkbox" id="cb-medical" style="width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:#00CFAD;cursor:pointer">
+        <input type="checkbox" id="cb-medical" >
         <span style="font-size:0.82rem;color:rgba(240,237,230,0.85);line-height:1.55">
           I confirm none of the above conditions apply to me, or I have obtained medical clearance from a physician to participate in freediving activities.
         </span>
@@ -155,7 +156,7 @@ input::placeholder{color:rgba(240,237,230,0.25)}
         <li>I am of lawful age, legally competent to sign this release, and understand I am waiving legal rights.</li>
       </ul>
       <label style="display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer;margin-bottom:0.85rem">
-        <input type="checkbox" id="cb-liability" style="width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:#00CFAD;cursor:pointer">
+        <input type="checkbox" id="cb-liability" >
         <span style="font-size:0.82rem;color:rgba(240,237,230,0.85);line-height:1.55">
           I have read, understood and accept the Liability Release and Assumption of Risk above.
         </span>
