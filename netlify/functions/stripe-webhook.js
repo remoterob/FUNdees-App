@@ -44,7 +44,7 @@ exports.handler = async (event) => {
         const session = stripeEvent.data.object;
 
         // Only handle subscription checkouts (not session bookings)
-        if (session.mode !== 'subscription') break;
+        if (session.metadata?.type !== 'membership') break;
 
         const memberId = session.metadata?.supabase_member_id;
         const tier = session.metadata?.tier;

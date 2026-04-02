@@ -336,6 +336,14 @@ async function doLogout() {
   window.location.href = '/';
 }
 
+// Handle payment return
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('payment') === 'success') {
+  setTimeout(() => alert('Payment successful! Your membership will activate shortly.'), 500);
+}
+if (urlParams.get('payment') === 'cancelled') {
+  setTimeout(() => alert('Payment cancelled — no charge was made.'), 500);
+}
 init();
 </script>
 </body>
