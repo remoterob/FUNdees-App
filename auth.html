@@ -42,6 +42,7 @@ input::placeholder{color:rgba(240,237,230,0.25)}
 .pw-bars{display:flex;gap:3px;margin-top:0.4rem}
 .pw-bar{height:2px;flex:1;border-radius:2px;background:rgba(255,255,255,0.08);transition:background 0.3s}
 .pw-bar.weak{background:var(--coral)}.pw-bar.med{background:#F5A623}.pw-bar.ok{background:var(--surge)}
+.dec-item{font-size:0.78rem;color:var(--muted);padding:0.3rem 0.4rem;border-radius:2px;line-height:1.4}
 .btn{width:100%;background:var(--surge);color:var(--midnight);border:none;padding:0.85rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.95rem;letter-spacing:0.12em;text-transform:uppercase;border-radius:3px;cursor:pointer;margin-top:1.25rem;transition:opacity 0.2s}
 .btn:disabled{opacity:0.5;cursor:not-allowed}
 .err{background:rgba(255,92,58,0.12);border:1px solid rgba(255,92,58,0.3);color:#ff8a70;padding:0.75rem 1rem;border-radius:3px;font-size:0.83rem;margin-bottom:1rem;display:none}
@@ -119,6 +120,50 @@ input::placeholder{color:rgba(240,237,230,0.25)}
     <div class="sec-header">Freediving Qualifications</div>
     <div class="label" style="margin-top:0">Select all that apply</div>
     <div class="qual-grid" id="qual-grid"></div>
+
+    <div class="sec-header">Medical Declaration</div>
+    <div style="background:rgba(13,45,74,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:3px;padding:1rem;margin-top:0.35rem">
+      <p style="font-size:0.78rem;color:var(--muted);line-height:1.6;margin-bottom:0.85rem">Freediving is a strenuous activity with inherent risks. Please confirm <strong style="color:var(--sand)">none</strong> of the following apply to you, or that you have sought medical clearance if they do:</p>
+      <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem">
+        <div class="dec-item">☐ Regular medication (prescribed or over-the-counter)</div>
+        <div class="dec-item">☐ Mental illness, mood disorder, or psychiatric condition</div>
+        <div class="dec-item">☐ Neurological conditions — seizures, stroke, blackouts, severe migraines</div>
+        <div class="dec-item">☐ Cardiovascular conditions — heart attack, irregular heartbeat, uncontrolled high blood pressure</div>
+        <div class="dec-item">☐ Pulmonary conditions — asthma, collapsed lung, emphysema, breathing problems</div>
+        <div class="dec-item">☐ Ear, nose or throat conditions — sinus surgery, ruptured eardrum, persistent sinus infection</div>
+        <div class="dec-item">☐ Eye conditions — severe myopia, retinal detachment, eye surgery</div>
+        <div class="dec-item">☐ Diabetes requiring insulin or oral medication</div>
+        <div class="dec-item">☐ Previous freediving/scuba incident — blackout, decompression sickness, lung squeeze</div>
+        <div class="dec-item">☐ Currently pregnant</div>
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer">
+        <input type="checkbox" id="cb-medical" style="width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:#00CFAD;cursor:pointer">
+        <span style="font-size:0.82rem;color:rgba(240,237,230,0.85);line-height:1.55">
+          I confirm none of the above conditions apply to me, or I have obtained medical clearance from a physician to participate in freediving activities.
+        </span>
+      </label>
+    </div>
+
+    <div class="sec-header">Liability Release</div>
+    <div style="background:rgba(13,45,74,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:3px;padding:1rem;margin-top:0.35rem">
+      <p style="font-size:0.78rem;color:var(--muted);line-height:1.6;margin-bottom:0.85rem">By joining Spearfishing FUNdamentals you acknowledge and agree to the following:</p>
+      <ul style="font-size:0.78rem;color:var(--muted);line-height:1.7;margin-bottom:1rem;padding-left:1.25rem">
+        <li>I am aware that freediving has inherent risks which may result in serious injury or death.</li>
+        <li>I choose to participate voluntarily and assume all risks of the experience, whether foreseen or unforeseen.</li>
+        <li>Neither Spearfishing FUNdamentals, its instructors, employees, officers, agents or assigns may be held liable for any injury, death or damages to me, my family, estate or heirs as a result of my participation.</li>
+        <li>I am in good mental and physical fitness for freediving and am not under the influence of alcohol or drugs contraindicated for freediving.</li>
+        <li>I am of lawful age, legally competent to sign this release, and understand I am waiving legal rights.</li>
+      </ul>
+      <label style="display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer;margin-bottom:0.85rem">
+        <input type="checkbox" id="cb-liability" style="width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:#00CFAD;cursor:pointer">
+        <span style="font-size:0.82rem;color:rgba(240,237,230,0.85);line-height:1.55">
+          I have read, understood and accept the Liability Release and Assumption of Risk above.
+        </span>
+      </label>
+      <label class="label" style="margin-top:0.5rem">Type your full name to confirm</label>
+      <input id="su-confirm-name" type="text" placeholder="Your full name" autocomplete="name" style="background:rgba(10,22,40,0.6);border:1px solid rgba(255,255,255,0.15)">
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:0.4rem">Your name must match your first and last name entered above.</p>
+    </div>
 
     <div class="sec-header">Password</div>
     <label class="label" style="margin-top:0">Password (min 8 characters)</label>
@@ -249,6 +294,12 @@ async function doSignUp() {
   if (!fn || !ln || !email || !pw) { err('signup', 'Please fill in name, email and password.'); return; }
   if (pw.length < 8)               { err('signup', 'Password must be at least 8 characters.'); return; }
   if (pw !== pw2)                  { err('signup', 'Passwords do not match.'); return; }
+  if (!document.getElementById('cb-medical').checked)   { err('signup', 'Please confirm the medical declaration.'); return; }
+  if (!document.getElementById('cb-liability').checked) { err('signup', 'Please accept the liability release.'); return; }
+  const confirmName = document.getElementById('su-confirm-name').value.trim();
+  const fullName    = (fn + ' ' + ln).trim();
+  if (!confirmName) { err('signup', 'Please type your full name to confirm the liability release.'); return; }
+  if (confirmName.toLowerCase() !== fullName.toLowerCase()) { err('signup', `Name confirmation must match "${fullName}" exactly.`); return; }
 
   loading('btn-signup', true);
 
@@ -270,7 +321,10 @@ async function doSignUp() {
       full_name: fn + ' ' + ln,
       email, phone: phone||null, date_of_birth: dob||null,
       emergency_contact: ec||null,
-      qualifications: quals.length > 0 ? quals : null
+      qualifications: quals.length > 0 ? quals : null,
+      medical_confirmed: true,
+      liability_confirmed: true,
+      declarations_date: new Date().toISOString().split('T')[0]
     })
   });
 

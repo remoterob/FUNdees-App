@@ -25,7 +25,10 @@ exports.handler = async (event) => {
       phone,
       date_of_birth,
       emergency_contact,
-      qualifications
+      qualifications,
+      medical_confirmed,
+      liability_confirmed,
+      declarations_date
     } = JSON.parse(event.body);
 
     if (!auth_user_id || !email || !full_name) {
@@ -53,6 +56,9 @@ exports.handler = async (event) => {
         date_of_birth:     date_of_birth || null,
         emergency_contact: emergency_contact || null,
         qualifications:    qualifications?.length > 0 ? qualifications : null,
+        medical_confirmed:    medical_confirmed || false,
+        liability_confirmed:  liability_confirmed || false,
+        declarations_date:    declarations_date || null,
         tier:              'casual',
         status:            'pending'
       })

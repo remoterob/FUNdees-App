@@ -372,7 +372,7 @@ async function viewEnrolments(sessionId, title) {
 
   const { data, error } = await sb
     .from('enrolments')
-    .select('status, amount_paid, enrolled_at, members(full_name, email)')
+    .select('status, amount_paid, enrolled_at, members(full_name, email, medical_confirmed, liability_confirmed, declarations_date)')
     .eq('session_id', sessionId)
     .order('enrolled_at', { ascending: true });
 
@@ -381,17 +381,25 @@ async function viewEnrolments(sessionId, title) {
     return;
   }
 
-  document.getElementById('enrolments-list').innerHTML = data.map(e => `
+  document.getElementById('enrolments-list').innerHTML = data.map(e => {
+    const m = e.members || {};
+    const decOk = m.medical_confirmed && m.liability_confirmed;
+    const decBadge = decOk
+      ? `<span style="background:rgba(0,207,173,0.12);color:var(--surge);font-size:0.6rem;padding:0.15rem 0.45rem;border-radius:2px;font-weight:600;letter-spacing:0.06em">✓ DECLARATIONS OK</span>`
+      : `<span style="background:rgba(255,92,58,0.12);color:var(--coral);font-size:0.6rem;padding:0.15rem 0.45rem;border-radius:2px;font-weight:600;letter-spacing:0.06em">⚠ NO DECLARATIONS</span>`;
+    return `
     <div class="enr-row">
       <div>
-        <div style="font-weight:500">${e.members?.full_name || '—'}</div>
-        <div style="font-size:0.75rem;color:var(--muted)">${e.members?.email || ''}</div>
+        <div style="font-weight:500">${m.full_name || '—'}</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">${m.email || ''}</div>
+        <div style="margin-top:0.3rem">${decBadge}${m.declarations_date ? `<span style="font-size:0.7rem;color:var(--muted);margin-left:0.4rem">Signed ${m.declarations_date}</span>` : ''}</div>
       </div>
       <div style="text-align:right">
         <span class="badge b-${e.status === 'enrolled' ? 'open' : 'opening_soon'}">${e.status.replace('_',' ')}</span>
         ${e.amount_paid ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">$${Number(e.amount_paid).toFixed(2)}</div>` : ''}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function closeEnrolments() { document.getElementById('enrolments-modal').classList.remove('open'); }
