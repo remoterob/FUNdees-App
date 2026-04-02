@@ -1822,7 +1822,7 @@
   let carouselImages = [];
 
   async function loadHeroImages() {
-    const { data, error } = await sb.storage.from('fundees').list('media', {
+    const { data, error } = await sb.storage.from('Fundees').list('Media', {
       sortBy: { column: 'created_at', order: 'asc' }
     });
 
@@ -1833,7 +1833,7 @@
     if (images.length === 0) return;
 
     carouselImages = images.map(f => {
-      const { data: { publicUrl } } = sb.storage.from('fundees').getPublicUrl('media/' + f.name);
+      const { data: { publicUrl } } = sb.storage.from('Fundees').getPublicUrl('Media/' + f.name);
       return publicUrl;
     });
 

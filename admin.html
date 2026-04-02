@@ -411,7 +411,7 @@ async function loadImages() {
   const grid = document.getElementById('img-grid');
   if (!grid) return;
 
-  const { data, error } = await sb.storage.from('fundees').list('media', {
+  const { data, error } = await sb.storage.from('Fundees').list('Media', {
     sortBy: { column: 'created_at', order: 'asc' }
   });
 
@@ -425,7 +425,7 @@ async function loadImages() {
   }
 
   grid.innerHTML = images.map(f => {
-    const { data: { publicUrl } } = sb.storage.from('fundees').getPublicUrl('media/' + f.name);
+    const { data: { publicUrl } } = sb.storage.from('Fundees').getPublicUrl('Media/' + f.name);
     return `
       <div class="img-card">
         <img src="${publicUrl}" alt="${f.name}" loading="lazy">
@@ -449,7 +449,7 @@ async function uploadImages(files) {
     const ext  = file.name.split('.').pop();
     const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-    const { error } = await sb.storage.from('fundees').upload(`media/${name}`, file, {
+    const { error } = await sb.storage.from('Fundees').upload(`Media/${name}`, file, {
       cacheControl: '3600', upsert: false
     });
 
@@ -473,7 +473,7 @@ async function uploadImages(files) {
 
 async function deleteImage(name) {
   if (!confirm('Delete this photo? This cannot be undone.')) return;
-  const { error } = await sb.storage.from('fundees').remove([`media/${name}`]);
+  const { error } = await sb.storage.from('Fundees').remove([`Media/${name}`]);
   if (error) { toast('Delete failed: ' + error.message, true); return; }
   toast('Photo deleted.');
   loadImages();
