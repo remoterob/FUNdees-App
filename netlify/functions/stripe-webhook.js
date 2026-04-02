@@ -39,52 +39,64 @@ exports.handler = async (event) => {
   try {
     switch (stripeEvent.type) {
 
-      // ── Membership checkout completed ──────────────────────────────────
       case 'checkout.session.completed': {
         const session = stripeEvent.data.object;
+        const type = session.metadata?.type;
 
-        // Only handle subscription checkouts (not session bookings)
-        if (session.metadata?.type !== 'membership') break;
+        // ── Membership payment ─────────────────────────────────────────────
+        if (type === 'membership') {
+          const memberId = session.metadata?.supabase_member_id;
+          if (!memberId) { console.error('No member id in metadata'); break; }
 
-        const memberId = session.metadata?.supabase_member_id;
-        const tier = session.metadata?.tier;
+          const now = new Date();
+          const periodEnd = new Date(now);
+          periodEnd.setFullYear(periodEnd.getFullYear() + 1);
 
-        if (!memberId) {
-          console.error('No supabase_member_id in checkout session metadata');
-          break;
-        }
-
-        // Calculate membership period (1 year from today)
-        const now = new Date();
-        const periodEnd = new Date(now);
-        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-
-        // Activate membership
-        await supabaseAdmin
-          .from('members')
-          .update({
+          await supabaseAdmin.from('members').update({
             status: 'active',
+            tier: 'annual',
             membership_start: now.toISOString().split('T')[0],
-            membership_end: periodEnd.toISOString().split('T')[0]
-          })
-          .eq('id', memberId);
+            membership_end:   periodEnd.toISOString().split('T')[0]
+          }).eq('id', memberId);
 
-        // Record the payment
-        await supabaseAdmin
-          .from('membership_payments')
-          .insert({
+          await supabaseAdmin.from('membership_payments').insert({
             member_id: memberId,
             amount: session.amount_total / 100,
             currency: session.currency.toUpperCase(),
-            tier,
+            tier: 'annual',
             payment_status: 'paid',
             stripe_payment_intent_id: session.payment_intent,
             period_start: now.toISOString().split('T')[0],
-            period_end: periodEnd.toISOString().split('T')[0],
+            period_end:   periodEnd.toISOString().split('T')[0],
             paid_at: new Date().toISOString()
           });
 
-        console.log(`Membership activated for member ${memberId}`);
+          console.log(`Membership activated for ${memberId}`);
+        }
+
+        // ── Session enrolment payment ──────────────────────────────────────
+        if (type === 'enrolment') {
+          const sessionId = session.metadata?.session_id;
+          const memberId  = session.metadata?.member_id;
+          if (!sessionId || !memberId) { console.error('Missing enrolment metadata'); break; }
+
+          await supabaseAdmin.from('enrolments').update({
+            status:                   'enrolled',
+            amount_paid:              session.amount_total / 100,
+            stripe_payment_intent_id: session.payment_intent,
+            enrolled_at:              new Date().toISOString()
+          }).eq('session_id', sessionId).eq('member_id', memberId);
+
+          // Mark session full if no spots left
+          const { data: counts } = await supabaseAdmin
+            .from('sessions_with_counts').select('spots_remaining').eq('id', sessionId).single();
+          if (counts?.spots_remaining <= 0) {
+            await supabaseAdmin.from('sessions').update({ status: 'full' }).eq('id', sessionId);
+          }
+
+          console.log(`Enrolment confirmed: member ${memberId} in session ${sessionId}`);
+        }
+
         break;
       }
 

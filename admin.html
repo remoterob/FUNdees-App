@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Spearfishing FUNdamentals</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--midnight:#0A1628;--deep:#0D2D4A;--surge:#00CFAD;--coral:#FF5C3A;--sand:#F0EDE6;--muted:rgba(240,237,230,0.55);--dim:rgba(255,255,255,0.07);--surge-dim:rgba(0,207,173,0.12)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#07101e;color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:64px;background:rgba(10,22,40,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--dim)}
+.nav-brand{display:flex;align-items:center;gap:0.75rem;text-decoration:none}
+.nav-brand img{height:36px;opacity:0.9}
+.nav-brand-text{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.95rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--sand);line-height:1.1}
+.nav-brand-text span{display:block;font-size:0.55rem;letter-spacing:0.2em;color:var(--surge)}
+.nav-right{display:flex;gap:1rem;align-items:center}
+.nav-link{color:var(--muted);text-decoration:none;font-size:0.82rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:500;cursor:pointer;background:none;border:none;transition:color 0.2s}
+.nav-link:hover{color:var(--surge)}
+.wrap{max-width:1100px;margin:0 auto;padding:5rem 2rem 3rem}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--sand);margin-bottom:0.25rem}
+.page-sub{color:var(--muted);font-size:0.85rem;margin-bottom:2rem}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
+.btn-p{background:var(--surge);color:var(--midnight);border:none;padding:0.65rem 1.5rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:opacity 0.2s}
+.btn-p:hover:not(:disabled){opacity:0.85}
+.btn-p:disabled{opacity:0.5;cursor:not-allowed}
+.btn-o{background:transparent;color:var(--sand);border:1px solid rgba(255,255,255,0.2);padding:0.55rem 1.1rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:all 0.2s}
+.btn-o:hover{border-color:var(--surge);color:var(--surge)}
+.btn-danger{background:rgba(255,92,58,0.15);color:var(--coral);border:1px solid rgba(255,92,58,0.3);padding:0.4rem 0.9rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:all 0.2s}
+.btn-danger:hover{background:rgba(255,92,58,0.25)}
+table{width:100%;border-collapse:collapse;background:rgba(13,45,74,0.4);border-radius:4px;overflow:hidden}
+th{text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)}
+td{padding:0.85rem 1rem;font-size:0.85rem;color:var(--sand);border-bottom:1px solid var(--dim);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,207,173,0.04)}
+.badge{font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:600;padding:0.2rem 0.55rem;border-radius:2px}
+.b-pool{background:rgba(0,207,173,0.12);color:var(--surge)}
+.b-depth{background:rgba(245,166,35,0.12);color:#F5A623}
+.b-open{background:rgba(0,207,173,0.12);color:var(--surge)}
+.b-full{background:rgba(255,92,58,0.12);color:var(--coral)}
+.b-closed{background:rgba(255,255,255,0.06);color:var(--muted)}
+.b-opening_soon{background:rgba(245,166,35,0.12);color:#F5A623}
+.td-actions{display:flex;gap:0.5rem;align-items:center}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(7,16,30,0.85);backdrop-filter:blur(8px);z-index:200;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal{background:var(--deep);border:1px solid rgba(0,207,173,0.2);border-radius:4px;padding:2rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;position:relative}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--sand);margin-bottom:1.5rem}
+.modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;line-height:1}
+.modal-close:hover{color:var(--sand)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+.lbl{display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.3rem;margin-top:0.85rem}
+.lbl:first-child{margin-top:0}
+.field{width:100%;background:rgba(10,22,40,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:3px;padding:0.65rem 0.8rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:300;outline:none;transition:border-color 0.2s}
+.field:focus{border-color:var(--surge)}
+.field::placeholder{color:rgba(240,237,230,0.25)}
+select.field{cursor:pointer}
+.modal-footer{display:flex;gap:0.75rem;margin-top:1.5rem;justify-content:flex-end}
+.msg{font-size:0.8rem;margin-top:0.75rem;display:none}
+.msg.err{color:var(--coral);display:block}
+.msg.ok{color:var(--surge);display:block}
+.access-denied{text-align:center;padding:4rem 2rem;color:var(--muted)}
+.enrolments-list{margin-top:0.5rem}
+.enr-row{display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--dim);font-size:0.83rem}
+.enr-row:last-child{border-bottom:none}
+.toast{position:fixed;bottom:2rem;right:2rem;background:#0C7C6A;color:white;padding:0.9rem 1.5rem;border-radius:3px;font-size:0.85rem;transform:translateY(100px);opacity:0;transition:all 0.3s;border-left:3px solid var(--surge);z-index:300}
+.toast.show{transform:translateY(0);opacity:1}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-brand">
+    <img src="/logo-white.png" alt="Logo">
+    <div class="nav-brand-text">Spearfishing<span>Admin</span></div>
+  </a>
+  <div class="nav-right">
+    <a href="/portal.html" class="nav-link">My Account</a>
+    <a href="/sessions.html" class="nav-link">Sessions</a>
+    <button class="nav-link" onclick="doLogout()">Log Out</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div id="access-denied" class="access-denied" style="display:none">
+    <h2 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;margin-bottom:1rem">Access Denied</h2>
+    <p>You need admin access to view this page.</p>
+  </div>
+
+  <div id="admin-content" style="display:none">
+    <div class="page-title">Sessions Admin</div>
+    <div class="page-sub">Manage pool and depth training sessions.</div>
+
+    <div class="top-bar">
+      <div style="font-size:0.85rem;color:var(--muted)" id="session-count"></div>
+      <button class="btn-p" onclick="openModal()">+ New Session</button>
+    </div>
+
+    <table id="sessions-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Type</th>
+          <th>Dates</th>
+          <th>Price</th>
+          <th>Enrolled</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="sessions-tbody">
+        <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SESSION MODAL -->
+<div class="overlay" id="session-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modal-title">New Session</div>
+
+    <label class="lbl">Title</label>
+    <input class="field" id="f-title" type="text" placeholder="e.g. Block 1 — Breath-hold Fundamentals" style="width:100%">
+
+    <div class="form-grid">
+      <div>
+        <label class="lbl">Type</label>
+        <select class="field" id="f-type">
+          <option value="pool">Pool</option>
+          <option value="depth">Depth</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Status</label>
+        <select class="field" id="f-status">
+          <option value="opening_soon">Opening Soon</option>
+          <option value="open">Open</option>
+          <option value="full">Full</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Start Date</label>
+        <input class="field" id="f-start" type="date">
+      </div>
+      <div>
+        <label class="lbl">End Date</label>
+        <input class="field" id="f-end" type="date">
+      </div>
+      <div>
+        <label class="lbl">Price (NZD)</label>
+        <input class="field" id="f-price" type="number" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div>
+        <label class="lbl">Capacity</label>
+        <input class="field" id="f-capacity" type="number" min="1" placeholder="12">
+      </div>
+    </div>
+
+    <label class="lbl">Location</label>
+    <input class="field" id="f-location" type="text" placeholder="e.g. WaterWorld 50m Pool, Auckland" style="width:100%">
+
+    <label class="lbl">Description</label>
+    <textarea class="field" id="f-desc" rows="3" placeholder="What will this session cover?" style="width:100%;resize:vertical"></textarea>
+
+    <label class="lbl">Prerequisites</label>
+    <input class="field" id="f-prereq" type="text" placeholder="e.g. AIDA2 or equivalent" style="width:100%">
+
+    <div class="msg" id="modal-msg"></div>
+
+    <div class="modal-footer">
+      <button class="btn-o" onclick="closeModal()">Cancel</button>
+      <button class="btn-p" id="btn-save-session" onclick="saveSession()">Save Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- ENROLMENTS MODAL -->
+<div class="overlay" id="enrolments-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEnrolments()">✕</button>
+    <div class="modal-title" id="enr-title">Enrolments</div>
+    <div id="enrolments-list" class="enrolments-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let editingId = null;
+
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.borderLeftColor = err ? 'var(--coral)' : 'var(--surge)';
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+function fmt(d) {
+  if (!d) return '—';
+  return new Date(d+'T12:00:00').toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
+}
+
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = '/auth.html'; return; }
+
+  const { data: member } = await sb.from('members').select('is_admin').eq('auth_user_id', session.user.id).maybeSingle();
+  if (!member?.is_admin) {
+    document.getElementById('access-denied').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('admin-content').style.display = 'block';
+  loadSessions();
+}
+
+async function loadSessions() {
+  const { data, error } = await sb
+    .from('sessions_with_counts')
+    .select('*')
+    .order('date_start', { ascending: true });
+
+  if (error) { document.getElementById('sessions-tbody').innerHTML = `<tr><td colspan="7" style="color:var(--coral)">${error.message}</td></tr>`; return; }
+
+  document.getElementById('session-count').textContent = `${data.length} session${data.length !== 1 ? 's' : ''}`;
+
+  if (data.length === 0) {
+    document.getElementById('sessions-tbody').innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem">No sessions yet. Create one above.</td></tr>';
+    return;
+  }
+
+  document.getElementById('sessions-tbody').innerHTML = data.map(s => `
+    <tr>
+      <td><strong>${s.title}</strong>${s.location ? `<br><span style="font-size:0.75rem;color:var(--muted)">${s.location}</span>` : ''}</td>
+      <td><span class="badge b-${s.type}">${s.type}</span></td>
+      <td style="font-size:0.8rem">${fmt(s.date_start)}<br>${fmt(s.date_end)}</td>
+      <td>$${Number(s.price).toFixed(2)}</td>
+      <td>${s.enrolled_count} / ${s.capacity}</td>
+      <td><span class="badge b-${s.status}">${s.status.replace('_',' ')}</span></td>
+      <td>
+        <div class="td-actions">
+          <button class="btn-o" onclick="editSession(${JSON.stringify(s).replace(/"/g,'&quot;')})">Edit</button>
+          <button class="btn-o" onclick="viewEnrolments('${s.id}','${s.title.replace(/'/g,"\\'")}')">Enrolments</button>
+          <button class="btn-danger" onclick="deleteSession('${s.id}','${s.title.replace(/'/g,"\\'")}')">Delete</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openModal(session=null) {
+  editingId = session?.id || null;
+  document.getElementById('modal-title').textContent = session ? 'Edit Session' : 'New Session';
+  document.getElementById('f-title').value    = session?.title || '';
+  document.getElementById('f-type').value     = session?.type || 'pool';
+  document.getElementById('f-status').value   = session?.status || 'opening_soon';
+  document.getElementById('f-start').value    = session?.date_start || '';
+  document.getElementById('f-end').value      = session?.date_end || '';
+  document.getElementById('f-price').value    = session?.price || '';
+  document.getElementById('f-capacity').value = session?.capacity || 12;
+  document.getElementById('f-location').value = session?.location || '';
+  document.getElementById('f-desc').value     = session?.description || '';
+  document.getElementById('f-prereq').value   = session?.prerequisites || '';
+  const msg = document.getElementById('modal-msg'); msg.className='msg'; msg.textContent='';
+  document.getElementById('session-modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('session-modal').classList.remove('open'); }
+
+function editSession(s) { openModal(s); }
+
+async function saveSession() {
+  const title    = document.getElementById('f-title').value.trim();
+  const type     = document.getElementById('f-type').value;
+  const status   = document.getElementById('f-status').value;
+  const start    = document.getElementById('f-start').value;
+  const end      = document.getElementById('f-end').value;
+  const price    = parseFloat(document.getElementById('f-price').value) || 0;
+  const capacity = parseInt(document.getElementById('f-capacity').value) || 12;
+  const location = document.getElementById('f-location').value.trim();
+  const desc     = document.getElementById('f-desc').value.trim();
+  const prereq   = document.getElementById('f-prereq').value.trim();
+
+  const msg = document.getElementById('modal-msg');
+  msg.className = 'msg'; msg.textContent = '';
+
+  if (!title || !start || !end) { msg.className='msg err'; msg.textContent='Title and dates are required.'; return; }
+  if (end < start)              { msg.className='msg err'; msg.textContent='End date must be after start date.'; return; }
+
+  const btn = document.getElementById('btn-save-session');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  const payload = { title, type, status, date_start: start, date_end: end, price, capacity, location: location||null, description: desc||null, prerequisites: prereq||null };
+
+  const { error } = editingId
+    ? await sb.from('sessions').update(payload).eq('id', editingId)
+    : await sb.from('sessions').insert(payload);
+
+  btn.disabled = false; btn.textContent = 'Save Session';
+
+  if (error) { msg.className='msg err'; msg.textContent='Save failed: '+error.message; return; }
+
+  closeModal();
+  toast(editingId ? 'Session updated ✓' : 'Session created ✓');
+  loadSessions();
+}
+
+async function deleteSession(id, title) {
+  if (!confirm(`Delete "${title}"? This cannot be undone and will remove all enrolments.`)) return;
+  const { error } = await sb.from('sessions').delete().eq('id', id);
+  if (error) { toast('Delete failed: '+error.message, true); return; }
+  toast('Session deleted.');
+  loadSessions();
+}
+
+async function viewEnrolments(sessionId, title) {
+  document.getElementById('enr-title').textContent = 'Enrolments — ' + title;
+  document.getElementById('enrolments-list').innerHTML = '<div style="color:var(--muted);font-size:0.85rem">Loading...</div>';
+  document.getElementById('enrolments-modal').classList.add('open');
+
+  const { data, error } = await sb
+    .from('enrolments')
+    .select('status, amount_paid, enrolled_at, members(full_name, email)')
+    .eq('session_id', sessionId)
+    .order('enrolled_at', { ascending: true });
+
+  if (error || !data?.length) {
+    document.getElementById('enrolments-list').innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0">No enrolments yet.</div>';
+    return;
+  }
+
+  document.getElementById('enrolments-list').innerHTML = data.map(e => `
+    <div class="enr-row">
+      <div>
+        <div style="font-weight:500">${e.members?.full_name || '—'}</div>
+        <div style="font-size:0.75rem;color:var(--muted)">${e.members?.email || ''}</div>
+      </div>
+      <div style="text-align:right">
+        <span class="badge b-${e.status === 'enrolled' ? 'open' : 'opening_soon'}">${e.status.replace('_',' ')}</span>
+        ${e.amount_paid ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">$${Number(e.amount_paid).toFixed(2)}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+function closeEnrolments() { document.getElementById('enrolments-modal').classList.remove('open'); }
+
+// Close modals on overlay click
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.href = '/';
+}
+
+init();
+</script>
+</body>
+</html>

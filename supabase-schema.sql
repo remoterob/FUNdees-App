@@ -321,3 +321,68 @@ VALUES
     '2025-04-23', '18:30', '20:30',
     'Block 2 — April 2025', 2, 10.00, 15.00
   );
+
+-- ─── SESSIONS (replaces pool_sessions for new flow) ────────────────────────
+
+CREATE TYPE session_type   AS ENUM ('pool', 'depth');
+CREATE TYPE session_status AS ENUM ('opening_soon', 'open', 'full', 'closed');
+
+CREATE TABLE sessions (
+  id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  type             session_type     NOT NULL DEFAULT 'pool',
+  title            TEXT             NOT NULL,
+  description      TEXT,
+  prerequisites    TEXT,
+  location         TEXT,
+  date_start       DATE             NOT NULL,
+  date_end         DATE             NOT NULL,
+  price            NUMERIC(8,2)     NOT NULL DEFAULT 0,
+  capacity         INT              NOT NULL DEFAULT 12,
+  status           session_status   NOT NULL DEFAULT 'opening_soon',
+  created_by       UUID             REFERENCES members(id),
+  created_at       TIMESTAMPTZ      NOT NULL DEFAULT now(),
+  updated_at       TIMESTAMPTZ      NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER sessions_updated_at
+  BEFORE UPDATE ON sessions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ─── ENROLMENTS ────────────────────────────────────────────────────────────
+
+CREATE TYPE enrolment_status AS ENUM ('pending_payment', 'enrolled', 'cancelled');
+
+CREATE TABLE enrolments (
+  id                       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  session_id               UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  member_id                UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  status                   enrolment_status NOT NULL DEFAULT 'pending_payment',
+  amount_paid              NUMERIC(8,2),
+  stripe_payment_intent_id TEXT,
+  enrolled_at              TIMESTAMPTZ,
+  created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(session_id, member_id)
+);
+
+-- View: sessions with enrolment count
+CREATE VIEW sessions_with_counts AS
+SELECT
+  s.*,
+  COUNT(e.id) FILTER (WHERE e.status = 'enrolled') AS enrolled_count,
+  s.capacity - COUNT(e.id) FILTER (WHERE e.status = 'enrolled') AS spots_remaining
+FROM sessions s
+LEFT JOIN enrolments e ON e.session_id = s.id
+GROUP BY s.id;
+
+-- RLS
+ALTER TABLE sessions   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enrolments ENABLE ROW LEVEL SECURITY;
+
+-- Sessions: anyone can read open ones; admins can do anything
+CREATE POLICY "sessions_read_all"   ON sessions FOR SELECT USING (true);
+CREATE POLICY "sessions_admin_all"  ON sessions FOR ALL   USING (is_admin());
+
+-- Enrolments: members see own; admins see all
+CREATE POLICY "enrolments_read_own" ON enrolments FOR SELECT
+  USING (member_id IN (SELECT id FROM members WHERE auth_user_id = auth.uid()));
+CREATE POLICY "enrolments_admin"    ON enrolments FOR ALL USING (is_admin());
