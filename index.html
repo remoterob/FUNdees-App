@@ -1165,7 +1165,7 @@
     <li id="nav-auth-admin" class="hidden"><a href="/admin.html">Admin</a></li>
     <li id="nav-auth-logout" class="hidden"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
-  <a id="hb-btn" class="hb-btn" href="javascript:void(0)" onclick="toggleMenu()">
+  <a id="hb-btn" class="hb-btn" href="#" onclick="toggleMenu();return false;" aria-label="Menu">
     <span></span><span></span><span></span>
   </a>
 </nav>
@@ -1807,15 +1807,18 @@
       sortBy: { column: 'created_at', order: 'asc' }
     });
 
-    if (error || !data || data.length === 0) return;
+    if (error) { console.error('loadHeroImages error:', error); return; }
+    if (!data || data.length === 0) { console.log('loadHeroImages: no files'); return; }
 
-    // Filter to image files only
+    // Filter to image files only, skip placeholder
     const images = data.filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f.name));
+    console.log('loadHeroImages: found', images.length, 'images');
     if (images.length === 0) return;
 
     carouselImages = images.map(f => {
-      const { data: { publicUrl } } = sb.storage.from('Fundees').getPublicUrl('Media/' + f.name);
-      return publicUrl;
+      const { data: urlData } = sb.storage.from('Fundees').getPublicUrl('Media/' + f.name);
+      console.log('Image URL:', urlData.publicUrl);
+      return urlData.publicUrl;
     });
 
     renderHeroImages(carouselImages);
