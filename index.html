@@ -1024,88 +1024,72 @@
   .toast.show { transform: translateY(0); opacity: 1; }
 
   /* ─── RESPONSIVE ────────────────────────── */
-  .hamburger {
+  /* HAMBURGER */
+  .hb-btn {
     display: none;
     flex-direction: column;
-    gap: 5px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.75rem;
-    z-index: 200;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    -webkit-user-select: none;
-    user-select: none;
-    position: relative;
-    min-width: 44px;
-    min-height: 44px;
-    align-items: center;
     justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
   }
-  .hamburger span {
+  .hb-btn span {
     display: block;
-    width: 24px;
+    width: 22px;
     height: 2px;
-    background: var(--sand);
+    background: #F0EDE6;
     border-radius: 2px;
     transition: all 0.25s;
+    pointer-events: none;
   }
-  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-  .hamburger.open span:nth-child(2) { opacity: 0; }
-  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .hb-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hb-btn.open span:nth-child(2) { opacity: 0; }
+  .hb-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-  .mobile-menu {
+  /* MOBILE MENU */
+  .mob-menu {
     display: none;
     position: fixed;
     top: 68px; left: 0; right: 0;
-    background: rgba(7, 16, 30, 0.98);
-    backdrop-filter: blur(16px);
-    z-index: 150;
-    border-bottom: 1px solid var(--border-dim);
-    padding: 1rem 1.5rem 1.5rem;
+    background: rgba(7,16,30,0.98);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    z-index: 999;
+    padding: 0.5rem 0 1rem;
     flex-direction: column;
-    gap: 0;
   }
-  .mobile-menu.open { display: flex; }
-  .mobile-menu a, .mobile-menu button {
+  .mob-menu.open { display: flex; }
+  .mob-menu a {
     display: block;
-    width: 100%;
-    text-align: left;
-    padding: 0.85rem 0;
-    border-bottom: 1px solid var(--border-dim);
-    color: var(--muted);
+    padding: 0.9rem 1.5rem;
+    color: rgba(240,237,230,0.7);
     text-decoration: none;
     font-size: 1rem;
     font-family: 'Barlow', sans-serif;
-    font-weight: 400;
-    letter-spacing: 0.05em;
-    background: none;
-    border-left: none;
-    border-right: none;
-    border-top: none;
-    cursor: pointer;
-    transition: color 0.15s;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
   }
-  .mobile-menu a:hover, .mobile-menu button:hover { color: var(--surge); }
-  .mobile-menu .mob-cta {
-    margin-top: 1rem;
-    background: var(--surge);
-    color: var(--midnight) !important;
+  .mob-menu a:active { background: rgba(0,207,173,0.08); }
+  .mob-menu .mob-cta {
+    margin: 0.75rem 1.5rem 0;
+    background: #00CFAD;
+    color: #0A1628 !important;
     text-align: center;
     padding: 0.85rem !important;
     border-radius: 2px;
-    font-weight: 600 !important;
+    font-weight: 600;
     border-bottom: none !important;
   }
-  .mobile-menu .mob-logout {
-    margin-top: 0.5rem;
-    background: var(--coral);
+  .mob-menu .mob-logout-lnk {
+    margin: 0.5rem 1.5rem 0;
+    background: #FF5C3A;
     color: white !important;
     text-align: center;
     padding: 0.85rem !important;
     border-radius: 2px;
-    font-weight: 600 !important;
+    font-weight: 600;
     border-bottom: none !important;
   }
 
@@ -1118,7 +1102,7 @@
     .dash-grid { grid-template-columns: 1fr; }
     nav { padding: 0 1rem; }
     .nav-links { display: none !important; }
-    .hamburger { display: flex; }
+    .hb-btn { display: flex; }
   }
 
   /* ─── MEMBER PORTAL ─────────────────────────── */
@@ -1181,22 +1165,20 @@
     <li id="nav-auth-admin" class="hidden"><a href="/admin.html">Admin</a></li>
     <li id="nav-auth-logout" class="hidden"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
-  <!-- Hamburger — mobile only -->
-  <a id="hamburger" class="hamburger" href="javascript:void(0)" aria-label="Open menu"
-    onclick="toggleMobileMenu();return false;">
+  <a id="hb-btn" class="hb-btn" href="javascript:void(0)" onclick="toggleMenu()">
     <span></span><span></span><span></span>
   </a>
 </nav>
 
 <!-- Mobile menu -->
-<div class="mobile-menu" id="mobile-menu">
-  <a href="/" onclick="closeMobileMenu()">Home</a>
-  <a href="/sessions.html" onclick="closeMobileMenu()">Pool Sessions</a>
+<div class="mob-menu" id="mob-menu">
+  <a href="/">Home</a>
+  <a href="/sessions.html">Pool Sessions</a>
   <a href="/auth.html" id="mob-signin">Sign In</a>
   <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta">Join Now</a>
   <a href="/portal.html" id="mob-account" style="display:none">My Account</a>
   <a href="/admin.html" id="mob-admin" style="display:none">Admin</a>
-  <a href="#" id="mob-logout" onclick="handleLogout()" class="mob-logout" style="display:none">Log Out</a>
+  <a href="/" onclick="handleLogout();return false;" id="mob-logout" class="mob-logout-lnk" style="display:none">Log Out</a>
 </div>
 
 <!-- ─── HOME PAGE ─── -->
@@ -1513,21 +1495,20 @@
 
   function navTo(page) { closeMobileMenu(); showPage(page); }
 
-  function toggleMobileMenu() {
-    const menu = document.getElementById('mobile-menu');
-    const btn  = document.getElementById('hamburger');
+  function toggleMenu() {
+    const menu = document.getElementById('mob-menu');
+    const btn  = document.getElementById('hb-btn');
+    if (!menu || !btn) return;
     const opening = !menu.classList.contains('open');
     menu.classList.toggle('open', opening);
     btn.classList.toggle('open', opening);
-    document.body.style.overflow = opening ? 'hidden' : '';
   }
 
   function closeMobileMenu() {
-    const menu = document.getElementById('mobile-menu');
-    const btn  = document.getElementById('hamburger');
+    const menu = document.getElementById('mob-menu');
+    const btn  = document.getElementById('hb-btn');
     if (menu) menu.classList.remove('open');
     if (btn)  btn.classList.remove('open');
-    document.body.style.overflow = '';
   }
 
   // ─── PORTAL ──────────────────────────────────────────────────────────────
