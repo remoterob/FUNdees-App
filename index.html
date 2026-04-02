@@ -944,13 +944,17 @@
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0.5rem;
+    padding: 0.75rem;
     z-index: 200;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     -webkit-user-select: none;
     user-select: none;
     position: relative;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
   }
   .hamburger span {
     display: block;
@@ -1062,6 +1066,17 @@
 </head>
 <body>
 
+<!-- iOS PWA Install Banner -->
+<div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:999;background:#0D2D4A;border-top:1px solid rgba(0,207,173,0.3);padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem">
+  <img src="/icons/icon-192.png" style="width:48px;height:48px;border-radius:10px;flex-shrink:0">
+  <div style="flex:1;min-width:0">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:0.05em;color:#F0EDE6">Install FUNdamentals</div>
+    <div style="font-size:0.75rem;color:rgba(240,237,230,0.6);margin-top:2px">Tap <strong style="color:#00CFAD">Share</strong> then <strong style="color:#00CFAD">Add to Home Screen</strong></div>
+  </div>
+  <button onclick="document.getElementById('pwa-banner').style.display='none';localStorage.setItem('pwa-dismissed','1')" style="background:none;border:none;color:rgba(240,237,230,0.4);font-size:1.4rem;cursor:pointer;padding:0.25rem;line-height:1;flex-shrink:0">✕</button>
+</div>
+
+
 <!-- NAV -->
 <nav>
   <div class="nav-logo" onclick="showPage('home')" style="cursor:pointer">
@@ -1082,11 +1097,11 @@
     <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
   <!-- Hamburger — mobile only -->
-  <button type="button" class="hamburger" id="hamburger" aria-label="Menu"
+  <div id="hamburger" class="hamburger" role="button" aria-label="Open menu"
     onclick="toggleMobileMenu()"
-    ontouchend="event.preventDefault();toggleMobileMenu()">
+    ontouchstart="toggleMobileMenu();return false;">
     <span></span><span></span><span></span>
-  </button>
+  </div>
 </nav>
 
 <!-- Mobile menu -->
@@ -1704,6 +1719,16 @@
   document.addEventListener('DOMContentLoaded', async () => {
     await initAuth();
     loadSessions();
+    // Show PWA install banner on iOS if not installed and not dismissed
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.navigator.standalone === true;
+    const dismissed = localStorage.getItem('pwa-dismissed');
+    if (isIOS && !isStandalone && !dismissed) {
+      setTimeout(() => {
+        document.getElementById('pwa-banner').style.display = 'flex';
+      }, 3000);
+    }
+
     if (window.location.search.includes('cancelled=true')) showToast('Checkout cancelled — no charge made.', true);
     document.addEventListener('click', e => {
       const menu = document.getElementById('mobile-menu');

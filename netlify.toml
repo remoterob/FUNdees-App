@@ -11,6 +11,17 @@
   node_bundler = "esbuild"
 
 [[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+    Content-Type = "application/javascript"
+
+[[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
