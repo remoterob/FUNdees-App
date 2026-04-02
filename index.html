@@ -1063,6 +1063,7 @@
     <li id="nav-auth-guest"><a href="/auth.html">Sign In</a></li>
     <li id="nav-auth-guest2"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
     <li id="nav-auth-user" style="display:none"><a href="/portal.html">My Account</a></li>
+    <li id="nav-auth-admin" style="display:none"><a href="/admin.html">Admin</a></li>
     <li id="nav-auth-logout" style="display:none"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
   <!-- Hamburger — mobile only -->
@@ -1080,6 +1081,7 @@
   <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta">Join Now</a>
   <!-- Auth links -->
   <a href="/portal.html" id="mob-account" style="display:none">My Account</a>
+  <a href="/admin.html" id="mob-admin" style="display:none">Admin</a>
   <button id="mob-logout" onclick="handleLogout()" class="mob-logout" style="display:none">Log Out</button>
 </div>
 
@@ -1090,6 +1092,9 @@
     <div class="depth-lines"></div>
     <div class="hero-inner">
       <div class="hero-badge">Auckland's Premier Spearfishing and Freediving Club</div>
+      <div id="hero-welcome" style="display:none;margin-bottom:1rem">
+        <span style="background:rgba(0,207,173,0.15);border:1px solid rgba(0,207,173,0.3);color:var(--surge);padding:0.3rem 0.9rem;border-radius:2px;font-size:0.78rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase" id="hero-welcome-text"></span>
+      </div>
       <h1>Bringing fun to<br><span class="accent">FUN</span>damentals.</h1>
       <p class="hero-sub">Structured peer training in a safe and supportive environment.</p>
       <div class="hero-actions">
@@ -1334,16 +1339,32 @@
 
   function renderNav() {
     const in_ = !!currentUser;
+    const isAdmin = !!currentMember?.is_admin;
     // Desktop
     document.getElementById('nav-auth-guest').style.display  = in_ ? 'none' : 'list-item';
     document.getElementById('nav-auth-guest2').style.display = in_ ? 'none' : 'list-item';
     document.getElementById('nav-auth-user').style.display   = in_ ? 'list-item' : 'none';
+    document.getElementById('nav-auth-admin').style.display  = isAdmin ? 'list-item' : 'none';
     document.getElementById('nav-auth-logout').style.display = in_ ? 'list-item' : 'none';
     // Mobile
     document.getElementById('mob-signin').style.display  = in_ ? 'none' : 'block';
     document.getElementById('mob-join').style.display    = in_ ? 'none' : 'block';
     document.getElementById('mob-account').style.display = in_ ? 'block' : 'none';
+    document.getElementById('mob-admin').style.display   = isAdmin ? 'block' : 'none';
     document.getElementById('mob-logout').style.display  = in_ ? 'block' : 'none';
+    // Hero welcome strip
+    const strip = document.getElementById('hero-welcome');
+    const txt   = document.getElementById('hero-welcome-text');
+    if (strip && txt) {
+      if (in_ && currentMember) {
+        const name = currentMember.full_name?.split(' ')[0] || 'Member';
+        const status = currentMember.status === 'active' ? '✓ Active Member' : '⚠ Membership Pending';
+        txt.textContent = `Welcome back, ${name} — ${status}`;
+        strip.style.display = 'block';
+      } else {
+        strip.style.display = 'none';
+      }
+    }
   }
 
   async function handleLogout() {
