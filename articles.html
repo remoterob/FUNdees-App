@@ -45,6 +45,20 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .article-cat{background:var(--surge-dim);color:var(--surge);padding:0.15rem 0.5rem;border-radius:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;font-size:0.65rem}
 .article-arrow{color:var(--surge);font-size:1.2rem;flex-shrink:0}
 .empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
+
+  /* ─── Mobile hamburger (all pages) ─── */
+  .hb-btn{display:none;flex-direction:column;justify-content:center;align-items:center;gap:5px;width:44px;height:44px;cursor:pointer;background:none;border:none;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+  .hb-btn span{display:block;width:22px;height:2px;background:#F0EDE6;border-radius:2px;transition:all 0.25s;pointer-events:none}
+  .hb-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .hb-btn.open span:nth-child(2){opacity:0}
+  .hb-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+  .mob-menu{display:none;position:fixed;top:64px;left:0;right:0;background:rgba(7,16,30,0.98);border-bottom:1px solid rgba(255,255,255,0.07);z-index:999;padding:0.5rem 0 1rem;flex-direction:column}
+  .mob-menu.open{display:flex}
+  .mob-menu a,.mob-menu button{display:block;padding:0.9rem 1.5rem;color:rgba(240,237,230,0.7);text-decoration:none;font-size:1rem;font-family:'Barlow',sans-serif;border-bottom:1px solid rgba(255,255,255,0.05);background:none;border-left:none;border-right:none;border-top:none;text-align:left;cursor:pointer;width:100%}
+  .mob-menu a:active,.mob-menu button:active{background:rgba(0,207,173,0.08)}
+  .mob-menu .mob-cta{margin:0.75rem 1.5rem 0;background:#00CFAD;color:#0A1628 !important;text-align:center;padding:0.85rem !important;border-radius:2px;font-weight:600;border:none;display:block;width:calc(100% - 3rem)}
+  .mob-menu .mob-danger{margin:0.5rem 1.5rem 0;background:#FF5C3A;color:white !important;text-align:center;padding:0.85rem !important;border-radius:2px;font-weight:600;border:none;display:block;width:calc(100% - 3rem)}
+  @media(max-width:768px){.hb-btn{display:flex}.nav-right .nav-link,.nav-right .nav-btn{display:none}}
 </style>
 </head>
 <body>
@@ -59,6 +73,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
     <a href="/sessions.html" class="nav-link">Sessions</a>
     <a href="https://fishbingo.netlify.app/" target="_blank" class="nav-link">Fish Bingo</a>
   </div>
+  <button id="hb-btn" class="hb-btn" aria-label="Menu"><span></span><span></span><span></span></button>
 </nav>
 
 <div class="hero">
