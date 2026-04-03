@@ -229,6 +229,61 @@ select.field{cursor:pointer}
         </tbody>
       </table>
     </div>
+
+    <!-- ── ANALYTICS ─────────────────────────────────────── -->
+    <div style="margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--dim)" id="analytics-section">
+      <div class="page-title" style="font-size:1.6rem;margin-bottom:0.25rem">Analytics</div>
+      <div style="color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem">Site traffic — unique visitors, devices, browsers and pages viewed.</div>
+
+      <!-- Stat cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-bottom:2rem" id="analytics-cards">
+        <div style="background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;padding:1.25rem">
+          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:0.4rem">Total Views</div>
+          <div id="an-total" style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--surge);line-height:1">—</div>
+        </div>
+        <div style="background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;padding:1.25rem">
+          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:0.4rem">Unique Visitors</div>
+          <div id="an-unique" style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--surge);line-height:1">—</div>
+        </div>
+        <div style="background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;padding:1.25rem">
+          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:0.4rem">Views Today</div>
+          <div id="an-today" style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--surge);line-height:1">—</div>
+        </div>
+        <div style="background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;padding:1.25rem">
+          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:0.4rem">This Week</div>
+          <div id="an-week" style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--surge);line-height:1">—</div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.5rem">
+
+        <!-- Views over time -->
+        <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.25rem;grid-column:1/3">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--surge);margin-bottom:1rem">Page Views — Last 14 Days</div>
+          <canvas id="chart-views" height="140"></canvas>
+        </div>
+
+        <!-- Pages breakdown -->
+        <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.25rem">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--surge);margin-bottom:0.75rem">Pages Viewed</div>
+          <div id="an-pages" style="font-size:0.82rem"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
+        <!-- OS breakdown -->
+        <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.25rem">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--surge);margin-bottom:0.75rem">Operating System</div>
+          <canvas id="chart-os" height="160"></canvas>
+        </div>
+        <!-- Browser breakdown -->
+        <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.25rem">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--surge);margin-bottom:0.75rem">Browser</div>
+          <canvas id="chart-browser" height="160"></canvas>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -338,6 +393,7 @@ async function init() {
   loadSessions();
   loadImages();
   loadArticles();
+  loadAnalytics();
 }
 
 async function loadSessions() {
@@ -628,6 +684,150 @@ async function deleteArticle(id, filename, thumbFilename) {
   toast('Article deleted.');
   loadArticles();
 }
+
+
+// ── ANALYTICS ────────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  const { data, error } = await sb
+    .from('page_views')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(5000);
+
+  if (error || !data || data.length === 0) {
+    document.getElementById('an-total').textContent = '0';
+    document.getElementById('an-unique').textContent = '0';
+    document.getElementById('an-today').textContent = '0';
+    document.getElementById('an-week').textContent = '0';
+    return;
+  }
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0,10);
+  const weekAgo = new Date(now - 7*24*60*60*1000);
+
+  // Stat cards
+  const uniqueFingerprints = new Set(data.map(r => r.fingerprint).filter(Boolean));
+  const todayViews = data.filter(r => r.created_at.slice(0,10) === todayStr).length;
+  const weekViews = data.filter(r => new Date(r.created_at) >= weekAgo).length;
+
+  document.getElementById('an-total').textContent  = data.length.toLocaleString();
+  document.getElementById('an-unique').textContent = uniqueFingerprints.size.toLocaleString();
+  document.getElementById('an-today').textContent  = todayViews.toLocaleString();
+  document.getElementById('an-week').textContent   = weekViews.toLocaleString();
+
+  // Views over 14 days
+  const days14 = Array.from({length:14}, (_,i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (13-i));
+    return d.toISOString().slice(0,10);
+  });
+  const dayCounts = days14.map(d => data.filter(r => r.created_at.slice(0,10) === d).length);
+
+  // Pages breakdown
+  const pageCounts = {};
+  data.forEach(r => {
+    const p = r.page || '/';
+    pageCounts[p] = (pageCounts[p] || 0) + 1;
+  });
+  const sortedPages = Object.entries(pageCounts).sort((a,b) => b[1]-a[1]).slice(0,6);
+  const maxPV = sortedPages[0]?.[1] || 1;
+  document.getElementById('an-pages').innerHTML = sortedPages.map(([page, count]) => `
+    <div style="margin-bottom:0.5rem">
+      <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:0.2rem">
+        <span style="color:var(--sand)">${page}</span>
+        <span style="color:var(--muted)">${count}</span>
+      </div>
+      <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px">
+        <div style="height:100%;width:${Math.round(count/maxPV*100)}%;background:var(--surge);border-radius:2px"></div>
+      </div>
+    </div>
+  `).join('');
+
+  // OS and Browser counts
+  const osCounts = {};
+  const brCounts = {};
+  data.forEach(r => {
+    const os = r.os || 'Unknown';
+    const br = r.browser || 'Unknown';
+    osCounts[os] = (osCounts[os] || 0) + 1;
+    brCounts[br] = (brCounts[br] || 0) + 1;
+  });
+
+  // Load Chart.js and draw
+  if (!window.Chart) {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js';
+    s.onload = () => drawAnalyticsCharts(days14, dayCounts, osCounts, brCounts);
+    document.head.appendChild(s);
+  } else {
+    drawAnalyticsCharts(days14, dayCounts, osCounts, brCounts);
+  }
+}
+
+function drawAnalyticsCharts(days, dayCounts, osCounts, brCounts) {
+  const SURGE = '#00CFAD';
+  const MUTED = 'rgba(240,237,230,0.55)';
+  const gridColor = 'rgba(255,255,255,0.06)';
+  const PIE_COLORS = ['#00CFAD','#FF5C3A','#4A90E2','#F5A623','#A29BFE','#74B9FF'];
+
+  // Line chart — views over 14 days
+  const ctx1 = document.getElementById('chart-views');
+  if (ctx1 && !ctx1._ch) {
+    ctx1._ch = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: days.map(d => {
+          const [,m,day] = d.split('-');
+          return `${parseInt(day)} ${['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]}`;
+        }),
+        datasets: [{ data: dayCounts, backgroundColor: 'rgba(0,207,173,0.55)', borderColor: SURGE, borderWidth: 1.5, borderRadius: 2 }]
+      },
+      options: {
+        responsive: true, plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: MUTED, font: { size: 10 } }, grid: { color: gridColor } },
+          y: { ticks: { color: MUTED, font: { size: 10 }, precision: 0 }, grid: { color: gridColor }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // OS doughnut
+  const ctx2 = document.getElementById('chart-os');
+  if (ctx2 && !ctx2._ch) {
+    const labels = Object.keys(osCounts);
+    const vals   = Object.values(osCounts);
+    ctx2._ch = new Chart(ctx2, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: vals, backgroundColor: PIE_COLORS, borderWidth: 1, borderColor: 'rgba(7,16,30,0.8)' }] },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: MUTED, font: { size: 10 }, boxWidth: 10, padding: 8 } }
+        }
+      }
+    });
+  }
+
+  // Browser doughnut
+  const ctx3 = document.getElementById('chart-browser');
+  if (ctx3 && !ctx3._ch) {
+    const labels = Object.keys(brCounts);
+    const vals   = Object.values(brCounts);
+    ctx3._ch = new Chart(ctx3, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: vals, backgroundColor: PIE_COLORS, borderWidth: 1, borderColor: 'rgba(7,16,30,0.8)' }] },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: MUTED, font: { size: 10 }, boxWidth: 10, padding: 8 } }
+        }
+      }
+    });
+  }
+}
+
 
 // ─── IMAGE MANAGEMENT ────────────────────────────────────────────────────
 async function loadImages() {

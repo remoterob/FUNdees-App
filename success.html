@@ -165,5 +165,61 @@
     init();
   }
 </script>
+
+<script>
+// ── Page view tracking ────────────────────────────────────────────
+(async function() {
+  try {
+    const ua = navigator.userAgent;
+
+    // Detect OS
+    const os =
+      /iPhone|iPad|iPod/.test(ua) ? 'iOS' :
+      /Android/.test(ua)          ? 'Android' :
+      /Windows/.test(ua)          ? 'Windows' :
+      /Mac OS/.test(ua)           ? 'macOS' :
+      /Linux/.test(ua)            ? 'Linux' : 'Other';
+
+    // Detect Browser
+    const browser =
+      /Edg\//.test(ua)            ? 'Edge' :
+      /Chrome\//.test(ua) && !/Chromium/.test(ua) ? 'Chrome' :
+      /Firefox\//.test(ua)        ? 'Firefox' :
+      /Safari\//.test(ua) && !/Chrome/.test(ua) ? 'Safari' :
+      /Samsung/.test(ua)          ? 'Samsung' : 'Other';
+
+    // Fingerprint: hash of screen + tz + language (no PII)
+    const raw = [screen.width, screen.height, Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.language].join('|');
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
+    const fingerprint = Math.abs(hash).toString(36);
+
+    // Page label
+    const path = window.location.pathname.replace(/\.html$/, '') || '/';
+    const page =
+      path === '/'        ? 'Home' :
+      path === '/sessions' ? 'Sessions' :
+      path === '/articles' ? 'Articles' :
+      path === '/portal'   ? 'Portal' :
+      path === '/auth'     ? 'Auth' :
+      path === '/admin'    ? 'Admin' :
+      path === '/success'  ? 'Success' : path;
+
+    const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+
+    await fetch(`${SUPABASE_URL}/rest/v1/page_views`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ page, os, browser, fingerprint })
+    });
+  } catch(e) { /* silent fail */ }
+})();
+</script>
 </body>
 </html>
