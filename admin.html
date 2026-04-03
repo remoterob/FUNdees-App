@@ -183,21 +183,40 @@ select.field{cursor:pointer}
         <label style="display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem">Description (optional)</label>
         <input class="field" id="article-desc" type="text" placeholder="Brief description of the article" style="width:100%;margin-bottom:1rem">
 
-        <div class="upload-area" id="article-upload-area">
-          <input type="file" id="article-file" accept=".pdf,.doc,.docx" onchange="uploadArticle(this.files[0])">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;align-items:start">
+          <div>
+            <label style="display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem">Thumbnail Image (optional)</label>
+            <div class="upload-area" style="padding:0.75rem;min-height:unset" id="article-thumb-area">
+              <input type="file" id="article-thumb" accept="image/*" onchange="previewThumb(this.files[0])">
+              <div id="thumb-preview" style="display:none;margin-bottom:0.5rem">
+                <img id="thumb-img" style="width:80px;height:60px;object-fit:cover;border-radius:3px;display:block;margin:0 auto">
+              </div>
+              <div id="thumb-placeholder" style="font-size:0.82rem;color:var(--muted)">🖼 Click to add thumbnail</div>
+            </div>
+          </div>
+          <div>
+            <label style="display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem">Document File</label>
+            <div class="upload-area" id="article-upload-area" style="padding:0.75rem;min-height:unset">
+              <input type="file" id="article-file" accept=".pdf,.doc,.docx" onchange="selectDoc(this.files[0])">
           <div style="font-size:1.5rem;margin-bottom:0.5rem">📄</div>
           <div style="color:var(--sand);font-weight:500;margin-bottom:0.25rem">Click to select file</div>
           <div>PDF or Word document (.pdf, .doc, .docx)</div>
-          <div class="upload-progress" id="article-progress">
-            <div class="upload-progress-bar" id="article-bar"></div>
+              <div id="doc-name" style="font-size:0.78rem;color:var(--surge);margin-top:0.3rem"></div>
+              <div style="font-size:0.82rem;color:var(--muted)">📄 PDF or Word (.pdf, .doc, .docx)</div>
+            </div>
           </div>
-          <div id="article-msg" style="margin-top:0.5rem;font-size:0.8rem"></div>
         </div>
+        <button class="btn-p" id="btn-upload-article" onclick="uploadArticle()" style="margin-top:0.5rem">Upload Article</button>
+        <div class="upload-progress" id="article-progress" style="margin-top:0.75rem">
+          <div class="upload-progress-bar" id="article-bar"></div>
+        </div>
+        <div id="article-msg" style="margin-top:0.5rem;font-size:0.8rem"></div>
       </div>
 
       <table id="articles-table" style="width:100%;border-collapse:collapse;background:rgba(13,45,74,0.4);border-radius:4px;overflow:hidden">
         <thead>
           <tr>
+            <th style="text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)">Thumb</th>
             <th style="text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)">Title</th>
             <th style="text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)">Category</th>
             <th style="text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)">File</th>
@@ -206,7 +225,7 @@ select.field{cursor:pointer}
           </tr>
         </thead>
         <tbody id="articles-tbody">
-          <tr><td colspan="5" style="color:var(--muted);text-align:center;padding:2rem">Loading...</td></tr>
+          <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:2rem">Loading...</td></tr>
         </tbody>
       </table>
     </div>
@@ -476,9 +495,9 @@ async function loadArticles() {
 
   const { data, error } = await sb.from('articles').select('*').order('created_at', { ascending: false });
 
-  if (error) { tbody.innerHTML = `<tr><td colspan="5" style="color:var(--coral);padding:1rem">${error.message}</td></tr>`; return; }
+  if (error) { tbody.innerHTML = `<tr><td colspan="6" style="color:var(--coral);padding:1rem">${error.message}</td></tr>`; return; }
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:2rem">No articles uploaded yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:2rem">No articles uploaded yet.</td></tr>';
     return;
   }
 
@@ -486,7 +505,16 @@ async function loadArticles() {
     const { data: { publicUrl } } = sb.storage.from('Fundees').getPublicUrl('Articles/' + a.filename);
     const ext = a.filename.split('.').pop().toUpperCase();
     const extColor = ext === 'PDF' ? 'var(--coral)' : '#4A90E2';
+    const thumbUrl = a.thumb_filename
+      ? sb.storage.from('Fundees').getPublicUrl('ArticleThumbs/' + a.thumb_filename).data.publicUrl
+      : null;
     return `<tr>
+      <td style="padding:0.6rem 1rem;border-bottom:1px solid var(--dim)">
+        ${thumbUrl
+          ? `<img src="${thumbUrl}" style="width:56px;height:42px;object-fit:cover;border-radius:3px;display:block">`
+          : `<div style="width:56px;height:42px;background:rgba(255,255,255,0.06);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:1.1rem">📄</div>`
+        }
+      </td>
       <td style="padding:0.85rem 1rem;font-size:0.85rem;border-bottom:1px solid var(--dim)">
         <strong>${a.title}</strong>
         ${a.description ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">${a.description}</div>` : ''}
@@ -497,72 +525,104 @@ async function loadArticles() {
       </td>
       <td style="padding:0.85rem 1rem;font-size:0.78rem;color:var(--muted);border-bottom:1px solid var(--dim)">${new Date(a.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}</td>
       <td style="padding:0.85rem 1rem;border-bottom:1px solid var(--dim)">
-        <button class="btn-danger" onclick="deleteArticle('${a.id}','${a.filename}')">Delete</button>
+        <button class="btn-danger" onclick="deleteArticle('${a.id}','${a.filename}','${a.thumb_filename||''}')">Delete</button>
       </td>
     </tr>`;
   }).join('');
 }
 
-async function uploadArticle(file) {
+let selectedDocFile = null;
+let selectedThumbFile = null;
+
+function previewThumb(file) {
   if (!file) return;
+  selectedThumbFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('thumb-img').src = e.target.result;
+    document.getElementById('thumb-preview').style.display = 'block';
+    document.getElementById('thumb-placeholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function selectDoc(file) {
+  if (!file) return;
+  selectedDocFile = file;
+  const name = document.getElementById('doc-name');
+  name.textContent = '✓ ' + file.name;
+}
+
+async function uploadArticle() {
   const title    = document.getElementById('article-title').value.trim();
   const category = document.getElementById('article-category').value.trim();
   const desc     = document.getElementById('article-desc').value.trim();
   const msg      = document.getElementById('article-msg');
   const progress = document.getElementById('article-progress');
   const bar      = document.getElementById('article-bar');
+  const btn      = document.getElementById('btn-upload-article');
 
-  if (!title) {
-    msg.style.color = 'var(--coral)'; msg.textContent = 'Please enter a title first.';
-    document.getElementById('article-file').value = '';
-    return;
-  }
+  if (!title)            { msg.style.color='var(--coral)'; msg.textContent='Please enter a title.'; return; }
+  if (!selectedDocFile)  { msg.style.color='var(--coral)'; msg.textContent='Please select a document file.'; return; }
 
+  btn.disabled = true; btn.textContent = 'Uploading...';
   progress.style.display = 'block';
-  bar.style.width = '30%';
-  msg.style.color = 'var(--muted)'; msg.textContent = 'Uploading...';
+  bar.style.width = '20%';
+  msg.style.color = 'var(--muted)'; msg.textContent = 'Uploading document...';
 
-  const ext      = file.name.split('.').pop();
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-  const { error: uploadErr } = await sb.storage.from('Fundees').upload(`Articles/${filename}`, file, {
-    cacheControl: '3600', upsert: false
-  });
-
-  if (uploadErr) {
+  // Upload document
+  const docExt = selectedDocFile.name.split('.').pop();
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${docExt}`;
+  const { error: docErr } = await sb.storage.from('Fundees').upload(`Articles/${filename}`, selectedDocFile, { cacheControl: '3600' });
+  if (docErr) {
+    btn.disabled = false; btn.textContent = 'Upload Article';
     bar.style.width = '0'; progress.style.display = 'none';
-    msg.style.color = 'var(--coral)'; msg.textContent = 'Upload failed: ' + uploadErr.message;
-    document.getElementById('article-file').value = '';
+    msg.style.color = 'var(--coral)'; msg.textContent = 'Upload failed: ' + docErr.message;
     return;
   }
+  bar.style.width = '60%';
 
-  bar.style.width = '70%';
+  // Upload thumbnail if provided
+  let thumbFilename = null;
+  if (selectedThumbFile) {
+    msg.textContent = 'Uploading thumbnail...';
+    const thumbExt = selectedThumbFile.name.split('.').pop();
+    thumbFilename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${thumbExt}`;
+    const { error: thumbErr } = await sb.storage.from('Fundees').upload(`ArticleThumbs/${thumbFilename}`, selectedThumbFile, { cacheControl: '3600' });
+    if (thumbErr) { console.warn('Thumb upload failed:', thumbErr.message); thumbFilename = null; }
+  }
+  bar.style.width = '85%';
 
-  // Save metadata to articles table
+  // Save to DB
   const { error: dbErr } = await sb.from('articles').insert({
-    title, category: category || null, description: desc || null, filename
+    title, category: category || null, description: desc || null,
+    filename, thumb_filename: thumbFilename
   });
-
   bar.style.width = '100%';
   setTimeout(() => { progress.style.display = 'none'; bar.style.width = '0'; }, 800);
 
-  if (dbErr) {
-    msg.style.color = 'var(--coral)'; msg.textContent = 'File uploaded but metadata save failed: ' + dbErr.message;
-    return;
-  }
+  btn.disabled = false; btn.textContent = 'Upload Article';
+
+  if (dbErr) { msg.style.color='var(--coral)'; msg.textContent='DB save failed: '+dbErr.message; return; }
 
   msg.style.color = 'var(--surge)'; msg.textContent = 'Article uploaded ✓';
   document.getElementById('article-title').value = '';
   document.getElementById('article-category').value = '';
   document.getElementById('article-desc').value = '';
   document.getElementById('article-file').value = '';
+  document.getElementById('article-thumb').value = '';
+  document.getElementById('doc-name').textContent = '';
+  document.getElementById('thumb-preview').style.display = 'none';
+  document.getElementById('thumb-placeholder').style.display = 'block';
+  selectedDocFile = null; selectedThumbFile = null;
   setTimeout(() => { msg.textContent = ''; }, 3000);
   loadArticles();
 }
 
-async function deleteArticle(id, filename) {
+async function deleteArticle(id, filename, thumbFilename) {
   if (!confirm('Delete this article? This cannot be undone.')) return;
   await sb.storage.from('Fundees').remove([`Articles/${filename}`]);
+  if (thumbFilename) await sb.storage.from('Fundees').remove([`ArticleThumbs/${thumbFilename}`]);
   const { error } = await sb.from('articles').delete().eq('id', id);
   if (error) { toast('Delete failed: ' + error.message, true); return; }
   toast('Article deleted.');

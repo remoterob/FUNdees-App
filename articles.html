@@ -31,7 +31,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .filter-btn{background:rgba(13,45,74,0.5);border:1px solid var(--dim);color:var(--muted);padding:0.45rem 1rem;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.15s}
 .filter-btn:hover,.filter-btn.active{background:var(--surge-dim);border-color:rgba(0,207,173,0.3);color:var(--surge)}
 .articles-list{display:flex;flex-direction:column;gap:1rem}
-.article-card{background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1.5rem;transition:border-color 0.2s,transform 0.15s;text-decoration:none;color:inherit}
+.article-card{background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;padding:1rem 1.5rem;display:flex;align-items:center;gap:1.25rem;transition:border-color 0.2s,transform 0.15s;text-decoration:none;color:inherit}
+.article-thumb{width:80px;height:60px;object-fit:cover;border-radius:3px;flex-shrink:0;display:block}
+.article-thumb-placeholder{width:80px;height:60px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:3px}
 .article-card:hover{border-color:rgba(0,207,173,0.3);transform:translateY(-1px)}
 .article-icon{width:52px;height:52px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.08em;flex-shrink:0}
 .icon-pdf{background:rgba(255,92,58,0.15);color:var(--coral);border:1px solid rgba(255,92,58,0.3)}
@@ -128,9 +130,16 @@ function render() {
     const iconTxt = isPdf ? 'PDF' : 'DOC';
     const date = new Date(a.created_at).toLocaleDateString('en-NZ', {day:'numeric', month:'long', year:'numeric'});
 
+    const thumbUrl = a.thumb_filename
+      ? sb.storage.from('Fundees').getPublicUrl('ArticleThumbs/' + a.thumb_filename).data.publicUrl
+      : null;
+
     return `
     <a href="${publicUrl}" target="_blank" class="article-card">
-      <div class="article-icon ${iconCls}">${iconTxt}</div>
+      ${thumbUrl
+        ? `<img src="${thumbUrl}" class="article-thumb" alt="${a.title}">`
+        : `<div class="article-thumb-placeholder article-icon ${iconCls}">${iconTxt}</div>`
+      }
       <div class="article-body">
         <div class="article-title">${a.title}</div>
         ${a.description ? `<div class="article-desc">${a.description}</div>` : ''}
