@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FUNdamentals">
+  <meta name="theme-color" content="#0A1628">
+  <link rel="apple-touch-icon" href="/icons/icon-180.png">
+<title>Articles — Spearfishing FUNdamentals</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--midnight:#0A1628;--deep:#0D2D4A;--surge:#00CFAD;--coral:#FF5C3A;--sand:#F0EDE6;--muted:rgba(240,237,230,0.55);--dim:rgba(255,255,255,0.07);--surge-dim:rgba(0,207,173,0.12)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#07101e;color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:64px;background:rgba(10,22,40,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--dim)}
+.nav-brand{display:flex;align-items:center;gap:0.75rem;text-decoration:none}
+.nav-brand img{height:36px;opacity:0.9}
+.nav-brand-text{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.95rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--sand);line-height:1.1}
+.nav-brand-text span{display:block;font-size:0.55rem;letter-spacing:0.2em;color:var(--surge)}
+.nav-right{display:flex;gap:1.5rem;align-items:center}
+.nav-link{color:var(--muted);text-decoration:none;font-size:0.82rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:500;transition:color 0.2s}
+.nav-link:hover{color:var(--surge)}
+.hero{padding:5rem 2rem 3rem;border-bottom:1px solid var(--dim);background:linear-gradient(160deg,var(--deep) 0%,var(--midnight) 100%)}
+.hero h1{font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--sand);line-height:1}
+.hero p{color:var(--muted);font-size:0.95rem;margin-top:0.5rem}
+.wrap{max-width:900px;margin:0 auto;padding:2.5rem 2rem}
+.filter-bar{display:flex;gap:0.75rem;margin-bottom:2rem;flex-wrap:wrap}
+.filter-btn{background:rgba(13,45,74,0.5);border:1px solid var(--dim);color:var(--muted);padding:0.45rem 1rem;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.15s}
+.filter-btn:hover,.filter-btn.active{background:var(--surge-dim);border-color:rgba(0,207,173,0.3);color:var(--surge)}
+.articles-list{display:flex;flex-direction:column;gap:1rem}
+.article-card{background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1.5rem;transition:border-color 0.2s,transform 0.15s;text-decoration:none;color:inherit}
+.article-card:hover{border-color:rgba(0,207,173,0.3);transform:translateY(-1px)}
+.article-icon{width:52px;height:52px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.08em;flex-shrink:0}
+.icon-pdf{background:rgba(255,92,58,0.15);color:var(--coral);border:1px solid rgba(255,92,58,0.3)}
+.icon-doc{background:rgba(74,144,226,0.15);color:#4A90E2;border:1px solid rgba(74,144,226,0.3)}
+.article-body{flex:1;min-width:0}
+.article-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.05rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--sand);margin-bottom:0.25rem}
+.article-desc{font-size:0.82rem;color:var(--muted);line-height:1.4}
+.article-meta{display:flex;gap:1rem;margin-top:0.4rem;font-size:0.72rem;color:var(--muted)}
+.article-cat{background:var(--surge-dim);color:var(--surge);padding:0.15rem 0.5rem;border-radius:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;font-size:0.65rem}
+.article-arrow{color:var(--surge);font-size:1.2rem;flex-shrink:0}
+.empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-brand">
+    <img src="/logo-white.png" alt="Logo">
+    <div class="nav-brand-text">Spearfishing<span>FUNdamentals</span></div>
+  </a>
+  <div class="nav-right">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/sessions.html" class="nav-link">Sessions</a>
+    <a href="https://fishbingo.netlify.app/" target="_blank" class="nav-link">Fish Bingo</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>Articles</h1>
+  <p>Resources, guides and updates from the club.</p>
+</div>
+
+<div class="wrap">
+  <div class="filter-bar" id="filter-bar"></div>
+  <div id="articles-list" class="articles-list">
+    <div class="empty">Loading articles...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let allArticles = [];
+let activeCategory = 'all';
+
+async function init() {
+  const { data, error } = await sb.from('articles').select('*').order('created_at', { ascending: false });
+  if (error || !data) {
+    document.getElementById('articles-list').innerHTML = `<div class="empty">Could not load articles: ${error?.message}</div>`;
+    return;
+  }
+  allArticles = data;
+  buildFilters();
+  render();
+}
+
+function buildFilters() {
+  const cats = ['all', ...new Set(allArticles.map(a => a.category).filter(Boolean))];
+  const bar = document.getElementById('filter-bar');
+  if (cats.length <= 2) { bar.style.display = 'none'; return; }
+  bar.innerHTML = cats.map(c => `
+    <button class="filter-btn ${c === 'all' ? 'active' : ''}" onclick="setFilter('${c}', this)">
+      ${c === 'all' ? 'All' : c}
+    </button>`).join('');
+}
+
+function setFilter(cat, btn) {
+  activeCategory = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render() {
+  const list = activeCategory === 'all'
+    ? allArticles
+    : allArticles.filter(a => a.category === activeCategory);
+
+  const el = document.getElementById('articles-list');
+
+  if (list.length === 0) {
+    el.innerHTML = '<div class="empty">No articles in this category yet.</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(a => {
+    const { data: { publicUrl } } = sb.storage.from('Fundees').getPublicUrl('Articles/' + a.filename);
+    const ext = a.filename.split('.').pop().toLowerCase();
+    const isPdf = ext === 'pdf';
+    const iconCls = isPdf ? 'icon-pdf' : 'icon-doc';
+    const iconTxt = isPdf ? 'PDF' : 'DOC';
+    const date = new Date(a.created_at).toLocaleDateString('en-NZ', {day:'numeric', month:'long', year:'numeric'});
+
+    return `
+    <a href="${publicUrl}" target="_blank" class="article-card">
+      <div class="article-icon ${iconCls}">${iconTxt}</div>
+      <div class="article-body">
+        <div class="article-title">${a.title}</div>
+        ${a.description ? `<div class="article-desc">${a.description}</div>` : ''}
+        <div class="article-meta">
+          ${a.category ? `<span class="article-cat">${a.category}</span>` : ''}
+          <span>${date}</span>
+        </div>
+      </div>
+      <div class="article-arrow">→</div>
+    </a>`;
+  }).join('');
+}
+
+init();
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+  }
+</script>
+</body>
+</html>

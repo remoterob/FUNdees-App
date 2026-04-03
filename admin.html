@@ -97,6 +97,7 @@ select.field{cursor:pointer}
   <div class="nav-right">
     <a href="/portal.html" class="nav-link">My Account</a>
     <a href="/sessions.html" class="nav-link">Sessions</a>
+    <a href="/articles.html" class="nav-link">Articles</a>
     <button class="nav-link" onclick="doLogout()">Log Out</button>
   </div>
 </nav>
@@ -156,6 +157,58 @@ select.field{cursor:pointer}
       <div class="img-grid" id="img-grid">
         <div style="color:var(--muted);font-size:0.85rem;grid-column:1/-1">Loading photos...</div>
       </div>
+    </div>
+
+    <!-- ARTICLE MANAGEMENT -->
+    <div style="margin-top:2.5rem">
+      <div class="top-bar" style="margin-bottom:1rem">
+        <div>
+          <div class="page-title" style="font-size:1.6rem">Articles</div>
+          <div style="color:var(--muted);font-size:0.82rem">Upload PDF or Word documents. Members can read them on the Articles page.</div>
+        </div>
+      </div>
+
+      <!-- Upload area -->
+      <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.5rem;margin-bottom:1.5rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div>
+            <label style="display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem">Article Title</label>
+            <input class="field" id="article-title" type="text" placeholder="e.g. Freediving Safety Guidelines" style="width:100%">
+          </div>
+          <div>
+            <label style="display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem">Category (optional)</label>
+            <input class="field" id="article-category" type="text" placeholder="e.g. Safety, Training, News">
+          </div>
+        </div>
+        <label style="display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem">Description (optional)</label>
+        <input class="field" id="article-desc" type="text" placeholder="Brief description of the article" style="width:100%;margin-bottom:1rem">
+
+        <div class="upload-area" id="article-upload-area">
+          <input type="file" id="article-file" accept=".pdf,.doc,.docx" onchange="uploadArticle(this.files[0])">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem">📄</div>
+          <div style="color:var(--sand);font-weight:500;margin-bottom:0.25rem">Click to select file</div>
+          <div>PDF or Word document (.pdf, .doc, .docx)</div>
+          <div class="upload-progress" id="article-progress">
+            <div class="upload-progress-bar" id="article-bar"></div>
+          </div>
+          <div id="article-msg" style="margin-top:0.5rem;font-size:0.8rem"></div>
+        </div>
+      </div>
+
+      <table id="articles-table" style="width:100%;border-collapse:collapse;background:rgba(13,45,74,0.4);border-radius:4px;overflow:hidden">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)">Title</th>
+            <th style="text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)">Category</th>
+            <th style="text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)">File</th>
+            <th style="text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)">Uploaded</th>
+            <th style="text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="articles-tbody">
+          <tr><td colspan="5" style="color:var(--muted);text-align:center;padding:2rem">Loading...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -265,6 +318,7 @@ async function init() {
   document.getElementById('admin-content').style.display = 'block';
   loadSessions();
   loadImages();
+  loadArticles();
 }
 
 async function loadSessions() {
@@ -412,6 +466,107 @@ document.querySelectorAll('.overlay').forEach(o => {
 async function doLogout() {
   await sb.auth.signOut();
   window.location.href = '/';
+}
+
+
+// ─── ARTICLE MANAGEMENT ──────────────────────────────────────────────────
+async function loadArticles() {
+  const tbody = document.getElementById('articles-tbody');
+  if (!tbody) return;
+
+  const { data, error } = await sb.from('articles').select('*').order('created_at', { ascending: false });
+
+  if (error) { tbody.innerHTML = `<tr><td colspan="5" style="color:var(--coral);padding:1rem">${error.message}</td></tr>`; return; }
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:2rem">No articles uploaded yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(a => {
+    const { data: { publicUrl } } = sb.storage.from('Fundees').getPublicUrl('Articles/' + a.filename);
+    const ext = a.filename.split('.').pop().toUpperCase();
+    const extColor = ext === 'PDF' ? 'var(--coral)' : '#4A90E2';
+    return `<tr>
+      <td style="padding:0.85rem 1rem;font-size:0.85rem;border-bottom:1px solid var(--dim)">
+        <strong>${a.title}</strong>
+        ${a.description ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">${a.description}</div>` : ''}
+      </td>
+      <td style="padding:0.85rem 1rem;font-size:0.82rem;border-bottom:1px solid var(--dim);color:var(--muted)">${a.category || '—'}</td>
+      <td style="padding:0.85rem 1rem;border-bottom:1px solid var(--dim)">
+        <a href="${publicUrl}" target="_blank" style="font-size:0.75rem;font-weight:700;color:${extColor};text-decoration:none;background:rgba(255,255,255,0.06);padding:0.2rem 0.5rem;border-radius:2px">${ext}</a>
+      </td>
+      <td style="padding:0.85rem 1rem;font-size:0.78rem;color:var(--muted);border-bottom:1px solid var(--dim)">${new Date(a.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}</td>
+      <td style="padding:0.85rem 1rem;border-bottom:1px solid var(--dim)">
+        <button class="btn-danger" onclick="deleteArticle('${a.id}','${a.filename}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function uploadArticle(file) {
+  if (!file) return;
+  const title    = document.getElementById('article-title').value.trim();
+  const category = document.getElementById('article-category').value.trim();
+  const desc     = document.getElementById('article-desc').value.trim();
+  const msg      = document.getElementById('article-msg');
+  const progress = document.getElementById('article-progress');
+  const bar      = document.getElementById('article-bar');
+
+  if (!title) {
+    msg.style.color = 'var(--coral)'; msg.textContent = 'Please enter a title first.';
+    document.getElementById('article-file').value = '';
+    return;
+  }
+
+  progress.style.display = 'block';
+  bar.style.width = '30%';
+  msg.style.color = 'var(--muted)'; msg.textContent = 'Uploading...';
+
+  const ext      = file.name.split('.').pop();
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error: uploadErr } = await sb.storage.from('Fundees').upload(`Articles/${filename}`, file, {
+    cacheControl: '3600', upsert: false
+  });
+
+  if (uploadErr) {
+    bar.style.width = '0'; progress.style.display = 'none';
+    msg.style.color = 'var(--coral)'; msg.textContent = 'Upload failed: ' + uploadErr.message;
+    document.getElementById('article-file').value = '';
+    return;
+  }
+
+  bar.style.width = '70%';
+
+  // Save metadata to articles table
+  const { error: dbErr } = await sb.from('articles').insert({
+    title, category: category || null, description: desc || null, filename
+  });
+
+  bar.style.width = '100%';
+  setTimeout(() => { progress.style.display = 'none'; bar.style.width = '0'; }, 800);
+
+  if (dbErr) {
+    msg.style.color = 'var(--coral)'; msg.textContent = 'File uploaded but metadata save failed: ' + dbErr.message;
+    return;
+  }
+
+  msg.style.color = 'var(--surge)'; msg.textContent = 'Article uploaded ✓';
+  document.getElementById('article-title').value = '';
+  document.getElementById('article-category').value = '';
+  document.getElementById('article-desc').value = '';
+  document.getElementById('article-file').value = '';
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+  loadArticles();
+}
+
+async function deleteArticle(id, filename) {
+  if (!confirm('Delete this article? This cannot be undone.')) return;
+  await sb.storage.from('Fundees').remove([`Articles/${filename}`]);
+  const { error } = await sb.from('articles').delete().eq('id', id);
+  if (error) { toast('Delete failed: ' + error.message, true); return; }
+  toast('Article deleted.');
+  loadArticles();
 }
 
 // ─── IMAGE MANAGEMENT ────────────────────────────────────────────────────
