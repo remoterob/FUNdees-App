@@ -107,7 +107,10 @@
   /* ─── HERO ─────────────────────────────── */
   #page-home .hero {
     min-height: calc(100vh - 68px);
-    display: flex; align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     position: relative;
     overflow: hidden;
     padding: 4rem 2.5rem;
@@ -1198,20 +1201,20 @@
           <span id="hero-welcome-text" style="background:rgba(0,207,173,0.15);border:1px solid rgba(0,207,173,0.3);color:var(--surge);padding:0.4rem 1rem;border-radius:2px;font-size:0.78rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;display:inline-block;line-height:1.4"></span>
         </div>
         <h1>Bringing fun to<br><span class="accent">FUN</span>damentals.</h1>
-        <p class="hero-sub">Structured peer training in a safe and supportive environment.</p>
+        <p class="hero-sub">Structured peer training, trips and competitions in a safe and supportive environment.</p>
         <div class="hero-actions">
           <a class="btn-primary" href="/sessions.html">Sign Up to a Training Session</a>
         </div>
-        <!-- Mobile carousel -->
-        <div class="hero-carousel" id="hero-carousel">
-          <div class="carousel-track" id="carousel-track"></div>
-        </div>
-        <div class="carousel-dots" id="carousel-dots"></div>
       </div>
       <!-- Right: image grid (desktop only) -->
       <div class="hero-images" id="hero-images" style="display:none">
       </div>
     </div>
+    <!-- Mobile carousel — below text, only shown on mobile via CSS -->
+    <div class="hero-carousel" id="hero-carousel" style="position:relative;z-index:2;max-width:600px;margin:1.5rem auto 0">
+      <div class="carousel-track" id="carousel-track"></div>
+    </div>
+    <div class="carousel-dots" id="carousel-dots" style="position:relative;z-index:2"></div>
   </div>
 
 
