@@ -4,14 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="/manifest.json">
-  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FUNdamentals">
   <meta name="theme-color" content="#0A1628">
   <link rel="apple-touch-icon" href="/icons/icon-180.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
 <title>Sessions — Spearfishing FUNdamentals</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
 <style>
@@ -26,321 +23,59 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .nav-right{display:flex;gap:1rem;align-items:center}
 .nav-link{color:var(--muted);text-decoration:none;font-size:0.82rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:500;transition:color 0.2s}
 .nav-link:hover{color:var(--surge)}
-.nav-btn{background:var(--surge);color:var(--midnight);padding:0.45rem 1.1rem;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.1em;text-transform:uppercase;border:none;cursor:pointer;text-decoration:none;display:inline-block}
-.hero{background:linear-gradient(160deg,var(--deep) 0%,var(--midnight) 100%);padding:5rem 2rem 3rem;border-bottom:1px solid var(--dim)}
-.hero h1{font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--sand);line-height:1}
-.hero p{color:var(--muted);font-size:0.95rem;margin-top:0.5rem}
-.wrap{max-width:1000px;margin:0 auto;padding:2.5rem 2rem}
-.filter-bar{display:flex;gap:0.75rem;margin-bottom:2rem;flex-wrap:wrap}
-.filter-btn{background:rgba(13,45,74,0.5);border:1px solid var(--dim);color:var(--muted);padding:0.45rem 1rem;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.15s}
-.filter-btn:hover,.filter-btn.active{background:var(--surge-dim);border-color:rgba(0,207,173,0.3);color:var(--surge)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem}
-.card{background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;overflow:hidden;transition:border-color 0.2s,transform 0.2s}
-.card:hover{border-color:rgba(0,207,173,0.3);transform:translateY(-2px)}
-.card-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--dim);display:flex;justify-content:space-between;align-items:flex-start}
-.card-type{font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;padding:0.2rem 0.6rem;border-radius:2px}
-.type-pool{background:rgba(0,207,173,0.12);color:var(--surge)}
-.type-depth{background:rgba(245,166,35,0.12);color:#F5A623}
-.status-badge{font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;font-weight:600;padding:0.2rem 0.6rem;border-radius:2px}
-.status-open{background:rgba(0,207,173,0.12);color:var(--surge)}
-.status-full{background:rgba(255,92,58,0.12);color:var(--coral)}
-.status-closed{background:rgba(255,255,255,0.06);color:var(--muted)}
-.status-opening_soon{background:rgba(245,166,35,0.12);color:#F5A623}
-.card-body{padding:1.25rem 1.5rem}
-.card-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.1rem;letter-spacing:0.05em;text-transform:uppercase;color:var(--sand);margin-bottom:0.5rem}
-.card-desc{font-size:0.83rem;color:var(--muted);line-height:1.55;margin-bottom:0.75rem}
-.card-meta{font-size:0.78rem;color:var(--muted);display:flex;flex-direction:column;gap:0.3rem}
-.card-meta span{display:flex;align-items:center;gap:0.4rem}
-.card-footer{padding:1rem 1.5rem;border-top:1px solid var(--dim);display:flex;justify-content:space-between;align-items:center}
-.price{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--surge);line-height:1}
-.price-label{font-size:0.7rem;color:var(--muted)}
-.enrol-btn{background:var(--surge);color:var(--midnight);border:none;padding:0.55rem 1.25rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:2px;cursor:pointer;transition:opacity 0.2s}
-.enrol-btn:hover:not(:disabled){opacity:0.85}
-.enrol-btn:disabled{background:rgba(255,255,255,0.08);color:var(--muted);cursor:not-allowed}
-.enrol-btn.enrolled{background:rgba(0,207,173,0.12);color:var(--surge);border:1px solid rgba(0,207,173,0.3)}
-.prereq{background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2);border-radius:2px;padding:0.5rem 0.75rem;font-size:0.78rem;color:#F5A623;margin-bottom:0.75rem;line-height:1.4}
-.empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
-.toast{position:fixed;bottom:2rem;right:2rem;background:var(--teal,#0C7C6A);color:white;padding:0.9rem 1.5rem;border-radius:3px;font-size:0.85rem;transform:translateY(100px);opacity:0;transition:all 0.3s;border-left:3px solid var(--surge);z-index:200}
-.toast.show{transform:translateY(0);opacity:1}
-.login-nudge{background:rgba(0,207,173,0.08);border:1px solid rgba(0,207,173,0.2);border-radius:3px;padding:1rem 1.5rem;font-size:0.85rem;color:var(--muted);text-align:center;margin-bottom:2rem}
-.login-nudge a{color:var(--surge);text-decoration:none;font-weight:500}
-@media(max-width:600px){.nav-right .nav-link{display:none}}
 
-  /* ─── Mobile hamburger (all pages) ─── */
-  .hb-btn{display:none;flex-direction:column;justify-content:center;align-items:center;gap:5px;width:44px;height:44px;cursor:pointer;background:none;border:none;-webkit-tap-highlight-color:transparent;flex-shrink:0}
-  .hb-btn span{display:block;width:22px;height:2px;background:#F0EDE6;border-radius:2px;transition:all 0.25s;pointer-events:none}
-  .hb-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
-  .hb-btn.open span:nth-child(2){opacity:0}
-  .hb-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
-  .mob-menu{display:none;position:fixed;top:64px;left:0;right:0;background:rgba(7,16,30,0.98);border-bottom:1px solid rgba(255,255,255,0.07);z-index:999;padding:0.5rem 0 1rem;flex-direction:column}
-  .mob-menu.open{display:flex}
-  .mob-menu a,.mob-menu button{display:block;padding:0.9rem 1.5rem;color:rgba(240,237,230,0.7);text-decoration:none;font-size:1rem;font-family:'Barlow',sans-serif;border-bottom:1px solid rgba(255,255,255,0.05);background:none;border-left:none;border-right:none;border-top:none;text-align:left;cursor:pointer;width:100%}
-  .mob-menu a:active,.mob-menu button:active{background:rgba(0,207,173,0.08)}
-  .mob-menu .mob-cta{margin:0.75rem 1.5rem 0;background:#00CFAD;color:#0A1628 !important;text-align:center;padding:0.85rem !important;border-radius:2px;font-weight:600;border:none;display:block;width:calc(100% - 3rem)}
-  .mob-menu .mob-danger{margin:0.5rem 1.5rem 0;background:#FF5C3A;color:white !important;text-align:center;padding:0.85rem !important;border-radius:2px;font-weight:600;border:none;display:block;width:calc(100% - 3rem)}
-  @media(max-width:768px){.hb-btn{display:flex}.nav-right .nav-link,.nav-right .nav-btn{display:none}}
+/* Mobile styles */
+.nav-toggle{display:none;width:32px;height:32px;background:none;border:none;cursor:pointer;position:relative;z-index:1001}
+.hamburger,.hamburger::before,.hamburger::after{content:'';display:block;width:24px;height:2px;background:var(--sand);position:absolute;transition:0.3s}
+.hamburger{top:50%;left:50%;transform:translate(-50%,-50%)}
+.hamburger::before{top:-7px;left:0}.hamburger::after{top:7px;left:0}
+.nav-toggle.active .hamburger{background:transparent}
+.nav-toggle.active .hamburger::before{top:0;transform:rotate(45deg)}
+.nav-toggle.active .hamburger::after{top:0;transform:rotate(-45deg)}
+
+.mobile-menu{position:fixed;inset:0;background:var(--midnight);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:0.4s}
+.mobile-menu.active{opacity:1;visibility:visible}
+.mobile-links{list-style:none;text-align:center}
+.mobile-links li{margin:1.5rem 0}
+.mobile-links a{font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--sand);text-decoration:none}
+
+@media(max-width:768px){.nav-right{display:none}.nav-toggle{display:block}}
 </style>
 </head>
 <body>
-
 <nav>
   <a href="/" class="nav-brand">
-    <img src="/logo-white.png" alt="Logo">
-    <div class="nav-brand-text">Spearfishing<span>FUNdamentals</span></div>
+    <img src="/icons/icon-180.png" alt="Logo">
+    <div class="nav-brand-text">FUNdamentals<span>Spearfishing</span></div>
   </a>
   <div class="nav-right">
-    <a href="/" class="nav-link">Home</a>
-    <span id="nav-auth"></span>
+    <a href="/articles" class="nav-link">Articles</a>
+    <a href="/portal" class="nav-link">Portal</a>
   </div>
-  <button id="hb-btn" class="hb-btn" aria-label="Menu"><span></span><span></span><span></span></button>
+  <button class="nav-toggle" aria-label="Toggle menu">
+    <div class="hamburger"></div>
+  </button>
 </nav>
 
-<div class="hero">
-  <h1>Training Sessions</h1>
-  <p>Pool and depth sessions open for enrolment. Sign up and pay to secure your spot.</p>
+<div class="mobile-menu">
+  <ul class="mobile-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/sessions">Sessions</a></li>
+    <li><a href="/articles">Articles</a></li>
+    <li><a href="/portal">My Account</a></li>
+  </ul>
 </div>
 
-<div class="wrap">
-  <div id="login-nudge" class="login-nudge" style="display:none">
-    <a href="/auth.html">Sign in</a> or <a href="/auth.html?tab=signup">create an account</a> to enrol in sessions. An active membership ($20/yr) is required to enrol.
-  </div>
-
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
-    <button class="filter-btn" onclick="setFilter('pool',this)">Pool</button>
-    <button class="filter-btn" onclick="setFilter('depth',this)">Depth</button>
-  </div>
-
-  <div id="sessions-grid" class="grid">
-    <div class="empty">Loading sessions...</div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
-let user = null, member = null, myEnrolments = [], allSessions = [], filter = 'all';
-
-function toast(msg, err=false) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.borderLeftColor = err ? 'var(--coral)' : 'var(--surge)';
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 4000);
-}
-
-function fmt(d) {
-  if (!d) return '—';
-  return new Date(d+'T12:00:00').toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
-}
-
-async function init() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session?.user) {
-    user = session.user;
-  } else {
-    // Wait briefly for async session restore (e.g. after Stripe redirect)
-    await new Promise(resolve => {
-      const { data: { subscription } } = sb.auth.onAuthStateChange((event, s) => {
-        if (s?.user) { user = s.user; subscription.unsubscribe(); resolve(); }
-      });
-      setTimeout(() => { subscription.unsubscribe(); resolve(); }, 2000);
+  const navToggle = document.querySelector('.nav-toggle');
+  const mobileMenu = document.querySelector('.mobile-menu');
+  if (navToggle && mobileMenu) {
+    navToggle.addEventListener('click', () => {
+      navToggle.classList.toggle('active');
+      mobileMenu.classList.toggle('active');
+      document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
     });
   }
-
-  if (user) {
-    const { data } = await sb.from('members').select('*').eq('auth_user_id', user.id).maybeSingle();
-    member = data;
-    if (member) {
-      const { data: enr } = await sb.from('enrolments').select('session_id,status').eq('member_id', member.id);
-      myEnrolments = enr || [];
-    }
-    document.getElementById('nav-auth').innerHTML = `<a href="/portal.html" class="nav-link">My Account</a>`;
-  } else {
-    document.getElementById('login-nudge').style.display = 'block';
-    document.getElementById('nav-auth').innerHTML = `<a href="/auth.html" class="nav-btn">Sign In</a>`;
-  }
-
-  await loadSessions();
-
-  // Handle return from payment
-  const p = new URLSearchParams(window.location.search);
-  if (p.get('enrolled') === 'success')    { toast('Enrolment confirmed! See you there. 🤿'); history.replaceState({}, '', '/sessions.html'); }
-  if (p.get('enrolled') === 'cancelled')  { toast('Payment cancelled — no charge made.', true); history.replaceState({}, '', '/sessions.html'); }
-}
-
-async function loadSessions() {
-  const { data, error } = await sb
-    .from('sessions_with_counts')
-    .select('*')
-    .in('status', ['open','full','opening_soon'])
-    .order('date_start', { ascending: true });
-
-  if (error) { document.getElementById('sessions-grid').innerHTML = `<div class="empty">Could not load sessions: ${error.message}</div>`; return; }
-  allSessions = data || [];
-  render();
-}
-
-function setFilter(f, btn) {
-  filter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  render();
-}
-
-function render() {
-  const grid = document.getElementById('sessions-grid');
-  const list = filter === 'all' ? allSessions : allSessions.filter(s => s.type === filter);
-
-  if (list.length === 0) {
-    grid.innerHTML = '<div class="empty">No sessions available right now. Check back soon.</div>';
-    return;
-  }
-
-  grid.innerHTML = list.map(s => {
-    const enrolment   = myEnrolments.find(e => e.session_id === s.id);
-    const isEnrolled  = enrolment?.status === 'enrolled';
-    const isPending   = enrolment?.status === 'pending_payment';
-    const isActive    = member?.status === 'active';
-    const statusLabel = { open:'Open', full:'Full', closed:'Closed', opening_soon:'Opening Soon' }[s.status] || s.status;
-
-    let btnHtml = '';
-    if (isEnrolled) {
-      btnHtml = `<button class="enrol-btn enrolled" disabled>Enrolled ✓</button>`;
-    } else if (isPending) {
-      btnHtml = `<button class="enrol-btn" onclick="enrol('${s.id}')" style="background:rgba(245,166,35,0.15);color:#F5A623;border:1px solid rgba(245,166,35,0.3)">⚠ Complete Payment</button>`;
-    } else if (!user) {
-      btnHtml = `<a href="/auth.html" class="enrol-btn" style="text-decoration:none;display:inline-block">Sign In to Enrol</a>`;
-    } else if (!isActive) {
-      btnHtml = `<a href="/portal.html" class="enrol-btn" style="text-decoration:none;display:inline-block;background:rgba(245,166,35,0.15);color:#F5A623;border:1px solid rgba(245,166,35,0.3);font-size:0.75rem;padding:0.5rem 0.75rem;text-align:center;line-height:1.3">Active membership<br>required to enrol</a>`;
-    } else if (s.status === 'open') {
-      btnHtml = `<button class="enrol-btn" onclick="enrol('${s.id}')">Enrol — $${Number(s.price).toFixed(2)}</button>`;
-    } else {
-      btnHtml = `<button class="enrol-btn" disabled>${statusLabel}</button>`;
-    }
-
-    return `
-    <div class="card">
-      <div class="card-header">
-        <span class="card-type type-${s.type}">${s.type === 'pool' ? '🏊 Pool' : '🌊 Depth'}</span>
-        <span class="status-badge status-${s.status}">${statusLabel}</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">${s.title}</div>
-        ${s.description ? `<div class="card-desc">${s.description}</div>` : ''}
-        ${s.prerequisites ? `<div class="prereq">⚠️ Prerequisites: ${s.prerequisites}</div>` : ''}
-        <div class="card-meta">
-          <span>📅 ${fmt(s.date_start)} — ${fmt(s.date_end)}</span>
-          ${s.location ? `<span>📍 ${s.location}</span>` : ''}
-          <span>👥 ${s.enrolled_count} / ${s.capacity} enrolled${s.spots_remaining > 0 ? ` · ${s.spots_remaining} spots left` : ''}</span>
-        </div>
-      </div>
-      <div class="card-footer">
-        <div>
-          <div class="price">$${Number(s.price).toFixed(2)}</div>
-          <div class="price-label">NZD per person</div>
-        </div>
-        ${btnHtml}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function enrol(sessionId) {
-  if (!user || !member) { window.location.href = '/auth.html'; return; }
-
-  const btn = event.target;
-  btn.disabled = true; btn.textContent = 'Redirecting...';
-
-  try {
-    const res = await fetch('/.netlify/functions/create-enrolment-checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId,
-        memberId:  member.id,
-        email:     user.email,
-        fullName:  member.full_name
-      })
-    });
-    const d = await res.json();
-    if (!res.ok) throw new Error(d.error || 'Could not start checkout');
-    window.location.href = d.url;
-  } catch(err) {
-    toast('Enrolment error: ' + err.message, true);
-    btn.disabled = false; btn.textContent = 'Enrol';
-  }
-}
-
-init();
-</script>
-<script>
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js");
-    });
-  }
-</script>
-
-<script>
-// ── Page view tracking ────────────────────────────────────────────
-(async function() {
-  try {
-    const ua = navigator.userAgent;
-
-    // Detect OS
-    const os =
-      /iPhone|iPad|iPod/.test(ua) ? 'iOS' :
-      /Android/.test(ua)          ? 'Android' :
-      /Windows/.test(ua)          ? 'Windows' :
-      /Mac OS/.test(ua)           ? 'macOS' :
-      /Linux/.test(ua)            ? 'Linux' : 'Other';
-
-    // Detect Browser
-    const browser =
-      /Edg\//.test(ua)            ? 'Edge' :
-      /Chrome\//.test(ua) && !/Chromium/.test(ua) ? 'Chrome' :
-      /Firefox\//.test(ua)        ? 'Firefox' :
-      /Safari\//.test(ua) && !/Chrome/.test(ua) ? 'Safari' :
-      /Samsung/.test(ua)          ? 'Samsung' : 'Other';
-
-    // Fingerprint: hash of screen + tz + language (no PII)
-    const raw = [screen.width, screen.height, Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.language].join('|');
-    let hash = 0;
-    for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
-    const fingerprint = Math.abs(hash).toString(36);
-
-    // Page label
-    const path = window.location.pathname.replace(/\.html$/, '') || '/';
-    const page =
-      path === '/'        ? 'Home' :
-      path === '/sessions' ? 'Sessions' :
-      path === '/articles' ? 'Articles' :
-      path === '/portal'   ? 'Portal' :
-      path === '/auth'     ? 'Auth' :
-      path === '/admin'    ? 'Admin' :
-      path === '/success'  ? 'Success' : path;
-
-    const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
-
-    await fetch(`${SUPABASE_URL}/rest/v1/page_views`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON,
-        'Authorization': `Bearer ${SUPABASE_ANON}`,
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ page, os, browser, fingerprint })
-    });
-  } catch(e) { /* silent fail */ }
-})();
 </script>
 </body>
 </html>
