@@ -23,63 +23,213 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .nav-right{display:flex;gap:1.5rem;align-items:center}
 .nav-link{color:var(--muted);text-decoration:none;font-size:0.82rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:500;transition:color 0.2s}
 .nav-link:hover{color:var(--surge)}
+.hero{padding:5rem 2rem 3rem;border-bottom:1px solid var(--dim);background:linear-gradient(160deg,var(--deep) 0%,var(--midnight) 100%)}
+.hero h1{font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--sand);line-height:1}
+.hero p{color:var(--muted);font-size:0.95rem;margin-top:0.5rem}
+.wrap{max-width:900px;margin:0 auto;padding:2.5rem 2rem}
+.filter-bar{display:flex;gap:0.75rem;margin-bottom:2rem;flex-wrap:wrap}
+.filter-btn{background:rgba(13,45,74,0.5);border:1px solid var(--dim);color:var(--muted);padding:0.45rem 1rem;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.15s}
+.filter-btn:hover,.filter-btn.active{background:var(--surge-dim);border-color:rgba(0,207,173,0.3);color:var(--surge)}
+.articles-list{display:flex;flex-direction:column;gap:1rem}
+.article-card{background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;padding:1rem 1.5rem;display:flex;align-items:center;gap:1.25rem;transition:border-color 0.2s,transform 0.15s;text-decoration:none;color:inherit}
+.article-thumb{width:80px;height:60px;object-fit:cover;border-radius:3px;flex-shrink:0;display:block}
+.article-thumb-placeholder{width:80px;height:60px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:3px}
+.article-card:hover{border-color:rgba(0,207,173,0.3);transform:translateY(-1px)}
+.article-icon{width:52px;height:52px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.08em;flex-shrink:0}
+.icon-pdf{background:rgba(255,92,58,0.15);color:var(--coral);border:1px solid rgba(255,92,58,0.3)}
+.icon-doc{background:rgba(74,144,226,0.15);color:#4A90E2;border:1px solid rgba(74,144,226,0.3)}
+.article-body{flex:1;min-width:0}
+.article-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.05rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--sand);margin-bottom:0.25rem}
+.article-desc{font-size:0.82rem;color:var(--muted);line-height:1.4}
+.article-meta{display:flex;gap:1rem;margin-top:0.4rem;font-size:0.72rem;color:var(--muted)}
+.article-cat{background:var(--surge-dim);color:var(--surge);padding:0.15rem 0.5rem;border-radius:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;font-size:0.65rem}
+.article-arrow{color:var(--surge);font-size:1.2rem;flex-shrink:0}
+.empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
 
-/* Mobile Toggle Button */
-.nav-toggle{display:none;width:32px;height:32px;background:none;border:none;cursor:pointer;position:relative;z-index:1001;padding:0}
-.hamburger,.hamburger::before,.hamburger::after{content:'';display:block;width:24px;height:2px;background:var(--sand);border-radius:2px;position:absolute;transition:all 0.3s ease}
-.hamburger{top:50%;left:50%;transform:translate(-50%,-50%)}
-.hamburger::before{top:-7px;left:0}.hamburger::after{top:7px;left:0}
-.nav-toggle.active .hamburger{background:transparent}
-.nav-toggle.active .hamburger::before{top:0;transform:rotate(45deg)}
-.nav-toggle.active .hamburger::after{top:0;transform:rotate(-45deg)}
-
-/* Mobile Menu */
-.mobile-menu{position:fixed;inset:0;background:var(--midnight);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all 0.4s ease;padding:2rem}
-.mobile-menu.active{opacity:1;visibility:visible}
-.mobile-links{list-style:none;text-align:center}
-.mobile-links li{margin:1.5rem 0;transform:translateY(20px);opacity:0;transition:all 0.4s ease}
-.mobile-menu.active .mobile-links li{transform:translateY(0);opacity:1}
-.mobile-links a{font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--sand);text-decoration:none;letter-spacing:0.05em}
-.mobile-links a:hover{color:var(--surge)}
-
-@media(max-width:768px){.nav-right{display:none}.nav-toggle{display:block}}
+  /* ─── Mobile hamburger (all pages) ─── */
+  .hb-btn{display:none;flex-direction:column;justify-content:center;align-items:center;gap:5px;width:44px;height:44px;cursor:pointer;background:none;border:none;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+  .hb-btn span{display:block;width:22px;height:2px;background:#F0EDE6;border-radius:2px;transition:all 0.25s;pointer-events:none}
+  .hb-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .hb-btn.open span:nth-child(2){opacity:0}
+  .hb-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+  .mob-menu{display:none;position:fixed;top:64px;left:0;right:0;background:rgba(7,16,30,0.98);border-bottom:1px solid rgba(255,255,255,0.07);z-index:999;padding:0.5rem 0 1rem;flex-direction:column}
+  .mob-menu.open{display:flex}
+  .mob-menu a,.mob-menu button{display:block;padding:0.9rem 1.5rem;color:rgba(240,237,230,0.7);text-decoration:none;font-size:1rem;font-family:'Barlow',sans-serif;border-bottom:1px solid rgba(255,255,255,0.05);background:none;border-left:none;border-right:none;border-top:none;text-align:left;cursor:pointer;width:100%}
+  .mob-menu a:active,.mob-menu button:active{background:rgba(0,207,173,0.08)}
+  .mob-menu .mob-cta{margin:0.75rem 1.5rem 0;background:#00CFAD;color:#0A1628 !important;text-align:center;padding:0.85rem !important;border-radius:2px;font-weight:600;border:none;display:block;width:calc(100% - 3rem)}
+  .mob-menu .mob-danger{margin:0.5rem 1.5rem 0;background:#FF5C3A;color:white !important;text-align:center;padding:0.85rem !important;border-radius:2px;font-weight:600;border:none;display:block;width:calc(100% - 3rem)}
+  @media(max-width:768px){.hb-btn{display:flex}.nav-right .nav-link,.nav-right .nav-btn{display:none}}
 </style>
 </head>
 <body>
+
 <nav>
   <a href="/" class="nav-brand">
-    <img src="/icons/icon-180.png" alt="Logo">
-    <div class="nav-brand-text">FUNdamentals<span>Spearfishing</span></div>
+    <img src="/logo-white.png" alt="Logo">
+    <div class="nav-brand-text">Spearfishing<span>FUNdamentals</span></div>
   </a>
   <div class="nav-right">
-    <a href="/sessions" class="nav-link">Sessions</a>
-    <a href="/portal" class="nav-link">Portal</a>
+    <a href="/" class="nav-link">Home</a>
+    <a href="/sessions.html" class="nav-link">Sessions</a>
+    <a href="https://fishbingo.netlify.app/" target="_blank" class="nav-link">Fish Bingo</a>
   </div>
-  <button class="nav-toggle" aria-label="Toggle menu">
-    <div class="hamburger"></div>
-  </button>
+  <button id="hb-btn" class="hb-btn" aria-label="Menu"><span></span><span></span><span></span></button>
 </nav>
 
-<div class="mobile-menu">
-  <ul class="mobile-links">
-    <li><a href="/">Home</a></li>
-    <li><a href="/sessions">Sessions</a></li>
-    <li><a href="/articles">Articles</a></li>
-    <li><a href="/portal">My Account</a></li>
-  </ul>
+<div class="hero">
+  <h1>Articles</h1>
+  <p>Resources, guides and updates from the club.</p>
 </div>
 
+<div class="wrap">
+  <div class="filter-bar" id="filter-bar"></div>
+  <div id="articles-list" class="articles-list">
+    <div class="empty">Loading articles...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // Navigation Toggle Script
-  const navToggle = document.querySelector('.nav-toggle');
-  const mobileMenu = document.querySelector('.mobile-menu');
-  if (navToggle && mobileMenu) {
-    navToggle.addEventListener('click', () => {
-      navToggle.classList.toggle('active');
-      mobileMenu.classList.toggle('active');
-      document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
-    });
+const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let allArticles = [];
+let activeCategory = 'all';
+
+async function init() {
+  const { data, error } = await sb.from('articles').select('*').order('created_at', { ascending: false });
+  if (error || !data) {
+    document.getElementById('articles-list').innerHTML = `<div class="empty">Could not load articles: ${error?.message}</div>`;
+    return;
   }
+  allArticles = data;
+  buildFilters();
+  render();
+}
+
+function buildFilters() {
+  const cats = ['all', ...new Set(allArticles.map(a => a.category).filter(Boolean))];
+  const bar = document.getElementById('filter-bar');
+  if (cats.length <= 2) { bar.style.display = 'none'; return; }
+  bar.innerHTML = cats.map(c => `
+    <button class="filter-btn ${c === 'all' ? 'active' : ''}" onclick="setFilter('${c}', this)">
+      ${c === 'all' ? 'All' : c}
+    </button>`).join('');
+}
+
+function setFilter(cat, btn) {
+  activeCategory = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render() {
+  const list = activeCategory === 'all'
+    ? allArticles
+    : allArticles.filter(a => a.category === activeCategory);
+
+  const el = document.getElementById('articles-list');
+
+  if (list.length === 0) {
+    el.innerHTML = '<div class="empty">No articles in this category yet.</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(a => {
+    const { data: { publicUrl } } = sb.storage.from('Fundees').getPublicUrl('Articles/' + a.filename);
+    const ext = a.filename.split('.').pop().toLowerCase();
+    const isPdf = ext === 'pdf';
+    const iconCls = isPdf ? 'icon-pdf' : 'icon-doc';
+    const iconTxt = isPdf ? 'PDF' : 'DOC';
+    const date = new Date(a.created_at).toLocaleDateString('en-NZ', {day:'numeric', month:'long', year:'numeric'});
+
+    const thumbUrl = a.thumb_filename
+      ? sb.storage.from('Fundees').getPublicUrl('ArticleThumbs/' + a.thumb_filename).data.publicUrl
+      : null;
+
+    return `
+    <a href="${publicUrl}" target="_blank" class="article-card">
+      ${thumbUrl
+        ? `<img src="${thumbUrl}" class="article-thumb" alt="${a.title}">`
+        : `<div class="article-thumb-placeholder article-icon ${iconCls}">${iconTxt}</div>`
+      }
+      <div class="article-body">
+        <div class="article-title">${a.title}</div>
+        ${a.description ? `<div class="article-desc">${a.description}</div>` : ''}
+        <div class="article-meta">
+          ${a.category ? `<span class="article-cat">${a.category}</span>` : ''}
+          <span>${date}</span>
+        </div>
+      </div>
+      <div class="article-arrow">→</div>
+    </a>`;
+  }).join('');
+}
+
+init();
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+  }
+</script>
+
+<script>
+// ── Page view tracking ────────────────────────────────────────────
+(async function() {
+  try {
+    const ua = navigator.userAgent;
+
+    // Detect OS
+    const os =
+      /iPhone|iPad|iPod/.test(ua) ? 'iOS' :
+      /Android/.test(ua)          ? 'Android' :
+      /Windows/.test(ua)          ? 'Windows' :
+      /Mac OS/.test(ua)           ? 'macOS' :
+      /Linux/.test(ua)            ? 'Linux' : 'Other';
+
+    // Detect Browser
+    const browser =
+      /Edg\//.test(ua)            ? 'Edge' :
+      /Chrome\//.test(ua) && !/Chromium/.test(ua) ? 'Chrome' :
+      /Firefox\//.test(ua)        ? 'Firefox' :
+      /Safari\//.test(ua) && !/Chrome/.test(ua) ? 'Safari' :
+      /Samsung/.test(ua)          ? 'Samsung' : 'Other';
+
+    // Fingerprint: hash of screen + tz + language (no PII)
+    const raw = [screen.width, screen.height, Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.language].join('|');
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
+    const fingerprint = Math.abs(hash).toString(36);
+
+    // Page label
+    const path = window.location.pathname.replace(/\.html$/, '') || '/';
+    const page =
+      path === '/'        ? 'Home' :
+      path === '/sessions' ? 'Sessions' :
+      path === '/articles' ? 'Articles' :
+      path === '/portal'   ? 'Portal' :
+      path === '/auth'     ? 'Auth' :
+      path === '/admin'    ? 'Admin' :
+      path === '/success'  ? 'Success' : path;
+
+    const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+
+    await fetch(`${SUPABASE_URL}/rest/v1/page_views`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ page, os, browser, fingerprint })
+    });
+  } catch(e) { /* silent fail */ }
+})();
 </script>
 </body>
 </html>

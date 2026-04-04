@@ -114,6 +114,7 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
     <div class="greeting" id="greeting">My Account</div>
     <div class="email-sub" id="useremail"></div>
 
+    <!-- MEMBERSHIP STATUS -->
     <div class="card">
       <div class="card-title">Membership Status</div>
       <div id="status-badge" class="badge badge-pending">Pending</div>
@@ -128,10 +129,12 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
       </div>
     </div>
 
+    <!-- PERSONAL DETAILS -->
     <div class="grid2">
       <div class="card">
         <div class="card-title">Personal Details</div>
 
+        <!-- VIEW MODE -->
         <div id="details-view">
           <div class="row"><span class="row-label">Name</span><span class="row-val" id="v-name">—</span></div>
           <div class="row"><span class="row-label">Phone</span><span class="row-val" id="v-phone">—</span></div>
@@ -140,6 +143,7 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
           <button class="btn-o" style="width:100%;margin-top:1rem" onclick="editMode(true)">Edit Details</button>
         </div>
 
+        <!-- EDIT MODE -->
         <div id="details-edit" style="display:none">
           <label class="lbl">Full Name</label>
           <input class="field" id="e-name" type="text" autocomplete="name">
@@ -157,14 +161,17 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
         </div>
       </div>
 
+      <!-- QUALIFICATIONS -->
       <div class="card">
         <div class="card-title">My Qualifications</div>
 
+        <!-- VIEW MODE -->
         <div id="quals-view">
           <div class="qual-tags" id="qual-tags"><span class="tag-none">None recorded</span></div>
           <button class="btn-o" style="width:100%;margin-top:1.25rem" onclick="qualMode(true)">Edit Qualifications</button>
         </div>
 
+        <!-- EDIT MODE -->
         <div id="quals-edit" style="display:none">
           <div class="qual-edit-grid" id="qual-edit-grid"></div>
           <div class="btn-row" style="margin-top:0.75rem">
@@ -176,11 +183,13 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
       </div>
     </div>
 
+    <!-- MY ENROLMENTS -->
     <div class="card" style="margin-top:1.5rem">
       <div class="card-title">My Session Enrolments</div>
       <div id="enrolments-content"><div style="color:var(--muted);font-size:0.85rem">Loading...</div></div>
     </div>
 
+    <!-- DELETE ACCOUNT -->
     <div style="margin-top:2.5rem;padding:1.5rem;border:1px solid rgba(255,92,58,0.2);border-radius:4px;background:rgba(255,92,58,0.04)">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--coral);margin-bottom:0.5rem">Danger Zone</div>
       <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;line-height:1.55">Permanently delete your account and all associated data. This cannot be undone.</p>
