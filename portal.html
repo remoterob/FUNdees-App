@@ -104,7 +104,7 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
     <a href="/#sessions" class="nav-link" onclick="window.location='/?page=sessions'">Pool Sessions</a>
     <button class="nav-btn" onclick="doLogout()">Log Out</button>
   </div>
-  <button id="hb-btn" class="hb-btn" aria-label="Menu"><span></span><span></span><span></span></button>
+  <button id="hb-btn" class="hb-btn" onclick="toggleHamburger();return false;" aria-label="Menu"><span></span><span></span><span></span></button>
 </nav>
 
 <div class="wrap">
@@ -563,6 +563,24 @@ init();
     });
   } catch(e) { /* silent fail */ }
 })();
+</script>
+<script>
+function toggleHamburger() {
+  var btn  = document.getElementById('hb-btn');
+  var menu = document.getElementById('mob-menu');
+  if (!btn || !menu) return;
+  var open = menu.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+document.addEventListener('click', function(e) {
+  var btn  = document.getElementById('hb-btn');
+  var menu = document.getElementById('mob-menu');
+  if (!menu || !menu.classList.contains('open')) return;
+  if (!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+    menu.classList.remove('open');
+    btn.classList.remove('open');
+  }
+});
 </script>
 </body>
 </html>
