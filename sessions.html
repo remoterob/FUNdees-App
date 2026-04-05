@@ -99,8 +99,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
   <a href="/sessions.html">Pool Sessions</a>
   <a href="/articles.html">Articles</a>
   <a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a>
-  <a href="/auth.html">Sign In</a>
-  <a href="/auth.html?tab=signup" class="mob-cta">Join Now</a>
+  <span id="mob-auth"></span>
 </div>
 
 <div class="hero">
@@ -168,10 +167,12 @@ async function init() {
       const { data: enr } = await sb.from('enrolments').select('session_id,status').eq('member_id', member.id);
       myEnrolments = enr || [];
     }
-    document.getElementById('nav-auth').innerHTML = `<a href="/portal.html" class="nav-link">My Account</a>`;
+    document.getElementById('nav-auth').innerHTML = `<a href="/portal.html" class="nav-link" style="color:var(--surge)">My Account</a>`;
+    document.getElementById('mob-auth').innerHTML = `<a href="/portal.html">My Account</a><a href="#" onclick="sb.auth.signOut().then(()=>window.location='/');return false;" class="mob-danger">Log Out</a>`;
   } else {
     document.getElementById('login-nudge').style.display = 'block';
     document.getElementById('nav-auth').innerHTML = `<a href="/auth.html" class="nav-btn">Sign In</a>`;
+    document.getElementById('mob-auth').innerHTML = `<a href="/auth.html">Sign In</a><a href="/auth.html?tab=signup" class="mob-cta">Join Now</a>`;
   }
 
   await loadSessions();

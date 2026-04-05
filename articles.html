@@ -72,6 +72,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
     <a href="/" class="nav-link">Home</a>
     <a href="/sessions.html" class="nav-link">Sessions</a>
     <a href="https://fishbingo.netlify.app/" target="_blank" class="nav-link">Fish Bingo</a>
+    <span id="nav-auth"></span>
   </div>
   <button id="hb-btn" class="hb-btn" onclick="toggleHamburger();return false;" aria-label="Menu"><span></span><span></span><span></span></button>
 </nav>
@@ -80,7 +81,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
   <a href="/sessions.html">Pool Sessions</a>
   <a href="/articles.html">Articles</a>
   <a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a>
-  <a href="/auth.html">Sign In</a>
+  <span id="mob-auth"></span>
 </div>
 
 <div class="hero">
@@ -105,6 +106,7 @@ let allArticles = [];
 let activeCategory = 'all';
 
 async function init() {
+  // Load articles immediately
   const { data, error } = await sb.from('articles').select('*').order('created_at', { ascending: false });
   if (error || !data) {
     document.getElementById('articles-list').innerHTML = `<div class="empty">Could not load articles: ${error?.message}</div>`;
@@ -113,6 +115,19 @@ async function init() {
   allArticles = data;
   buildFilters();
   render();
+
+  // Set nav auth state — use onAuthStateChange so it fires even after navigation
+  sb.auth.onAuthStateChange((event, session) => {
+    const navAuth = document.getElementById('nav-auth');
+    const mobAuth = document.getElementById('mob-auth');
+    if (session) {
+      if (navAuth) navAuth.innerHTML = `<a href="/portal.html" class="nav-link" style="color:var(--surge)">My Account</a>`;
+      if (mobAuth) mobAuth.innerHTML = `<a href="/portal.html">My Account</a><a href="#" onclick="sb.auth.signOut().then(()=>window.location='/');return false;" class="mob-danger">Log Out</a>`;
+    } else {
+      if (navAuth) navAuth.innerHTML = `<a href="/auth.html" class="nav-link">Sign In</a>`;
+      if (mobAuth) mobAuth.innerHTML = `<a href="/auth.html">Sign In</a><a href="/auth.html?tab=signup" class="mob-cta">Join Now</a>`;
+    }
+  });
 }
 
 function buildFilters() {
