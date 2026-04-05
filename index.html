@@ -1200,6 +1200,7 @@
     <li id="nav-auth-guest2"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
     <li id="nav-auth-user" class="hidden"><a href="/portal.html">My Account</a></li>
     <li id="nav-auth-admin" class="hidden"><a href="/admin.html">Admin</a></li>
+    <li id="nav-auth-plans" class="hidden"><a href="/session-plan.html">Session Plans</a></li>
     <li id="nav-auth-logout" class="hidden"><a href="#" onclick="handleLogout()" class="nav-cta" style="background:var(--coral)">Log Out</a></li>
   </ul>
   <a id="hb-btn" class="hb-btn" href="#" onclick="toggleMenu();return false;" aria-label="Menu">
@@ -1217,6 +1218,7 @@
   <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta">Join Now</a>
   <a href="/portal.html" id="mob-account" style="display:none">My Account</a>
   <a href="/admin.html" id="mob-admin" style="display:none">Admin</a>
+  <a href="/session-plan.html" id="mob-plans" style="display:none">Session Plans</a>
   <a href="/" onclick="handleLogout();return false;" id="mob-logout" class="mob-logout-lnk" style="display:none">Log Out</a>
 </div>
 
@@ -1520,6 +1522,11 @@
     document.getElementById('mob-join').style.display    = loggedIn ? 'none' : 'block';
     document.getElementById('mob-account').style.display = loggedIn ? 'block' : 'none';
     document.getElementById('mob-admin').style.display   = isAdmin  ? 'block' : 'none';
+    const isLead = isAdmin || !!currentMember?.is_qualified_lead;
+    const navPlans = document.getElementById('nav-auth-plans');
+    const mobPlans = document.getElementById('mob-plans');
+    if (navPlans) navPlans.classList.toggle('hidden', !isLead);
+    if (mobPlans) mobPlans.style.display = isLead ? 'block' : 'none';
     document.getElementById('mob-logout').style.display  = loggedIn ? 'block' : 'none';
 
     const hasSessions = !!currentMember?._hasActiveSessions;

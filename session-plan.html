@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0A1628">
+<title>Session Plan — Spearfishing FUNdamentals</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--midnight:#0A1628;--deep:#0D2D4A;--surge:#00CFAD;--coral:#FF5C3A;--amber:#F5A623;--sand:#F0EDE6;--muted:rgba(240,237,230,0.5);--dim:rgba(255,255,255,0.07);--surge-dim:rgba(0,207,173,0.08);--surge-border:rgba(0,207,173,0.25);--amber-dim:rgba(245,166,35,0.08);--amber-border:rgba(245,166,35,0.25)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#07101e;color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:60px;background:rgba(10,22,40,0.97);border-bottom:1px solid var(--dim);display:flex;align-items:center;padding:0 1.5rem;gap:1rem}
+.nav-brand{display:flex;align-items:center;gap:0.6rem;text-decoration:none}
+.nav-brand img{height:32px;opacity:0.9}
+.nav-brand-text{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--sand);line-height:1.1}
+.nav-brand-text span{display:block;font-size:0.5rem;letter-spacing:0.2em;color:var(--surge)}
+.nav-sep{color:var(--dim);font-size:1.2rem;margin:0 0.25rem}
+.nav-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted)}
+.nav-badge{background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.3);color:var(--amber);font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.2rem 0.6rem;border-radius:2px}
+.nav-right{margin-left:auto;display:flex;gap:0.6rem;align-items:center}
+
+/* ── BUTTONS ── */
+.btn{border:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;padding:0.4rem 0.9rem;border-radius:2px;transition:all 0.15s;display:inline-flex;align-items:center;gap:0.35rem}
+.btn-ghost{background:transparent;border:1px solid var(--dim);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--surge-border);color:var(--surge)}
+.btn-surge{background:var(--surge);color:var(--midnight)}
+.btn-surge:hover{background:#00e8c0}
+.btn-outline{background:transparent;border:1px solid var(--surge-border);color:var(--surge)}
+.btn-outline:hover{background:var(--surge-dim)}
+.btn-danger{background:transparent;border:1px solid rgba(255,92,58,0.3);color:var(--coral)}
+.btn-danger:hover{background:rgba(255,92,58,0.08)}
+.btn-amber{background:transparent;border:1px solid var(--amber-border);color:var(--amber)}
+.btn-amber:hover{background:var(--amber-dim)}
+.btn-sm{padding:0.3rem 0.65rem;font-size:0.7rem}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:256px 1fr;min-height:calc(100vh - 60px);margin-top:60px}
+
+/* ── SIDEBAR ── */
+.sidebar{background:rgba(10,22,40,0.7);border-right:1px solid var(--dim);display:flex;flex-direction:column;height:calc(100vh - 60px);position:sticky;top:60px;overflow:hidden}
+.sidebar-top{padding:1rem;border-bottom:1px solid var(--dim);flex-shrink:0}
+.sidebar-scroll{flex:1;overflow-y:auto;padding:1rem}
+.sec-label{font-size:0.6rem;letter-spacing:0.16em;text-transform:uppercase;color:rgba(240,237,230,0.28);font-weight:600;margin-bottom:0.5rem}
+
+/* Session list */
+.sess-item{padding:0.65rem 0.75rem;border-radius:3px;cursor:pointer;border:1px solid transparent;transition:all 0.12s;margin-bottom:0.3rem}
+.sess-item:hover{background:rgba(255,255,255,0.03);border-color:var(--dim)}
+.sess-item.active{background:var(--surge-dim);border-color:var(--surge-border)}
+.sess-item-date{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.03em;color:var(--sand)}
+.sess-item.active .sess-item-date{color:var(--surge)}
+.sess-item-sub{font-size:0.7rem;color:var(--muted);margin-top:0.1rem}
+.pill{display:inline-block;font-size:0.58rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:0.12rem 0.4rem;border-radius:2px;margin-top:0.25rem}
+.pill-draft{background:rgba(245,166,35,0.12);color:var(--amber)}
+.pill-pub{background:rgba(0,207,173,0.12);color:var(--surge)}
+.pill-empty{background:rgba(255,255,255,0.05);color:var(--muted)}
+
+/* Drill library */
+.drill-search{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--dim);border-radius:3px;padding:0.45rem 0.7rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.8rem;outline:none;margin-bottom:0.75rem}
+.drill-search::placeholder{color:var(--muted)}
+.drill-search:focus{border-color:var(--surge-border)}
+.drill-cat-label{font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(240,237,230,0.22);font-weight:600;margin:0.75rem 0 0.35rem}
+.drill-chip{display:flex;align-items:flex-start;gap:0.5rem;padding:0.5rem 0.6rem;border-radius:3px;cursor:grab;border:1px solid var(--dim);background:rgba(13,45,74,0.4);margin-bottom:0.25rem;transition:all 0.12s;user-select:none}
+.drill-chip:hover{border-color:var(--surge-border);background:rgba(0,207,173,0.05)}
+.drill-chip.dragging{opacity:0.4;cursor:grabbing}
+.drill-chip-num{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--surge);line-height:1;flex-shrink:0;width:16px}
+.drill-chip-name{font-size:0.75rem;font-weight:500;color:var(--sand);line-height:1.2}
+.drill-chip-cat{font-size:0.62rem;color:var(--muted);margin-top:0.1rem}
+.drill-add-btn{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.6rem;border-radius:3px;cursor:pointer;border:1px dashed rgba(255,255,255,0.12);background:none;color:var(--muted);font-size:0.75rem;width:100%;margin-top:0.5rem;font-family:'Barlow',sans-serif;transition:all 0.12s}
+.drill-add-btn:hover{border-color:var(--surge-border);color:var(--surge)}
+
+/* ── MAIN ── */
+.main{padding:1.5rem 1.75rem;overflow-y:auto}
+.plan-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.25rem}
+.plan-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--sand);line-height:1}
+.plan-meta{font-size:0.8rem;color:var(--muted);margin-top:0.3rem}
+.plan-meta strong{color:var(--sand);font-weight:500}
+.tag{display:inline-block;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:2px}
+.tag-pool{background:rgba(0,207,173,0.1);color:var(--surge);border:1px solid var(--surge-border)}
+.tag-depth{background:rgba(74,144,226,0.1);color:#4A90E2;border:1px solid rgba(74,144,226,0.3)}
+.avatars{display:flex;gap:0.3rem;flex-wrap:wrap;margin-top:0.45rem}
+.av{width:26px;height:26px;border-radius:50%;background:var(--deep);border:1px solid rgba(0,207,173,0.25);display:flex;align-items:center;justify-content:center;font-size:0.62rem;font-weight:600;color:var(--surge)}
+
+/* Lane config */
+.lane-cfg{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.1rem;padding:0.65rem 1rem;background:rgba(13,45,74,0.25);border:1px solid var(--dim);border-radius:3px;flex-wrap:wrap}
+.lane-cfg-lbl{font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.cnt-btn{width:26px;height:26px;border-radius:2px;border:1px solid var(--dim);background:none;color:var(--sand);cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center}
+.cnt-btn:hover{border-color:var(--surge-border);color:var(--surge)}
+.cnt-val{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--surge);width:20px;text-align:center}
+.lane-name-inp{background:rgba(255,255,255,0.04);border:1px solid var(--dim);border-radius:2px;padding:0.28rem 0.55rem;color:var(--sand);font-size:0.75rem;font-family:'Barlow',sans-serif;width:130px;outline:none}
+.lane-name-inp:focus{border-color:var(--surge-border)}
+
+/* ── GRID ── */
+#plan-grid{overflow-x:auto}
+.grid-wrap{min-width:500px}
+.grid-header-row{display:grid;gap:2px;margin-bottom:2px}
+.grid-time-hdr{font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(240,237,230,0.25);text-align:center;padding:0.5rem 0}
+.lane-hdr{padding:0.55rem 0.75rem;background:rgba(13,45,74,0.7);border:1px solid var(--dim);border-radius:3px 3px 0 0;display:flex;align-items:center;gap:0.5rem}
+.lane-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.lane-hdr-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase}
+
+.grid-row{display:grid;gap:2px;margin-bottom:2px}
+.time-cell{display:flex;align-items:flex-start;justify-content:center;padding-top:0.55rem;font-family:'Bebas Neue',sans-serif;font-size:0.95rem;color:rgba(240,237,230,0.3)}
+.block-cell{min-height:78px;padding:0.45rem;border:1px solid var(--dim);background:rgba(13,45,74,0.25);position:relative;transition:border-color 0.12s,background 0.12s;cursor:pointer}
+.block-cell:hover{border-color:var(--surge-border);background:rgba(0,207,173,0.04)}
+.block-cell.drag-over{border-color:var(--surge);background:rgba(0,207,173,0.1);border-style:dashed}
+.block-cell.is-continuation{background:rgba(0,207,173,0.03);border-top:1px dashed rgba(0,207,173,0.18);cursor:default}
+.block-cell.is-continuation.lane-2-cont{background:rgba(245,166,35,0.03);border-top:1px dashed rgba(245,166,35,0.18)}
+.cont-label{padding:0.25rem 0.45rem;font-size:0.65rem;font-style:italic}
+.block-empty{display:flex;align-items:center;justify-content:center;height:100%;min-height:60px;color:rgba(240,237,230,0.12);font-size:0.7rem;letter-spacing:0.05em}
+
+/* Drill card in block */
+.block-drill{border-radius:2px;padding:0.45rem 0.55rem;height:100%}
+.bd-lane1{background:var(--surge-dim);border:1px solid var(--surge-border)}
+.bd-lane2{background:var(--amber-dim);border:1px solid var(--amber-border)}
+.bd-lane3{background:rgba(74,144,226,0.07);border:1px solid rgba(74,144,226,0.25)}
+.bd-header{display:flex;align-items:flex-start;gap:0.4rem;margin-bottom:0.25rem}
+.bd-num{font-family:'Bebas Neue',sans-serif;font-size:0.9rem;line-height:1;flex-shrink:0}
+.bd-name{font-size:0.73rem;font-weight:600;color:var(--sand);line-height:1.25;flex:1}
+.bd-span-badge{font-size:0.58rem;font-weight:700;padding:0.1rem 0.3rem;border-radius:2px;white-space:nowrap;flex-shrink:0}
+.bd-specifics{font-size:0.68rem;color:rgba(240,237,230,0.6);line-height:1.4;border-top:1px solid rgba(255,255,255,0.06);padding-top:0.25rem;margin-top:0.25rem}
+.span-btn{position:absolute;bottom:3px;right:3px;font-size:0.58rem;color:rgba(255,255,255,0.2);cursor:pointer;padding:2px 4px;border:1px solid rgba(255,255,255,0.1);border-radius:2px;background:none;transition:all 0.12s}
+.span-btn:hover{color:var(--surge);border-color:var(--surge-border)}
+.remove-btn{position:absolute;top:3px;right:3px;font-size:0.65rem;color:rgba(255,255,255,0.15);cursor:pointer;width:16px;height:16px;border:none;background:none;border-radius:2px;display:flex;align-items:center;justify-content:center;transition:all 0.12s}
+.remove-btn:hover{color:var(--coral);background:rgba(255,92,58,0.1)}
+
+/* Lane colours */
+.lc0-num{color:var(--surge)}.lc0-badge{background:rgba(0,207,173,0.15);color:var(--surge)}
+.lc1-num{color:var(--amber)}.lc1-badge{background:rgba(245,166,35,0.15);color:var(--amber)}
+.lc2-num{color:#4A90E2}.lc2-badge{background:rgba(74,144,226,0.15);color:#4A90E2}
+.lc0-cont{color:rgba(0,207,173,0.35)}.lc1-cont{color:rgba(245,166,35,0.35)}.lc2-cont{color:rgba(74,144,226,0.35)}
+
+/* ── EDIT PANEL ── */
+.edit-panel{margin-top:1rem;background:rgba(13,45,74,0.4);border:1px solid var(--surge-border);border-radius:4px;padding:1.1rem;display:none}
+.edit-panel.open{display:block}
+.edit-panel-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--surge);margin-bottom:0.9rem}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.85rem}
+.fld label{display:block;font-size:0.62rem;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:0.3rem}
+.fld select,.fld textarea,.fld input{width:100%;background:rgba(10,22,40,0.6);border:1px solid var(--dim);border-radius:2px;padding:0.5rem 0.65rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.82rem;outline:none;resize:vertical}
+.fld select:focus,.fld textarea:focus,.fld input:focus{border-color:var(--surge-border)}
+.fld textarea{min-height:72px}
+.fld-full{grid-column:1/-1}
+.edit-actions{display:flex;gap:0.6rem;justify-content:flex-end;margin-top:0.75rem}
+
+/* ── NOTES & EXPORT ── */
+.section-lbl{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem}
+.notes-ta{width:100%;background:rgba(10,22,40,0.5);border:1px solid var(--dim);border-radius:3px;padding:0.7rem 0.9rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.82rem;resize:vertical;min-height:80px;outline:none}
+.notes-ta:focus{border-color:var(--surge-border)}
+.export-bar{margin-top:1.5rem;padding:0.9rem 1.1rem;background:rgba(13,45,74,0.3);border:1px solid var(--dim);border-radius:4px;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.export-bar-txt{font-size:0.8rem;color:var(--muted)}
+.export-bar-txt strong{color:var(--sand);font-weight:500}
+.export-actions{display:flex;gap:0.5rem}
+hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(7,16,30,0.9);backdrop-filter:blur(6px);align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--deep);border:1px solid rgba(0,207,173,0.2);border-radius:4px;padding:1.75rem;width:100%;max-width:440px;position:relative}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--sand);margin-bottom:0.25rem}
+.modal-sub{font-size:0.8rem;color:var(--muted);margin-bottom:1.25rem}
+.modal-close{position:absolute;top:0.85rem;right:0.85rem;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem}
+.modal-close:hover{color:var(--sand)}
+
+/* ── PRINT STYLES ── */
+@media print {
+  nav,.sidebar,.edit-panel,.export-bar,.btn,button{display:none!important}
+  body{background:white;color:#111}
+  .layout{display:block}
+  .main{padding:1rem}
+  .plan-title{color:#111;font-size:1.6rem}
+  .plan-meta{color:#555}
+  .grid-wrap{min-width:unset}
+  .block-cell{border:1px solid #ddd!important;background:#f9f9f9!important;min-height:60px}
+  .block-drill{background:#fff!important;border:1px solid #ccc!important}
+  .bd-name{color:#111}
+  .bd-specifics{color:#555}
+  .lane-hdr{background:#eee!important;border:1px solid #ccc!important}
+  .lane-hdr-name{color:#111!important}
+  .time-cell{color:#888}
+  .notes-ta{border:1px solid #ddd;color:#111;background:#f9f9f9}
+  .section-lbl{color:#888}
+  .cont-label{color:#aaa}
+}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:3rem 2rem;color:var(--muted)}
+.empty-icon{font-size:2.5rem;margin-bottom:0.75rem}
+.empty-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.1rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--surge);margin-bottom:0.4rem}
+.empty-text{font-size:0.82rem;line-height:1.6;max-width:360px;margin:0 auto}
+
+/* Toast */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:300;background:var(--deep);border-left:3px solid var(--surge);border:1px solid var(--surge-border);color:var(--sand);padding:0.75rem 1.1rem;border-radius:3px;font-size:0.82rem;transform:translateY(80px);opacity:0;transition:all 0.3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{border-left-color:var(--coral);border-color:rgba(255,92,58,0.3)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-brand">
+    <img src="/logo-white.png" alt="Logo">
+    <div class="nav-brand-text">Spearfishing<span>FUNdamentals</span></div>
+  </a>
+  <span class="nav-sep">·</span>
+  <span class="nav-title">Session Plans</span>
+  <span class="nav-badge" id="role-badge">Lead</span>
+  <div class="nav-right">
+    <button class="btn btn-ghost btn-sm" id="btn-preview" onclick="togglePreview()" style="display:none">👁 Preview</button>
+    <button class="btn btn-ghost btn-sm" id="btn-draft" onclick="savePlan('draft')" style="display:none">Save Draft</button>
+    <button class="btn btn-surge btn-sm" id="btn-publish" onclick="savePlan('published')" style="display:none">Publish Plan</button>
+    <a href="/" class="btn btn-ghost btn-sm">← Back</a>
+  </div>
+</nav>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sec-label" id="block-title">Loading…</div>
+      <div id="session-list" style="margin-top:0.5rem"></div>
+    </div>
+    <div class="sidebar-scroll">
+      <div class="sec-label">Drill Library</div>
+      <input class="drill-search" id="drill-search" placeholder="Search drills…" oninput="filterDrills(this.value)">
+      <div id="drill-library"></div>
+      <button class="drill-add-btn" onclick="openAddDrill()">＋ Add new drill…</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="main-area">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🤿</div>
+      <div class="empty-title">Select a Session</div>
+      <div class="empty-text">Choose a session date from the left to view or build its plan.</div>
+    </div>
+
+    <div id="plan-area" style="display:none">
+      <!-- Header -->
+      <div class="plan-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.35rem">
+            <span class="tag tag-pool" id="plan-type-tag">Pool</span>
+            <span style="font-size:0.72rem;color:var(--muted)" id="plan-location-time"></span>
+          </div>
+          <div class="plan-title" id="plan-title">–</div>
+          <div class="plan-meta" id="plan-meta"></div>
+          <div class="avatars" id="plan-avatars"></div>
+        </div>
+        <div style="display:flex;gap:0.6rem;flex-shrink:0;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="togglePreview()">👁 Member View</button>
+          <button class="btn btn-amber btn-sm" onclick="exportPrint()">⬇ Export / Print</button>
+        </div>
+      </div>
+
+      <!-- Lane config -->
+      <div class="lane-cfg">
+        <span class="lane-cfg-lbl">Lanes</span>
+        <button class="cnt-btn" onclick="changeLaneCount(-1)">−</button>
+        <span class="cnt-val" id="lane-count-val">2</span>
+        <button class="cnt-btn" onclick="changeLaneCount(1)">+</button>
+        <span style="font-size:0.7rem;color:var(--dim);margin:0 0.35rem">|</span>
+        <div id="lane-name-inputs" style="display:flex;gap:0.5rem;flex-wrap:wrap"></div>
+      </div>
+
+      <!-- Plan grid -->
+      <div id="plan-grid"></div>
+
+      <!-- Edit panel -->
+      <div class="edit-panel" id="edit-panel">
+        <div class="edit-panel-title" id="edit-panel-title">Editing block</div>
+        <div class="edit-grid">
+          <div class="fld">
+            <label>Drill</label>
+            <select id="edit-drill"></select>
+          </div>
+          <div class="fld">
+            <label>Spans (10-min blocks)</label>
+            <select id="edit-span">
+              <option value="1">1 block — 10 min</option>
+              <option value="2">2 blocks — 20 min</option>
+              <option value="3">3 blocks — 30 min</option>
+              <option value="4">4 blocks — 40 min</option>
+              <option value="5">5 blocks — 50 min</option>
+              <option value="6">6 blocks — 60 min</option>
+            </select>
+          </div>
+          <div class="fld fld-full">
+            <label>Specifics / Commentary</label>
+            <textarea id="edit-specifics" placeholder="Free text — sets, distances, times, instructions. Overrides the drill default description for this block."></textarea>
+          </div>
+        </div>
+        <div class="edit-actions">
+          <button class="btn btn-danger btn-sm" onclick="removeDrill()">Remove Drill</button>
+          <button class="btn btn-ghost btn-sm" onclick="closeEditPanel()">Cancel</button>
+          <button class="btn btn-surge btn-sm" onclick="applyEdit()">Apply</button>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- Session notes -->
+      <div>
+        <div class="section-lbl">Session Notes (visible to enrolled members when published)</div>
+        <textarea class="notes-ta" id="session-notes" placeholder="Overall notes — equipment to bring, focus themes, safety reminders, parking info…"></textarea>
+      </div>
+
+      <hr>
+
+      <!-- Export bar -->
+      <div class="export-bar">
+        <div class="export-bar-txt">
+          <strong>Export Session Plan</strong> — share with enrolled members or print for poolside use
+        </div>
+        <div class="export-actions">
+          <button class="btn btn-ghost btn-sm" onclick="copyLink()">🔗 Copy Link</button>
+          <button class="btn btn-outline btn-sm" onclick="exportPrint()">🖨 Print / PDF</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add Drill Modal -->
+<div class="modal-overlay" id="modal-add-drill">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-add-drill')">✕</button>
+    <div class="modal-title">New Drill</div>
+    <div class="modal-sub">Add to the library — available for all future plans.</div>
+    <div style="display:flex;flex-direction:column;gap:0.85rem">
+      <div class="fld"><label>Drill Name</label><input id="new-drill-name" type="text" placeholder="e.g. Breath-Up Sequence"></div>
+      <div class="fld">
+        <label>Category</label>
+        <select id="new-drill-cat">
+          <option>Fitness & CO2</option>
+          <option>Distance & Depth</option>
+          <option>Skills & Safety</option>
+          <option>Relaxation</option>
+        </select>
+      </div>
+      <div class="fld"><label>Default Description</label><textarea id="new-drill-desc" placeholder="What does this drill involve?"></textarea></div>
+    </div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;margin-top:1rem">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-add-drill')">Cancel</button>
+      <button class="btn btn-surge btn-sm" onclick="saveNewDrill()">Add Drill</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const TIME_SLOTS = ['6:00','6:10','6:20','6:30','6:40','6:50','7:00','7:10','7:20','7:30','7:40','7:50'];
+const LANE_COLOURS = ['lc0','lc1','lc2'];
+const LANE_DOT_COLOURS = ['#00CFAD','#F5A623','#4A90E2'];
+const BD_CLASSES = ['bd-lane1','bd-lane2','bd-lane3'];
+
+let currentUser = null, currentMember = null;
+let allDrills = [], allSessions = [];
+let currentSession = null, currentPlan = null;
+let planBlocks = {}; // { 'slot-lane': {drill_id, span, specifics} }
+let laneCount = 2;
+let laneNames = ['Lane 1','Lane 2'];
+let editTarget = null; // { slot, lane }
+let isDirty = false;
+let previewMode = false;
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session?.user) { window.location = '/auth.html'; return; }
+  currentUser = session.user;
+
+  const { data: m } = await sb.from('members').select('*').eq('auth_user_id', currentUser.id).maybeSingle();
+  if (!m || (!m.is_admin && !m.is_qualified_lead)) {
+    window.location = '/'; return;
+  }
+  currentMember = m;
+  if (m.is_admin) document.getElementById('role-badge').textContent = 'Admin';
+
+  await Promise.all([loadDrills(), loadSessions()]);
+
+  // Check URL for session param
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('session')) selectSession(params.get('session'));
+}
+
+// ── DRILLS ────────────────────────────────────────────────────────────────
+async function loadDrills() {
+  const { data } = await sb.from('drills').select('*').order('id');
+  allDrills = data || [];
+  renderDrillLibrary(allDrills);
+  renderEditDrillSelect();
+}
+
+function renderDrillLibrary(drills) {
+  const cats = {};
+  drills.forEach(d => { (cats[d.category] = cats[d.category]||[]).push(d); });
+  const catOrder = ['Fitness & CO2','Distance & Depth','Skills & Safety','Relaxation'];
+  let html = '';
+  catOrder.forEach(cat => {
+    const items = cats[cat] || [];
+    if (!items.length) return;
+    html += `<div class="drill-cat-label">${cat}</div>`;
+    items.forEach(d => {
+      html += `<div class="drill-chip" draggable="true"
+        data-drill-id="${d.id}"
+        ondragstart="onDrillDragStart(event,${d.id})"
+        onclick="onDrillChipClick(${d.id})">
+        <span class="drill-chip-num">${d.id}</span>
+        <div>
+          <div class="drill-chip-name">${d.name}</div>
+          <div class="drill-chip-cat">${d.category}</div>
+        </div>
+      </div>`;
+    });
+  });
+  document.getElementById('drill-library').innerHTML = html;
+}
+
+function renderEditDrillSelect() {
+  const sel = document.getElementById('edit-drill');
+  sel.innerHTML = '<option value="">— choose drill —</option>' +
+    allDrills.map(d => `<option value="${d.id}">${d.id} — ${d.name}</option>`).join('');
+}
+
+function filterDrills(q) {
+  const filtered = q ? allDrills.filter(d =>
+    d.name.toLowerCase().includes(q.toLowerCase()) ||
+    d.category.toLowerCase().includes(q.toLowerCase())
+  ) : allDrills;
+  renderDrillLibrary(filtered);
+}
+
+// ── SESSIONS ──────────────────────────────────────────────────────────────
+async function loadSessions() {
+  // Load pool sessions that are open or future
+  const { data } = await sb.from('sessions')
+    .select('*, enrolments(member_id, status, members(full_name))')
+    .in('status', ['open','full','closed','opening_soon'])
+    .order('date_start');
+  allSessions = data || [];
+
+  if (!allSessions.length) {
+    document.getElementById('block-title').textContent = 'No sessions found';
+    return;
+  }
+
+  // Group by session (block)
+  document.getElementById('block-title').textContent = allSessions[0]?.title || 'Sessions';
+
+  // Generate date list for each session (weekly occurrences between date_start and date_end)
+  const list = document.getElementById('session-list');
+  list.innerHTML = '';
+  allSessions.forEach(sess => {
+    const dates = getWeeklyDates(sess.date_start, sess.date_end);
+    dates.forEach((date, i) => {
+      const div = document.createElement('div');
+      div.className = 'sess-item';
+      div.dataset.sessId = sess.id;
+      div.dataset.date = date;
+      div.innerHTML = `
+        <div class="sess-item-date">${fmtDate(date)}</div>
+        <div class="sess-item-sub">Week ${i+1} of ${dates.length} · ${sess.title}</div>
+        <span class="pill pill-empty" id="status-${sess.id}-${date}">No Plan Yet</span>`;
+      div.onclick = () => selectSession(sess.id, date);
+      list.appendChild(div);
+    });
+  });
+
+  // Check which dates already have plans
+  const { data: plans } = await sb.from('session_plans').select('session_id, plan_date, status');
+  (plans||[]).forEach(p => {
+    const el = document.getElementById(`status-${p.session_id}-${p.plan_date}`);
+    if (el) {
+      el.className = `pill ${p.status === 'published' ? 'pill-pub' : 'pill-draft'}`;
+      el.textContent = p.status === 'published' ? 'Published' : 'Draft';
+    }
+  });
+}
+
+function getWeeklyDates(start, end) {
+  const dates = [];
+  let d = new Date(start + 'T12:00:00');
+  const endD = new Date(end + 'T12:00:00');
+  while (d <= endD) {
+    dates.push(d.toISOString().slice(0,10));
+    d = new Date(d); d.setDate(d.getDate() + 7);
+  }
+  return dates;
+}
+
+function fmtDate(d) {
+  return new Date(d+'T12:00:00').toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+
+// ── SELECT SESSION DATE ────────────────────────────────────────────────────
+async function selectSession(sessId, date) {
+  if (isDirty && !confirm('You have unsaved changes. Discard them?')) return;
+
+  // Update sidebar highlight
+  document.querySelectorAll('.sess-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.sessId === sessId && el.dataset.date === date);
+  });
+
+  currentSession = allSessions.find(s => s.id === sessId);
+  if (!currentSession) return;
+
+  // Load plan for this date
+  const { data: plan } = await sb.from('session_plans')
+    .select('*, plan_blocks(*)')
+    .eq('session_id', sessId)
+    .eq('plan_date', date)
+    .maybeSingle();
+
+  currentPlan = plan || null;
+
+  laneCount = plan?.lane_count || 2;
+  laneNames = plan?.lane_names || ['Lane 1', 'Lane 2'];
+
+  // Rebuild planBlocks state
+  planBlocks = {};
+  (plan?.plan_blocks || []).forEach(b => {
+    planBlocks[`${b.time_slot}|${b.lane}`] = {
+      drill_id: b.drill_id,
+      span: b.span || 1,
+      specifics: b.specifics || '',
+      id: b.id
+    };
+  });
+
+  // Render header
+  const sessTypeLower = currentSession.type === 'pool' ? 'Pool' : 'Depth';
+  document.getElementById('plan-type-tag').textContent = sessTypeLower;
+  document.getElementById('plan-type-tag').className = `tag tag-${currentSession.type}`;
+  document.getElementById('plan-location-time').textContent =
+    [currentSession.location, currentSession.date_start !== currentSession.date_end ? '' : ''].filter(Boolean).join(' · ');
+  document.getElementById('plan-title').textContent =
+    `${currentSession.title} — ${fmtDate(date)}`;
+
+  const enrolled = (currentSession.enrolments||[]).filter(e => e.status === 'enrolled');
+  document.getElementById('plan-meta').innerHTML =
+    `Lead: <strong>${currentMember.full_name}</strong> &nbsp;·&nbsp; ${enrolled.length} enrolled`;
+
+  // Avatars
+  const avHtml = enrolled.slice(0,6).map(e => {
+    const initials = (e.members?.full_name||'?').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+    return `<div class="av">${initials}</div>`;
+  }).join('') + (enrolled.length > 6 ? `<div class="av" style="font-size:0.6rem;color:var(--muted)">+${enrolled.length-6}</div>` : '');
+  document.getElementById('plan-avatars').innerHTML = avHtml;
+
+  // Session notes
+  document.getElementById('session-notes').value = plan?.session_notes || '';
+
+  // Show/hide save buttons
+  document.getElementById('btn-preview').style.display = 'inline-flex';
+  document.getElementById('btn-draft').style.display = 'inline-flex';
+  document.getElementById('btn-publish').style.display = 'inline-flex';
+  if (plan?.status === 'published') {
+    document.getElementById('btn-publish').textContent = '✓ Published';
+    document.getElementById('btn-publish').className = 'btn btn-outline btn-sm';
+  } else {
+    document.getElementById('btn-publish').textContent = 'Publish Plan';
+    document.getElementById('btn-publish').className = 'btn btn-surge btn-sm';
+  }
+
+  // Store date for saving
+  currentPlan = { ...(currentPlan||{}), _date: date, _sessId: sessId };
+
+  renderLaneConfig();
+  renderGrid();
+  closeEditPanel();
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('plan-area').style.display = 'block';
+  isDirty = false;
+}
+
+// ── LANE CONFIG ───────────────────────────────────────────────────────────
+function renderLaneConfig() {
+  document.getElementById('lane-count-val').textContent = laneCount;
+  const inp = document.getElementById('lane-name-inputs');
+  inp.innerHTML = laneNames.slice(0, laneCount).map((name, i) =>
+    `<input class="lane-name-inp" value="${name}"
+      onchange="laneNames[${i}]=this.value;isDirty=true;renderGrid()"
+      placeholder="Lane ${i+1} name">`
+  ).join('');
+}
+
+function changeLaneCount(delta) {
+  laneCount = Math.max(1, Math.min(4, laneCount + delta));
+  while (laneNames.length < laneCount) laneNames.push(`Lane ${laneNames.length + 1}`);
+  isDirty = true;
+  renderLaneConfig();
+  renderGrid();
+}
+
+// ── GRID ──────────────────────────────────────────────────────────────────
+function renderGrid() {
+  const cols = `64px ${Array(laneCount).fill('1fr').join(' ')}`;
+  let html = `<div class="grid-wrap"><div class="grid-header-row" style="display:grid;grid-template-columns:${cols};gap:2px;margin-bottom:2px">`;
+  html += `<div class="grid-time-hdr">Time</div>`;
+  for (let l = 0; l < laneCount; l++) {
+    html += `<div class="lane-hdr">
+      <div class="lane-dot" style="background:${LANE_DOT_COLOURS[l]}"></div>
+      <span class="lane-hdr-name" style="color:${LANE_DOT_COLOURS[l]}">${laneNames[l]||`Lane ${l+1}`}</span>
+    </div>`;
+  }
+  html += '</div>';
+
+  // Build continuation map: track which slot+lane are spanned from above
+  const contMap = {}; // 'slot|lane' => true
+
+  TIME_SLOTS.forEach((slot, si) => {
+    html += `<div class="grid-row" style="display:grid;grid-template-columns:${cols};gap:2px">`;
+    html += `<div class="time-cell">${slot}</div>`;
+
+    for (let l = 1; l <= laneCount; l++) {
+      const key = `${slot}|${l}`;
+      if (contMap[key]) {
+        // This cell is a continuation
+        const lc = LANE_COLOURS[l-1];
+        html += `<div class="block-cell is-continuation ${l>1?'lane-'+l+'-cont':''}"
+          onclick="openEditPanel('${slot}',${l})">
+          <div class="cont-label ${lc}-cont">↑ continued</div>
+        </div>`;
+        continue;
+      }
+
+      const block = planBlocks[key];
+      if (block?.drill_id) {
+        const drill = allDrills.find(d => d.id === block.drill_id);
+        const span = block.span || 1;
+        const lc = LANE_COLOURS[l-1];
+        const bdCls = BD_CLASSES[l-1];
+
+        // Mark future slots as continuations
+        for (let s2 = 1; s2 < span && (si+s2) < TIME_SLOTS.length; s2++) {
+          contMap[`${TIME_SLOTS[si+s2]}|${l}`] = true;
+        }
+
+        html += `<div class="block-cell has-drill" onclick="openEditPanel('${slot}',${l})"
+          ondragover="onDragOver(event)" ondrop="onDrop(event,'${slot}',${l})">
+          <div class="${bdCls} block-drill">
+            <div class="bd-header">
+              <span class="bd-num ${lc}-num">${block.drill_id}</span>
+              <span class="bd-name">${drill?.name||'Unknown drill'}</span>
+              ${span>1?`<span class="bd-span-badge ${lc}-badge">×${span}</span>`:''}
+            </div>
+            ${block.specifics ? `<div class="bd-specifics">${block.specifics}</div>`
+              : drill?.description ? `<div class="bd-specifics" style="opacity:0.5">${drill.description.substring(0,80)}${drill.description.length>80?'…':''}</div>` : ''}
+          </div>
+          <button class="remove-btn" onclick="event.stopPropagation();removeDrillAt('${slot}',${l})">✕</button>
+          ${previewMode?'':`<button class="span-btn" onclick="event.stopPropagation();quickSpan('${slot}',${l})">↕ span</button>`}
+        </div>`;
+      } else {
+        html += `<div class="block-cell" onclick="openEditPanel('${slot}',${l})"
+          ondragover="onDragOver(event)" ondrop="onDrop(event,'${slot}',${l})">
+          <div class="block-empty">${previewMode ? '' : '+ add drill'}</div>
+        </div>`;
+      }
+    }
+    html += '</div>';
+  });
+
+  html += '</div>';
+  document.getElementById('plan-grid').innerHTML = html;
+}
+
+// ── DRAG & DROP ───────────────────────────────────────────────────────────
+let draggingDrillId = null;
+
+function onDrillDragStart(e, drillId) {
+  draggingDrillId = drillId;
+  e.dataTransfer.effectAllowed = 'copy';
+  e.dataTransfer.setData('text/plain', drillId);
+  e.currentTarget.classList.add('dragging');
+  setTimeout(() => e.currentTarget.classList.remove('dragging'), 100);
+}
+
+function onDrillChipClick(drillId) {
+  // Mobile fallback: if edit panel is open, set the drill
+  if (editTarget) {
+    document.getElementById('edit-drill').value = drillId;
+    applyEdit();
+  } else {
+    toast('Tap a grid cell first, then tap a drill to assign it', false);
+  }
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDrop(e, slot, lane) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const drillId = parseInt(e.dataTransfer.getData('text/plain') || draggingDrillId);
+  if (!drillId) return;
+  setBlock(slot, lane, drillId, 1, '');
+}
+
+// ── EDIT PANEL ────────────────────────────────────────────────────────────
+function openEditPanel(slot, lane) {
+  if (previewMode) return;
+  editTarget = { slot, lane };
+  const key = `${slot}|${lane}`;
+  const block = planBlocks[key] || {};
+  const lc = LANE_COLOURS[lane-1];
+
+  document.getElementById('edit-panel-title').innerHTML =
+    `✏ Editing &nbsp;<span style="color:${LANE_DOT_COLOURS[lane-1]}">${laneNames[lane-1]||'Lane '+lane}</span> &nbsp;·&nbsp; ${slot}`;
+  document.getElementById('edit-drill').value = block.drill_id || '';
+  document.getElementById('edit-span').value = block.span || 1;
+  document.getElementById('edit-specifics').value = block.specifics || '';
+  document.getElementById('edit-panel').classList.add('open');
+  document.getElementById('edit-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeEditPanel() {
+  document.getElementById('edit-panel').classList.remove('open');
+  editTarget = null;
+}
+
+function applyEdit() {
+  if (!editTarget) return;
+  const drillId = parseInt(document.getElementById('edit-drill').value);
+  if (!drillId) { toast('Please select a drill', true); return; }
+  const span = parseInt(document.getElementById('edit-span').value) || 1;
+  const specifics = document.getElementById('edit-specifics').value.trim();
+  setBlock(editTarget.slot, editTarget.lane, drillId, span, specifics);
+  closeEditPanel();
+}
+
+function removeDrill() {
+  if (!editTarget) return;
+  removeDrillAt(editTarget.slot, editTarget.lane);
+  closeEditPanel();
+}
+
+function removeDrillAt(slot, lane) {
+  delete planBlocks[`${slot}|${lane}`];
+  isDirty = true;
+  renderGrid();
+}
+
+function setBlock(slot, lane, drillId, span, specifics) {
+  planBlocks[`${slot}|${lane}`] = { drill_id: drillId, span, specifics };
+  isDirty = true;
+  renderGrid();
+}
+
+function quickSpan(slot, lane) {
+  const key = `${slot}|${lane}`;
+  const block = planBlocks[key];
+  if (!block) return;
+  const cur = block.span || 1;
+  block.span = cur >= 6 ? 1 : cur + 1;
+  isDirty = true;
+  renderGrid();
+}
+
+// ── SAVE ──────────────────────────────────────────────────────────────────
+async function savePlan(status) {
+  if (!currentPlan?._sessId || !currentPlan?._date) return;
+  const notes = document.getElementById('session-notes').value;
+
+  // Upsert session_plan
+  const planPayload = {
+    session_id: currentPlan._sessId,
+    plan_date: currentPlan._date,
+    lane_count: laneCount,
+    lane_names: laneNames,
+    session_notes: notes,
+    status,
+    created_by: currentMember.id
+  };
+
+  let planId;
+  if (currentPlan.id) {
+    const { data, error } = await sb.from('session_plans').update(planPayload).eq('id', currentPlan.id).select().single();
+    if (error) { toast('Save failed: ' + error.message, true); return; }
+    planId = data.id;
+    currentPlan = { ...data, _date: currentPlan._date, _sessId: currentPlan._sessId };
+  } else {
+    const { data, error } = await sb.from('session_plans').insert(planPayload).select().single();
+    if (error) { toast('Save failed: ' + error.message, true); return; }
+    planId = data.id;
+    currentPlan = { ...data, _date: currentPlan._date, _sessId: currentPlan._sessId };
+  }
+
+  // Delete existing blocks then re-insert
+  await sb.from('plan_blocks').delete().eq('plan_id', planId);
+
+  const blocks = Object.entries(planBlocks).map(([key, b]) => {
+    const [slot, laneStr] = key.split('|');
+    return { plan_id: planId, lane: parseInt(laneStr), time_slot: slot, drill_id: b.drill_id, span: b.span, specifics: b.specifics };
+  });
+
+  if (blocks.length) {
+    const { error } = await sb.from('plan_blocks').insert(blocks);
+    if (error) { toast('Blocks save failed: ' + error.message, true); return; }
+  }
+
+  isDirty = false;
+  toast(status === 'published' ? '✓ Plan published — enrolled members can now view it' : '✓ Draft saved');
+
+  // Update sidebar pill
+  const date = currentPlan._date;
+  const sessId = currentPlan._sessId;
+  const el = document.getElementById(`status-${sessId}-${date}`);
+  if (el) {
+    el.className = `pill ${status === 'published' ? 'pill-pub' : 'pill-draft'}`;
+    el.textContent = status === 'published' ? 'Published' : 'Draft';
+  }
+
+  if (status === 'published') {
+    document.getElementById('btn-publish').textContent = '✓ Published';
+    document.getElementById('btn-publish').className = 'btn btn-outline btn-sm';
+  }
+}
+
+// ── PREVIEW / EXPORT ──────────────────────────────────────────────────────
+function togglePreview() {
+  previewMode = !previewMode;
+  document.getElementById('btn-preview').textContent = previewMode ? '✏ Edit Mode' : '👁 Member View';
+  document.getElementById('btn-preview').className = previewMode ? 'btn btn-amber btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('edit-panel').classList.remove('open');
+  editTarget = null;
+  renderGrid();
+}
+
+function exportPrint() {
+  previewMode = true;
+  renderGrid();
+  setTimeout(() => {
+    window.print();
+    previewMode = false;
+    renderGrid();
+  }, 200);
+}
+
+function copyLink() {
+  const url = `${window.location.origin}/session-plan.html?session=${currentPlan?._sessId}&date=${currentPlan?._date}&view=member`;
+  navigator.clipboard.writeText(url).then(() => toast('Link copied to clipboard'));
+}
+
+// ── ADD DRILL ─────────────────────────────────────────────────────────────
+function openAddDrill() {
+  document.getElementById('modal-add-drill').classList.add('open');
+}
+
+async function saveNewDrill() {
+  const name = document.getElementById('new-drill-name').value.trim();
+  const cat  = document.getElementById('new-drill-cat').value;
+  const desc = document.getElementById('new-drill-desc').value.trim();
+  if (!name) { toast('Drill name required', true); return; }
+
+  const { data, error } = await sb.from('drills').insert({ name, category: cat, description: desc }).select().single();
+  if (error) { toast('Error: ' + error.message, true); return; }
+
+  allDrills.push(data);
+  renderDrillLibrary(allDrills);
+  renderEditDrillSelect();
+  closeModal('modal-add-drill');
+  document.getElementById('new-drill-name').value = '';
+  document.getElementById('new-drill-desc').value = '';
+  toast(`✓ "${name}" added to drill library`);
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast${err?' err':''} show`;
+  setTimeout(() => t.className = `toast${err?' err':''}`, 3500);
+}
+
+// Warn on unsaved changes
+window.onbeforeunload = () => isDirty ? 'You have unsaved changes.' : undefined;
+
+// Close modals on outside click
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// Drag-over cleanup
+document.addEventListener('dragend', () => {
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+});
+
+init();
+</script>
+
+</body>
+</html>
