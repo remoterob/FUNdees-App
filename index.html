@@ -1493,12 +1493,14 @@
 
     // Check for active enrolments to show/hide "My Sessions"
     if (currentMember) {
-      const { data: enrs } = await sb.from('enrolments')
-        .select('id')
+      const { data: enrs, error: enrErr } = await sb.from('enrolments')
+        .select('id, status')
         .eq('member_id', currentMember.id)
-        .eq('status', 'enrolled')
-        .limit(1);
+        .in('status', ['enrolled', 'pending_payment']);
+      console.log('[My Sessions] member_id:', currentMember.id, 'enrolments:', enrs, 'error:', enrErr);
       currentMember._hasActiveSessions = (enrs && enrs.length > 0);
+      // Re-render nav now that we know enrolment status
+      renderNav();
     }
   }
 
