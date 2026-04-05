@@ -74,7 +74,7 @@
 
   /* Nav links — flex row, each item inline */
   .nav-links {
-    display: flex; align-items: center; gap: 2rem; list-style: none;
+    display: flex; align-items: center; gap: 1.25rem; list-style: none;
   }
 
   /* Each li is flex item — use display:flex/none to show/hide */
@@ -1192,8 +1192,7 @@
   <ul class="nav-links" id="nav-links">
     <li><a href="#" onclick="navTo('home')">Home</a></li>
     <li><a href="/sessions.html">Enrol</a></li>
-    <li><a href="/articles.html">Articles</a>
-  <a href="#" id="mob-my-sessions" onclick="toggleMenu();navTo('my-sessions')" style="display:none">My Sessions</a></li>
+    <li><a href="/articles.html">Articles</a></li>
     <li id="nav-my-sessions" class="hidden"><a href="#" onclick="navTo('my-sessions')">My Sessions</a></li>
     <li><a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a></li>
     <li id="nav-auth-guest"><a href="/auth.html">Sign In</a></li>
@@ -1213,6 +1212,7 @@
   <a href="/">Home</a>
   <a href="/sessions.html">Enrol</a>
   <a href="/articles.html">Articles</a>
+  <a href="#" id="mob-my-sessions" onclick="toggleMenu();navTo('my-sessions')" style="display:none">My Sessions</a>
   <a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a>
   <a href="/auth.html" id="mob-signin">Sign In</a>
   <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta">Join Now</a>

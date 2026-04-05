@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS drills (
 ALTER TABLE drills ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "drills_read_all"   ON drills FOR SELECT USING (true);
 CREATE POLICY "drills_lead_write" ON drills FOR INSERT
-  USING (EXISTS (SELECT 1 FROM members WHERE auth_user_id = auth.uid() AND (is_admin OR is_qualified_lead)));
+  WITH CHECK (EXISTS (SELECT 1 FROM members WHERE auth_user_id = auth.uid() AND (is_admin = true OR is_qualified_lead = true)));
 CREATE POLICY "drills_admin_all"  ON drills FOR ALL USING (is_admin());
 
 -- Seed the drill library from the PDF
