@@ -1191,8 +1191,10 @@
   </div>
   <ul class="nav-links" id="nav-links">
     <li><a href="#" onclick="navTo('home')">Home</a></li>
-    <li><a href="/sessions.html">Pool Sessions</a></li>
-    <li><a href="/articles.html">Articles</a></li>
+    <li><a href="/sessions.html">Enrol</a></li>
+    <li><a href="/articles.html">Articles</a>
+  <a href="#" id="mob-my-sessions" onclick="toggleMenu();navTo('my-sessions')" style="display:none">My Sessions</a></li>
+    <li id="nav-my-sessions" class="hidden"><a href="#" onclick="navTo('my-sessions')">My Sessions</a></li>
     <li><a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a></li>
     <li id="nav-auth-guest"><a href="/auth.html">Sign In</a></li>
     <li id="nav-auth-guest2"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
@@ -1208,7 +1210,7 @@
 <!-- Mobile menu -->
 <div class="mob-menu" id="mob-menu">
   <a href="/">Home</a>
-  <a href="/sessions.html">Pool Sessions</a>
+  <a href="/sessions.html">Enrol</a>
   <a href="/articles.html">Articles</a>
   <a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a>
   <a href="/auth.html" id="mob-signin">Sign In</a>
@@ -1252,6 +1254,19 @@
 
 <!-- ─── SESSIONS PAGE ─── -->
 <div id="page-sessions" class="page">
+
+<!-- ─── MY SESSIONS PAGE ─── -->
+<div id="page-my-sessions" class="page">
+  <div style="max-width:800px;margin:0 auto;padding:3rem 2rem">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--sand);margin-bottom:0.5rem">My Sessions</div>
+    <div style="color:var(--muted);font-size:0.9rem;margin-bottom:3rem">Your enrolled training sessions.</div>
+    <div style="background:rgba(0,207,173,0.08);border:1px solid rgba(0,207,173,0.2);border-radius:4px;padding:2.5rem;text-align:center">
+      <div style="font-size:2rem;margin-bottom:0.75rem">🤿</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.2rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--surge);margin-bottom:0.5rem">Coming Soon</div>
+      <div style="color:var(--muted);font-size:0.88rem;line-height:1.6;max-width:400px;margin:0 auto">Your enrolled sessions, session details, training plans and session reminders will all appear here.</div>
+    </div>
+  </div>
+</div>
   <div class="sessions-hero">
     <div>
       <div class="section-label">Pool Training</div>
@@ -1475,6 +1490,17 @@
     if (!currentUser) return;
     const { data } = await sb.from('members').select('*').eq('auth_user_id', currentUser.id).maybeSingle();
     currentMember = data || null;
+
+    // Check for active enrolments to show/hide "My Sessions"
+    if (currentMember) {
+      const { data: enrs } = await sb.from('enrolments')
+        .select('id, status, sessions(date_end)')
+        .eq('member_id', currentMember.id)
+        .eq('status', 'enrolled');
+      const today = new Date().toISOString().split('T')[0];
+      const hasActive = (enrs || []).some(e => !e.sessions?.date_end || e.sessions.date_end >= today);
+      currentMember._hasActiveSessions = hasActive;
+    }
   }
 
   function renderNav() {
@@ -1494,6 +1520,10 @@
     document.getElementById('mob-account').style.display = loggedIn ? 'block' : 'none';
     document.getElementById('mob-admin').style.display   = isAdmin  ? 'block' : 'none';
     document.getElementById('mob-logout').style.display  = loggedIn ? 'block' : 'none';
+
+    const hasSessions = !!currentMember?._hasActiveSessions;
+    document.getElementById('nav-my-sessions').classList.toggle('hidden', !hasSessions);
+    document.getElementById('mob-my-sessions').style.display = hasSessions ? 'block' : 'none';
 
     // Hero welcome strip
     const strip = document.getElementById('hero-welcome');
