@@ -1494,12 +1494,11 @@
     // Check for active enrolments to show/hide "My Sessions"
     if (currentMember) {
       const { data: enrs } = await sb.from('enrolments')
-        .select('id, status, sessions(date_end)')
+        .select('id')
         .eq('member_id', currentMember.id)
-        .eq('status', 'enrolled');
-      const today = new Date().toISOString().split('T')[0];
-      const hasActive = (enrs || []).some(e => !e.sessions?.date_end || e.sessions.date_end >= today);
-      currentMember._hasActiveSessions = hasActive;
+        .eq('status', 'enrolled')
+        .limit(1);
+      currentMember._hasActiveSessions = (enrs && enrs.length > 0);
     }
   }
 
