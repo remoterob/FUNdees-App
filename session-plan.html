@@ -167,18 +167,6 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
 .modal-close:hover{color:var(--sand)}
 
 /* ── MOBILE ── */
-@media(max-width:768px){
-  .layout{grid-template-columns:1fr}
-  .sidebar{display:none}
-  .mob-session-bar{display:flex}
-  .main{padding:1rem}
-  .plan-header{flex-direction:column;gap:0.75rem}
-  .plan-header>div:last-child{flex-direction:row;flex-wrap:wrap}
-  .lane-cfg{gap:0.5rem}
-  .edit-grid{grid-template-columns:1fr}
-  .export-bar{flex-direction:column;align-items:flex-start}
-}
-
 /* Mobile session selector bar — hidden on desktop */
 .mob-session-bar{
   display:none;
@@ -217,6 +205,18 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
   margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--dim);
 }
 .mob-drill-drawer-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--surge)}
+
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .mob-session-bar{display:flex}
+  .main{padding:1rem}
+  .plan-header{flex-direction:column;gap:0.75rem}
+  .plan-header>div:last-child{flex-direction:row;flex-wrap:wrap}
+  .lane-cfg{gap:0.5rem}
+  .edit-grid{grid-template-columns:1fr}
+  .export-bar{flex-direction:column;align-items:flex-start}
+}
 
 @media print {
   nav,.sidebar,.edit-panel,.export-bar,.btn,button{display:none!important}
