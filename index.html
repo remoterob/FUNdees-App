@@ -1259,13 +1259,19 @@
 
 <!-- ─── MY SESSIONS PAGE ─── -->
 <div id="page-my-sessions" class="page">
-  <div style="max-width:800px;margin:0 auto;padding:3rem 2rem">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--sand);margin-bottom:0.5rem">My Sessions</div>
-    <div style="color:var(--muted);font-size:0.9rem;margin-bottom:3rem">Your enrolled training sessions.</div>
-    <div style="background:rgba(0,207,173,0.08);border:1px solid rgba(0,207,173,0.2);border-radius:4px;padding:2.5rem;text-align:center">
-      <div style="font-size:2rem;margin-bottom:0.75rem">🤿</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.2rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--surge);margin-bottom:0.5rem">Coming Soon</div>
-      <div style="color:var(--muted);font-size:0.88rem;line-height:1.6;max-width:400px;margin:0 auto">Your enrolled sessions, session details, training plans and session reminders will all appear here.</div>
+  <div style="max-width:900px;margin:0 auto;padding:3rem 2rem">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--sand);margin-bottom:0.25rem">My Sessions</div>
+    <div style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem">Your enrolled training sessions and published weekly plans.</div>
+    <div id="my-sessions-content">
+      <div style="color:var(--muted);font-size:0.85rem;padding:2rem 0">Loading your sessions…</div>
+    </div>
+  </div>
+
+  <!-- Drill detail modal -->
+  <div id="modal-drill-detail" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(7,16,30,0.92);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:1rem">
+    <div style="background:#0D2D4A;border:1px solid rgba(0,207,173,0.2);border-radius:6px;padding:1.75rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;position:relative">
+      <button onclick="closeDrillModal()" style="position:absolute;top:0.85rem;right:0.85rem;background:none;border:none;color:rgba(240,237,230,0.4);cursor:pointer;font-size:1.1rem">✕</button>
+      <div id="drill-modal-content"></div>
     </div>
   </div>
 </div>
@@ -1562,6 +1568,7 @@
     if (pg) pg.classList.add('active');
     window.scrollTo(0,0);
     if (id === 'sessions') loadSessions();
+    if (id === 'my-sessions') loadMySessions();
   }
 
   function navTo(page) { closeMobileMenu(); showPage(page); }
@@ -1582,7 +1589,235 @@
     if (btn)  btn.classList.remove('open');
   }
 
-  // ─── PORTAL ──────────────────────────────────────────────────────────────
+  // ─── MY SESSIONS ─────────────────────────────────────────────────────────
+  async function loadMySessions() {
+    const el = document.getElementById('my-sessions-content');
+    if (!el) return;
+    if (!currentMember) { el.innerHTML = '<div style="color:var(--muted)">Please sign in to view your sessions.</div>'; return; }
+
+    el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem">Loading…</div>';
+
+    // 1. Get enrolments for this member
+    const { data: enrolments } = await sb.from('enrolments')
+      .select('*, sessions(*)')
+      .eq('member_id', currentMember.id)
+      .eq('status', 'enrolled');
+
+    if (!enrolments || enrolments.length === 0) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0">You have no active enrolments.</div>';
+      return;
+    }
+
+    // 2. For each session, get published plans with their blocks and drills
+    let html = '';
+    for (const enr of enrolments) {
+      const sess = enr.sessions;
+      if (!sess) continue;
+
+      const { data: plans } = await sb.from('session_plans')
+        .select('*, plan_blocks(*, drills(*))')
+        .eq('session_id', sess.id)
+        .eq('status', 'published')
+        .order('plan_date', { ascending: true });
+
+      const typeTag = sess.type === 'pool'
+        ? `<span style="background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.25);color:#00CFAD;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:2px">Pool</span>`
+        : `<span style="background:rgba(74,144,226,0.1);border:1px solid rgba(74,144,226,0.3);color:#4A90E2;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:2px">Depth</span>`;
+
+      html += `
+        <div style="margin-bottom:2.5rem">
+          <!-- Session header -->
+          <div style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1.1rem;padding-bottom:0.85rem;border-bottom:1px solid rgba(255,255,255,0.07)">
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem">${typeTag}</div>
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#F0EDE6;line-height:1">${sess.title}</div>
+              <div style="font-size:0.78rem;color:rgba(240,237,230,0.5);margin-top:0.25rem">
+                📅 ${fmtDateRange(sess.date_start, sess.date_end)}
+                ${sess.location ? ` &nbsp;·&nbsp; 📍 ${sess.location}` : ''}
+              </div>
+            </div>
+            <span style="background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.2);color:#00CFAD;font-size:0.72rem;font-weight:600;padding:0.3rem 0.75rem;border-radius:2px;white-space:nowrap">Enrolled ✓</span>
+          </div>
+
+          <!-- Week plans -->
+          ${plans && plans.length > 0 ? buildWeekPlans(plans, sess) : `
+            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:1.25rem;color:rgba(240,237,230,0.35);font-size:0.82rem;text-align:center">
+              No session plans published yet — check back closer to each session date.
+            </div>`}
+        </div>`;
+    }
+
+    el.innerHTML = html;
+  }
+
+  function fmtDateRange(start, end) {
+    const s = new Date(start+'T12:00:00').toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
+    const e = new Date(end+'T12:00:00').toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
+    return start === end ? s : `${s} — ${e}`;
+  }
+
+  function fmtPlanDate(d) {
+    return new Date(d+'T12:00:00').toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  }
+
+  function buildWeekPlans(plans, sess) {
+    const TIME_SLOTS = ['6:00','6:10','6:20','6:30','6:40','6:50','7:00','7:10','7:20','7:30','7:40','7:50'];
+    const LANE_COLOURS = ['#00CFAD','#F5A623','#4A90E2'];
+    const today = new Date().toISOString().slice(0,10);
+
+    let html = '<div style="display:flex;flex-direction:column;gap:0.6rem">';
+
+    plans.forEach((plan, pi) => {
+      const isPast = plan.plan_date < today;
+      const isUpcoming = plan.plan_date >= today;
+      const weekNum = pi + 1;
+
+      // Group blocks by slot then lane
+      const blocks = plan.plan_blocks || [];
+      const bySlot = {};
+      blocks.forEach(b => {
+        if (!bySlot[b.time_slot]) bySlot[b.time_slot] = {};
+        bySlot[b.time_slot][b.lane] = b;
+      });
+
+      // Get lane names and count
+      const laneNames = plan.lane_names || ['Lane 1','Lane 2'];
+      const laneCount = plan.lane_count || 2;
+
+      const dateLabel = fmtPlanDate(plan.plan_date);
+
+      html += `
+        <details style="background:rgba(13,45,74,0.35);border:1px solid rgba(255,255,255,0.07);border-radius:4px;overflow:hidden" ${isUpcoming && !isPast ? 'open' : ''}>
+          <summary style="padding:0.85rem 1.1rem;cursor:pointer;display:flex;align-items:center;gap:0.75rem;list-style:none;user-select:none">
+            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;background:rgba(0,207,173,0.1);color:#00CFAD;padding:0.2rem 0.5rem;border-radius:2px;flex-shrink:0">Week ${weekNum}</span>
+            <span style="font-size:0.88rem;font-weight:500;color:#F0EDE6;flex:1">${dateLabel}</span>
+            ${isPast ? `<span style="font-size:0.65rem;color:rgba(240,237,230,0.3);text-transform:uppercase;letter-spacing:0.08em">Past</span>` : `<span style="font-size:0.65rem;color:#00CFAD;text-transform:uppercase;letter-spacing:0.08em">Upcoming</span>`}
+            <span style="color:rgba(240,237,230,0.3);font-size:0.8rem">▾</span>
+          </summary>
+
+          <div style="padding:0 1.1rem 1.1rem">
+            ${plan.session_notes ? `<div style="background:rgba(0,207,173,0.06);border:1px solid rgba(0,207,173,0.15);border-radius:3px;padding:0.75rem 1rem;font-size:0.8rem;color:rgba(240,237,230,0.7);margin-bottom:1rem;line-height:1.5">📋 ${plan.session_notes}</div>` : ''}
+
+            <!-- Plan grid -->
+            <div style="overflow-x:auto">
+              <div style="min-width:420px">
+                <!-- Lane headers -->
+                <div style="display:grid;grid-template-columns:52px ${Array(laneCount).fill('1fr').join(' ')};gap:2px;margin-bottom:2px">
+                  <div></div>
+                  ${laneNames.slice(0,laneCount).map((name,li) => `
+                    <div style="padding:0.45rem 0.6rem;background:rgba(13,45,74,0.7);border:1px solid rgba(255,255,255,0.07);border-radius:3px 3px 0 0;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:${LANE_COLOURS[li]};display:flex;align-items:center;gap:0.4rem">
+                      <span style="width:7px;height:7px;border-radius:50%;background:${LANE_COLOURS[li]};flex-shrink:0;display:inline-block"></span>${name}
+                    </div>`).join('')}
+                </div>
+
+                <!-- Time rows -->
+                ${buildMemberGridRows(TIME_SLOTS, bySlot, laneCount, LANE_COLOURS, plan.plan_blocks || [])}
+              </div>
+            </div>
+          </div>
+        </details>`;
+    });
+
+    html += '</div>';
+    return html;
+  }
+
+  function buildMemberGridRows(timeSlots, bySlot, laneCount, laneColours, allBlocks) {
+    // Build continuation map
+    const contMap = {};
+    let html = '';
+
+    timeSlots.forEach((slot, si) => {
+      const hasAny = Object.keys(bySlot[slot] || {}).length > 0 ||
+        Object.keys(contMap).some(k => k.startsWith(slot+'|'));
+
+      // Skip empty rows at the end
+      const anyRemaining = timeSlots.slice(si).some(s => Object.keys(bySlot[s]||{}).length > 0);
+      if (!anyRemaining && !Object.values(contMap).some(Boolean)) return;
+
+      html += `<div style="display:grid;grid-template-columns:52px ${Array(laneCount).fill('1fr').join(' ')};gap:2px;margin-bottom:2px">`;
+      html += `<div style="display:flex;align-items:flex-start;justify-content:center;padding-top:0.5rem;font-family:'Bebas Neue',sans-serif;font-size:0.9rem;color:rgba(240,237,230,0.25)">${slot}</div>`;
+
+      for (let l = 1; l <= laneCount; l++) {
+        const key = `${slot}|${l}`;
+        const lc = laneColours[l-1];
+        const lcDim = lc.replace('#','') === '00CFAD' ? 'rgba(0,207,173,' : lc.replace('#','') === 'F5A623' ? 'rgba(245,166,35,' : 'rgba(74,144,226,';
+
+        if (contMap[key]) {
+          html += `<div style="min-height:60px;border:1px solid ${lcDim}0.15);background:${lcDim}0.03);border-top:1px dashed ${lcDim}0.2)">
+            <div style="padding:0.25rem 0.45rem;font-size:0.62rem;font-style:italic;color:${lcDim}0.3)">↑ continued</div>
+          </div>`;
+          continue;
+        }
+
+        const block = bySlot[slot]?.[l];
+        if (block?.drill_id) {
+          const drill = block.drills;
+          const span = block.span || 1;
+
+          // Mark continuations
+          for (let s2 = 1; s2 < span && (si+s2) < timeSlots.length; s2++) {
+            contMap[`${timeSlots[si+s2]}|${l}`] = true;
+          }
+
+          const drillData = JSON.stringify({ name: drill?.name||'', desc: drill?.description||'', specifics: block.specifics||'', span, slot, lane: l }).replace(/'/g,"&#39;");
+
+          html += `<div style="min-height:60px;padding:0.4rem;border:1px solid ${lcDim}0.25);background:${lcDim}0.07);border-radius:2px;cursor:pointer;transition:all 0.12s"
+            onclick="openDrillModal('${drillData}')"
+            onmouseover="this.style.background='${lcDim}0.14)'"
+            onmouseout="this.style.background='${lcDim}0.07)'">
+            <div style="display:flex;align-items:flex-start;gap:0.35rem;margin-bottom:0.2rem">
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;color:${lc};line-height:1;flex-shrink:0">${block.drill_id}</span>
+              <span style="font-size:0.72rem;font-weight:600;color:#F0EDE6;line-height:1.2;flex:1">${drill?.name||'Drill'}</span>
+              ${span>1?`<span style="font-size:0.58rem;font-weight:700;padding:0.1rem 0.3rem;border-radius:2px;background:${lcDim}0.15);color:${lc};white-space:nowrap">×${span}</span>`:''}
+            </div>
+            ${block.specifics
+              ? `<div style="font-size:0.67rem;color:rgba(240,237,230,0.55);line-height:1.35;border-top:1px solid rgba(255,255,255,0.06);padding-top:0.2rem;margin-top:0.2rem">${block.specifics.substring(0,90)}${block.specifics.length>90?'…':''}</div>`
+              : drill?.description
+                ? `<div style="font-size:0.67rem;color:rgba(240,237,230,0.35);line-height:1.35;border-top:1px solid rgba(255,255,255,0.06);padding-top:0.2rem;margin-top:0.2rem;font-style:italic">${drill.description.substring(0,80)}${drill.description.length>80?'…':''}</div>`
+                : ''}
+          </div>`;
+        } else {
+          html += `<div style="min-height:60px;border:1px solid rgba(255,255,255,0.05);background:rgba(13,45,74,0.2)"></div>`;
+        }
+      }
+      html += '</div>';
+    });
+    return html || '<div style="color:rgba(240,237,230,0.3);font-size:0.78rem;padding:0.5rem 0">No drills entered for this session.</div>';
+  }
+
+  function openDrillModal(dataStr) {
+    let d;
+    try { d = JSON.parse(dataStr.replace(/&#39;/g,"'")); } catch(e) { return; }
+    const modal = document.getElementById('modal-drill-detail');
+    const content = document.getElementById('drill-modal-content');
+    content.innerHTML = `
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#F0EDE6;margin-bottom:0.25rem">${d.name}</div>
+      <div style="font-size:0.72rem;color:rgba(240,237,230,0.4);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1.25rem">${d.slot} · Drill #${d.lane}</div>
+      ${d.specifics ? `
+        <div style="margin-bottom:1rem">
+          <div style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:#00CFAD;font-weight:700;margin-bottom:0.4rem">Session Instructions</div>
+          <div style="background:rgba(0,207,173,0.07);border:1px solid rgba(0,207,173,0.2);border-radius:3px;padding:0.85rem 1rem;font-size:0.85rem;color:rgba(240,237,230,0.8);line-height:1.6">${d.specifics}</div>
+        </div>` : ''}
+      ${d.desc ? `
+        <div>
+          <div style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(240,237,230,0.35);font-weight:700;margin-bottom:0.4rem">Drill Description</div>
+          <div style="font-size:0.82rem;color:rgba(240,237,230,0.5);line-height:1.6">${d.desc}</div>
+        </div>` : ''}
+      ${d.span > 1 ? `<div style="margin-top:1rem;font-size:0.72rem;color:rgba(240,237,230,0.3)">⏱ This drill runs for ${d.span * 10} minutes (${d.span} blocks)</div>` : ''}`;
+    modal.style.display = 'flex';
+  }
+
+  function closeDrillModal() {
+    document.getElementById('modal-drill-detail').style.display = 'none';
+  }
+
+  // Close drill modal on outside click
+  document.getElementById('modal-drill-detail')?.addEventListener('click', function(e) {
+    if (e.target === this) closeDrillModal();
+  });
+
+
   async function loadPortal() {
     if (!currentUser) { window.location.href = '/auth.html'; return; }
 

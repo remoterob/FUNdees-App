@@ -279,7 +279,7 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
         <div class="edit-grid">
           <div class="fld">
             <label>Drill</label>
-            <select id="edit-drill"></select>
+            <select id="edit-drill" onchange="onDrillSelectChange()"></select>
           </div>
           <div class="fld">
             <label>Spans (10-min blocks)</label>
@@ -709,7 +709,11 @@ function onDrop(e, slot, lane) {
   e.currentTarget.classList.remove('drag-over');
   const drillId = parseInt(e.dataTransfer.getData('text/plain') || draggingDrillId);
   if (!drillId) return;
-  setBlock(slot, lane, drillId, 1, '');
+  const drill = allDrills.find(d => d.id === drillId);
+  // Keep existing specifics if block already has a drill; otherwise default to description
+  const existingBlock = planBlocks[`${slot}|${lane}`];
+  const specifics = existingBlock?.specifics || drill?.description || '';
+  setBlock(slot, lane, drillId, existingBlock?.span || 1, specifics);
 }
 
 // ── EDIT PANEL ────────────────────────────────────────────────────────────
@@ -718,15 +722,41 @@ function openEditPanel(slot, lane) {
   editTarget = { slot, lane };
   const key = `${slot}|${lane}`;
   const block = planBlocks[key] || {};
-  const lc = LANE_COLOURS[lane-1];
 
   document.getElementById('edit-panel-title').innerHTML =
     `✏ Editing &nbsp;<span style="color:${LANE_DOT_COLOURS[lane-1]}">${laneNames[lane-1]||'Lane '+lane}</span> &nbsp;·&nbsp; ${slot}`;
   document.getElementById('edit-drill').value = block.drill_id || '';
   document.getElementById('edit-span').value = block.span || 1;
-  document.getElementById('edit-specifics').value = block.specifics || '';
+
+  // Pre-fill specifics: use saved specifics if they exist, otherwise default to drill description
+  if (block.specifics) {
+    document.getElementById('edit-specifics').value = block.specifics;
+  } else if (block.drill_id) {
+    const drill = allDrills.find(d => d.id === block.drill_id);
+    document.getElementById('edit-specifics').value = drill?.description || '';
+  } else {
+    document.getElementById('edit-specifics').value = '';
+  }
+
   document.getElementById('edit-panel').classList.add('open');
   document.getElementById('edit-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// When drill changes in the select, populate specifics with default description
+// (only if specifics is empty or still matches the previous drill's description)
+function onDrillSelectChange() {
+  const drillId = parseInt(document.getElementById('edit-drill').value);
+  if (!drillId) return;
+  const drill = allDrills.find(d => d.id === drillId);
+  if (!drill) return;
+
+  const specificsEl = document.getElementById('edit-specifics');
+  // Check if current value is empty or matches any drill's default description
+  const currentVal = specificsEl.value.trim();
+  const isDefaultOrEmpty = !currentVal || allDrills.some(d => d.description === currentVal);
+  if (isDefaultOrEmpty) {
+    specificsEl.value = drill.description || '';
+  }
 }
 
 function closeEditPanel() {
