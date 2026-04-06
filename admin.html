@@ -404,17 +404,17 @@ async function init() {
   loadLeads();
 }
 
-async function loadLeads() {
-  const { data } = await sb.from('members')
+async function loadLeads(selectedId) {
+  const { data, error } = await sb.from('members')
     .select('id, full_name')
     .or('is_qualified_lead.eq.true,is_admin.eq.true')
     .order('full_name');
+  if (error) console.warn('loadLeads error:', error.message);
   const sel = document.getElementById('f-lead');
   if (!sel) return;
-  const cur = sel.value;
   sel.innerHTML = '<option value="">— No lead assigned —</option>' +
     (data||[]).map(m => `<option value="${m.id}">${m.full_name}</option>`).join('');
-  if (cur) sel.value = cur;
+  if (selectedId) sel.value = selectedId;
 }
 
 
@@ -464,7 +464,7 @@ async function loadLeads() {
   }
 }
 
-function openModal(session=null) {
+async function openModal(session=null) {
   editingId = session?.id || null;
   document.getElementById('modal-title').textContent = session ? 'Edit Session' : 'New Session';
   document.getElementById('f-title').value    = session?.title || '';
@@ -477,7 +477,8 @@ function openModal(session=null) {
   document.getElementById('f-location').value = session?.location || '';
   document.getElementById('f-desc').value     = session?.description || '';
   document.getElementById('f-prereq').value   = session?.prerequisites || '';
-  document.getElementById('f-lead').value     = session?.lead_member_id || '';
+  // Load leads first, then set the selected value
+  await loadLeads(session?.lead_member_id || '');
   const msg = document.getElementById('modal-msg'); msg.className='msg'; msg.textContent='';
   document.getElementById('session-modal').classList.add('open');
 }
