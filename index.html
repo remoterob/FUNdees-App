@@ -1593,61 +1593,103 @@
   async function loadMySessions() {
     const el = document.getElementById('my-sessions-content');
     if (!el) return;
-    if (!currentMember) { el.innerHTML = '<div style="color:var(--muted)">Please sign in to view your sessions.</div>'; return; }
-
-    el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem">Loading…</div>';
-
-    // 1. Get enrolments for this member
-    const { data: enrolments } = await sb.from('enrolments')
-      .select('*, sessions(*)')
-      .eq('member_id', currentMember.id)
-      .eq('status', 'enrolled');
-
-    if (!enrolments || enrolments.length === 0) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0">You have no active enrolments.</div>';
+    if (!currentMember) {
+      el.innerHTML = '<div style="color:var(--muted)">Please sign in to view your sessions.</div>';
       return;
     }
 
-    // 2. For each session, get published plans with their blocks and drills
-    let html = '';
-    for (const enr of enrolments) {
-      const sess = enr.sessions;
-      if (!sess) continue;
+    el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem">Loading…</div>';
 
-      const { data: plans } = await sb.from('session_plans')
-        .select('*, plan_blocks(*, drills(*))')
-        .eq('session_id', sess.id)
-        .eq('status', 'published')
-        .order('plan_date', { ascending: true });
+    try {
+      // 1. Get enrolments for this member
+      const { data: enrolments, error: enrErr } = await sb.from('enrolments')
+        .select('*, sessions(*)')
+        .eq('member_id', currentMember.id)
+        .eq('status', 'enrolled');
 
-      const typeTag = sess.type === 'pool'
-        ? `<span style="background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.25);color:#00CFAD;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:2px">Pool</span>`
-        : `<span style="background:rgba(74,144,226,0.1);border:1px solid rgba(74,144,226,0.3);color:#4A90E2;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:2px">Depth</span>`;
+      if (enrErr) throw new Error('Enrolments: ' + enrErr.message);
+      console.log('[My Sessions] enrolments raw:', enrolments);
 
-      html += `
-        <div style="margin-bottom:2.5rem">
-          <!-- Session header -->
-          <div style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1.1rem;padding-bottom:0.85rem;border-bottom:1px solid rgba(255,255,255,0.07)">
-            <div style="flex:1">
-              <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem">${typeTag}</div>
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#F0EDE6;line-height:1">${sess.title}</div>
-              <div style="font-size:0.78rem;color:rgba(240,237,230,0.5);margin-top:0.25rem">
-                📅 ${fmtDateRange(sess.date_start, sess.date_end)}
-                ${sess.location ? ` &nbsp;·&nbsp; 📍 ${sess.location}` : ''}
+      if (!enrolments || enrolments.length === 0) {
+        el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0">You have no active enrolments.</div>';
+        return;
+      }
+
+      // 2. Fetch session details separately for any that didn't join
+      const sessionIds = enrolments.map(e => e.session_id);
+      const { data: sessionsData, error: sessErr } = await sb.from('sessions')
+        .select('*')
+        .in('id', sessionIds);
+      if (sessErr) throw new Error('Sessions: ' + sessErr.message);
+      const sessMap = {};
+      (sessionsData||[]).forEach(s => { sessMap[s.id] = s; });
+
+      let html = '';
+
+      for (const enr of enrolments) {
+        const sess = sessMap[enr.session_id];
+        if (!sess) { console.warn('[My Sessions] no session found for', enr.session_id); continue; }
+
+        // 2. Get published plans for this session
+        const { data: plans, error: planErr } = await sb.from('session_plans')
+          .select('*')
+          .eq('session_id', sess.id)
+          .eq('status', 'published')
+          .order('plan_date', { ascending: true });
+
+        if (planErr) throw new Error('Plans: ' + planErr.message);
+
+        // 3. For each plan, get blocks separately (avoids join issues)
+        const plansWithBlocks = [];
+        for (const plan of (plans || [])) {
+          const { data: blocks, error: blkErr } = await sb.from('plan_blocks')
+            .select('*')
+            .eq('plan_id', plan.id)
+            .order('time_slot');
+          if (blkErr) throw new Error('Blocks: ' + blkErr.message);
+
+          // 4. Get drill info for each unique drill_id
+          const drillIds = [...new Set((blocks||[]).map(b => b.drill_id).filter(Boolean))];
+          let drillMap = {};
+          if (drillIds.length) {
+            const { data: drills } = await sb.from('drills').select('*').in('id', drillIds);
+            (drills||[]).forEach(d => { drillMap[d.id] = d; });
+          }
+
+          plansWithBlocks.push({ ...plan, blocks: blocks||[], drillMap });
+        }
+
+        const typeTag = sess.type === 'pool'
+          ? `<span style="background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.25);color:#00CFAD;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:2px">Pool</span>`
+          : `<span style="background:rgba(74,144,226,0.1);border:1px solid rgba(74,144,226,0.3);color:#4A90E2;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:2px">Depth</span>`;
+
+        html += `
+          <div style="margin-bottom:2.5rem">
+            <div style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1.1rem;padding-bottom:0.85rem;border-bottom:1px solid rgba(255,255,255,0.07)">
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem">${typeTag}</div>
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#F0EDE6;line-height:1">${sess.title}</div>
+                <div style="font-size:0.78rem;color:rgba(240,237,230,0.5);margin-top:0.25rem">
+                  📅 ${fmtDateRange(sess.date_start, sess.date_end)}
+                  ${sess.location ? ` &nbsp;·&nbsp; 📍 ${sess.location}` : ''}
+                </div>
               </div>
+              <span style="background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.2);color:#00CFAD;font-size:0.72rem;font-weight:600;padding:0.3rem 0.75rem;border-radius:2px;white-space:nowrap;flex-shrink:0">Enrolled ✓</span>
             </div>
-            <span style="background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.2);color:#00CFAD;font-size:0.72rem;font-weight:600;padding:0.3rem 0.75rem;border-radius:2px;white-space:nowrap">Enrolled ✓</span>
-          </div>
 
-          <!-- Week plans -->
-          ${plans && plans.length > 0 ? buildWeekPlans(plans, sess) : `
-            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:1.25rem;color:rgba(240,237,230,0.35);font-size:0.82rem;text-align:center">
-              No session plans published yet — check back closer to each session date.
-            </div>`}
-        </div>`;
+            ${plansWithBlocks.length > 0 ? buildWeekPlans(plansWithBlocks) : `
+              <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:1.25rem;color:rgba(240,237,230,0.35);font-size:0.82rem;text-align:center">
+                No session plans published yet — check back closer to each session date.
+              </div>`}
+          </div>`;
+      }
+
+      el.innerHTML = html || '<div style="color:var(--muted);font-size:0.85rem">No sessions found.</div>';
+
+    } catch(err) {
+      console.error('loadMySessions error:', err);
+      el.innerHTML = `<div style="color:var(--coral);font-size:0.82rem;padding:1rem;background:rgba(255,92,58,0.06);border:1px solid rgba(255,92,58,0.2);border-radius:3px">Error loading sessions: ${err.message}</div>`;
     }
-
-    el.innerHTML = html;
   }
 
   function fmtDateRange(start, end) {
@@ -1660,7 +1702,7 @@
     return new Date(d+'T12:00:00').toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   }
 
-  function buildWeekPlans(plans, sess) {
+  function buildWeekPlans(plans) {
     const TIME_SLOTS = ['6:00','6:10','6:20','6:30','6:40','6:50','7:00','7:10','7:20','7:30','7:40','7:50'];
     const LANE_COLOURS = ['#00CFAD','#F5A623','#4A90E2'];
     const today = new Date().toISOString().slice(0,10);
@@ -1669,39 +1711,30 @@
 
     plans.forEach((plan, pi) => {
       const isPast = plan.plan_date < today;
-      const isUpcoming = plan.plan_date >= today;
       const weekNum = pi + 1;
+      const laneNames = plan.lane_names || ['Lane 1','Lane 2'];
+      const laneCount = plan.lane_count || 2;
 
-      // Group blocks by slot then lane
-      const blocks = plan.plan_blocks || [];
+      // Group blocks by slot+lane
       const bySlot = {};
-      blocks.forEach(b => {
+      (plan.blocks || []).forEach(b => {
         if (!bySlot[b.time_slot]) bySlot[b.time_slot] = {};
         bySlot[b.time_slot][b.lane] = b;
       });
 
-      // Get lane names and count
-      const laneNames = plan.lane_names || ['Lane 1','Lane 2'];
-      const laneCount = plan.lane_count || 2;
-
-      const dateLabel = fmtPlanDate(plan.plan_date);
-
       html += `
-        <details style="background:rgba(13,45,74,0.35);border:1px solid rgba(255,255,255,0.07);border-radius:4px;overflow:hidden" ${isUpcoming && !isPast ? 'open' : ''}>
+        <details style="background:rgba(13,45,74,0.35);border:1px solid rgba(255,255,255,0.07);border-radius:4px;overflow:hidden" ${!isPast ? 'open' : ''}>
           <summary style="padding:0.85rem 1.1rem;cursor:pointer;display:flex;align-items:center;gap:0.75rem;list-style:none;user-select:none">
             <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;background:rgba(0,207,173,0.1);color:#00CFAD;padding:0.2rem 0.5rem;border-radius:2px;flex-shrink:0">Week ${weekNum}</span>
-            <span style="font-size:0.88rem;font-weight:500;color:#F0EDE6;flex:1">${dateLabel}</span>
-            ${isPast ? `<span style="font-size:0.65rem;color:rgba(240,237,230,0.3);text-transform:uppercase;letter-spacing:0.08em">Past</span>` : `<span style="font-size:0.65rem;color:#00CFAD;text-transform:uppercase;letter-spacing:0.08em">Upcoming</span>`}
+            <span style="font-size:0.88rem;font-weight:500;color:#F0EDE6;flex:1">${fmtPlanDate(plan.plan_date)}</span>
+            <span style="font-size:0.65rem;${isPast?'color:rgba(240,237,230,0.3)':'color:#00CFAD'};text-transform:uppercase;letter-spacing:0.08em">${isPast?'Past':'Upcoming'}</span>
             <span style="color:rgba(240,237,230,0.3);font-size:0.8rem">▾</span>
           </summary>
 
           <div style="padding:0 1.1rem 1.1rem">
             ${plan.session_notes ? `<div style="background:rgba(0,207,173,0.06);border:1px solid rgba(0,207,173,0.15);border-radius:3px;padding:0.75rem 1rem;font-size:0.8rem;color:rgba(240,237,230,0.7);margin-bottom:1rem;line-height:1.5">📋 ${plan.session_notes}</div>` : ''}
-
-            <!-- Plan grid -->
             <div style="overflow-x:auto">
               <div style="min-width:420px">
-                <!-- Lane headers -->
                 <div style="display:grid;grid-template-columns:52px ${Array(laneCount).fill('1fr').join(' ')};gap:2px;margin-bottom:2px">
                   <div></div>
                   ${laneNames.slice(0,laneCount).map((name,li) => `
@@ -1709,9 +1742,7 @@
                       <span style="width:7px;height:7px;border-radius:50%;background:${LANE_COLOURS[li]};flex-shrink:0;display:inline-block"></span>${name}
                     </div>`).join('')}
                 </div>
-
-                <!-- Time rows -->
-                ${buildMemberGridRows(TIME_SLOTS, bySlot, laneCount, LANE_COLOURS, plan.plan_blocks || [])}
+                ${buildMemberGridRows(TIME_SLOTS, bySlot, laneCount, LANE_COLOURS, plan.drillMap)}
               </div>
             </div>
           </div>
@@ -1722,54 +1753,52 @@
     return html;
   }
 
-  function buildMemberGridRows(timeSlots, bySlot, laneCount, laneColours, allBlocks) {
-    // Build continuation map
+  function buildMemberGridRows(timeSlots, bySlot, laneCount, laneColours, drillMap) {
     const contMap = {};
     let html = '';
+    let hadAny = false;
 
     timeSlots.forEach((slot, si) => {
-      const hasAny = Object.keys(bySlot[slot] || {}).length > 0 ||
-        Object.keys(contMap).some(k => k.startsWith(slot+'|'));
+      const slotsWithData = timeSlots.slice(si).some(s => Object.keys(bySlot[s]||{}).length > 0);
+      const hasCont = Object.keys(contMap).some(k => k.startsWith(slot+'|'));
+      if (!slotsWithData && !hasCont) return;
 
-      // Skip empty rows at the end
-      const anyRemaining = timeSlots.slice(si).some(s => Object.keys(bySlot[s]||{}).length > 0);
-      if (!anyRemaining && !Object.values(contMap).some(Boolean)) return;
-
+      hadAny = true;
       html += `<div style="display:grid;grid-template-columns:52px ${Array(laneCount).fill('1fr').join(' ')};gap:2px;margin-bottom:2px">`;
       html += `<div style="display:flex;align-items:flex-start;justify-content:center;padding-top:0.5rem;font-family:'Bebas Neue',sans-serif;font-size:0.9rem;color:rgba(240,237,230,0.25)">${slot}</div>`;
 
       for (let l = 1; l <= laneCount; l++) {
         const key = `${slot}|${l}`;
         const lc = laneColours[l-1];
-        const lcDim = lc.replace('#','') === '00CFAD' ? 'rgba(0,207,173,' : lc.replace('#','') === 'F5A623' ? 'rgba(245,166,35,' : 'rgba(74,144,226,';
+        const a = lc === '#00CFAD' ? '0,207,173' : lc === '#F5A623' ? '245,166,35' : '74,144,226';
 
         if (contMap[key]) {
-          html += `<div style="min-height:60px;border:1px solid ${lcDim}0.15);background:${lcDim}0.03);border-top:1px dashed ${lcDim}0.2)">
-            <div style="padding:0.25rem 0.45rem;font-size:0.62rem;font-style:italic;color:${lcDim}0.3)">↑ continued</div>
+          html += `<div style="min-height:60px;border:1px solid rgba(${a},0.15);background:rgba(${a},0.03);border-top:1px dashed rgba(${a},0.2)">
+            <div style="padding:0.25rem 0.45rem;font-size:0.62rem;font-style:italic;color:rgba(${a},0.3)">↑ continued</div>
           </div>`;
           continue;
         }
 
         const block = bySlot[slot]?.[l];
         if (block?.drill_id) {
-          const drill = block.drills;
+          const drill = drillMap?.[block.drill_id];
           const span = block.span || 1;
 
-          // Mark continuations
           for (let s2 = 1; s2 < span && (si+s2) < timeSlots.length; s2++) {
             contMap[`${timeSlots[si+s2]}|${l}`] = true;
           }
 
-          const drillData = JSON.stringify({ name: drill?.name||'', desc: drill?.description||'', specifics: block.specifics||'', span, slot, lane: l }).replace(/'/g,"&#39;");
+          const safeSpecifics = (block.specifics||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+          const safeDesc = (drill?.description||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+          const safeName = (drill?.name||'Drill').replace(/'/g,"&#39;");
+          const modalData = `{"name":"${safeName}","desc":"${safeDesc}","specifics":"${safeSpecifics}","span":${span},"slot":"${slot}"}`;
 
-          html += `<div style="min-height:60px;padding:0.4rem;border:1px solid ${lcDim}0.25);background:${lcDim}0.07);border-radius:2px;cursor:pointer;transition:all 0.12s"
-            onclick="openDrillModal('${drillData}')"
-            onmouseover="this.style.background='${lcDim}0.14)'"
-            onmouseout="this.style.background='${lcDim}0.07)'">
+          html += `<div style="min-height:60px;padding:0.4rem;border:1px solid rgba(${a},0.25);background:rgba(${a},0.07);border-radius:2px;cursor:pointer"
+            onclick='openDrillModal(${JSON.stringify(modalData)})'>
             <div style="display:flex;align-items:flex-start;gap:0.35rem;margin-bottom:0.2rem">
               <span style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;color:${lc};line-height:1;flex-shrink:0">${block.drill_id}</span>
               <span style="font-size:0.72rem;font-weight:600;color:#F0EDE6;line-height:1.2;flex:1">${drill?.name||'Drill'}</span>
-              ${span>1?`<span style="font-size:0.58rem;font-weight:700;padding:0.1rem 0.3rem;border-radius:2px;background:${lcDim}0.15);color:${lc};white-space:nowrap">×${span}</span>`:''}
+              ${span>1?`<span style="font-size:0.58rem;font-weight:700;padding:0.1rem 0.3rem;border-radius:2px;background:rgba(${a},0.15);color:${lc};white-space:nowrap">×${span}</span>`:''}
             </div>
             ${block.specifics
               ? `<div style="font-size:0.67rem;color:rgba(240,237,230,0.55);line-height:1.35;border-top:1px solid rgba(255,255,255,0.06);padding-top:0.2rem;margin-top:0.2rem">${block.specifics.substring(0,90)}${block.specifics.length>90?'…':''}</div>`
@@ -1778,22 +1807,23 @@
                 : ''}
           </div>`;
         } else {
-          html += `<div style="min-height:60px;border:1px solid rgba(255,255,255,0.05);background:rgba(13,45,74,0.2)"></div>`;
+          html += `<div style="min-height:60px;border:1px solid rgba(255,255,255,0.04);background:rgba(13,45,74,0.15)"></div>`;
         }
       }
       html += '</div>';
     });
-    return html || '<div style="color:rgba(240,237,230,0.3);font-size:0.78rem;padding:0.5rem 0">No drills entered for this session.</div>';
+
+    return hadAny ? html : '<div style="color:rgba(240,237,230,0.3);font-size:0.78rem;padding:0.75rem 0">No drills entered for this session.</div>';
   }
 
   function openDrillModal(dataStr) {
     let d;
-    try { d = JSON.parse(dataStr.replace(/&#39;/g,"'")); } catch(e) { return; }
+    try { d = JSON.parse(typeof dataStr === 'string' ? dataStr : JSON.stringify(dataStr)); } catch(e) { console.error('drill modal parse',e); return; }
     const modal = document.getElementById('modal-drill-detail');
     const content = document.getElementById('drill-modal-content');
     content.innerHTML = `
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#F0EDE6;margin-bottom:0.25rem">${d.name}</div>
-      <div style="font-size:0.72rem;color:rgba(240,237,230,0.4);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1.25rem">${d.slot} · Drill #${d.lane}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#F0EDE6;margin-bottom:0.25rem">${d.name||'Drill'}</div>
+      <div style="font-size:0.72rem;color:rgba(240,237,230,0.4);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1.25rem">${d.slot||''}</div>
       ${d.specifics ? `
         <div style="margin-bottom:1rem">
           <div style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:#00CFAD;font-weight:700;margin-bottom:0.4rem">Session Instructions</div>
@@ -1804,7 +1834,7 @@
           <div style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(240,237,230,0.35);font-weight:700;margin-bottom:0.4rem">Drill Description</div>
           <div style="font-size:0.82rem;color:rgba(240,237,230,0.5);line-height:1.6">${d.desc}</div>
         </div>` : ''}
-      ${d.span > 1 ? `<div style="margin-top:1rem;font-size:0.72rem;color:rgba(240,237,230,0.3)">⏱ This drill runs for ${d.span * 10} minutes (${d.span} blocks)</div>` : ''}`;
+      ${d.span > 1 ? `<div style="margin-top:1rem;font-size:0.72rem;color:rgba(240,237,230,0.3)">⏱ This drill runs for ${d.span * 10} minutes</div>` : ''}`;
     modal.style.display = 'flex';
   }
 
