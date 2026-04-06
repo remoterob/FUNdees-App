@@ -166,7 +166,58 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
 .modal-close{position:absolute;top:0.85rem;right:0.85rem;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem}
 .modal-close:hover{color:var(--sand)}
 
-/* ── PRINT STYLES ── */
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .mob-session-bar{display:flex}
+  .main{padding:1rem}
+  .plan-header{flex-direction:column;gap:0.75rem}
+  .plan-header>div:last-child{flex-direction:row;flex-wrap:wrap}
+  .lane-cfg{gap:0.5rem}
+  .edit-grid{grid-template-columns:1fr}
+  .export-bar{flex-direction:column;align-items:flex-start}
+}
+
+/* Mobile session selector bar — hidden on desktop */
+.mob-session-bar{
+  display:none;
+  align-items:center;gap:0.75rem;
+  padding:0.75rem 1rem;
+  background:rgba(10,22,40,0.95);
+  border-bottom:1px solid var(--dim);
+  position:sticky;top:60px;z-index:40;
+}
+.mob-session-select{
+  flex:1;background:rgba(13,45,74,0.8);border:1px solid var(--dim);
+  border-radius:3px;padding:0.55rem 0.75rem;color:var(--sand);
+  font-family:'Barlow',sans-serif;font-size:0.85rem;outline:none;
+  -webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300CFAD' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 0.75rem center;
+  padding-right:2.25rem;
+}
+.mob-session-select:focus{border-color:var(--surge-border)}
+.mob-drill-toggle{
+  background:rgba(13,45,74,0.8);border:1px solid var(--dim);border-radius:3px;
+  padding:0.55rem 0.75rem;color:var(--muted);font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;
+  cursor:pointer;white-space:nowrap;transition:all 0.12s;
+}
+.mob-drill-toggle:hover,.mob-drill-toggle.open{border-color:var(--surge-border);color:var(--surge)}
+
+/* Mobile drill drawer */
+.mob-drill-drawer{
+  display:none;position:fixed;inset:0;top:60px;z-index:50;
+  background:rgba(10,22,40,0.98);overflow-y:auto;padding:1rem;
+}
+.mob-drill-drawer.open{display:block}
+.mob-drill-drawer-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--dim);
+}
+.mob-drill-drawer-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--surge)}
+
 @media print {
   nav,.sidebar,.edit-panel,.export-bar,.btn,button{display:none!important}
   body{background:white;color:#111}
@@ -217,6 +268,25 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
     <a href="/" class="btn btn-ghost btn-sm">← Back</a>
   </div>
 </nav>
+
+<!-- MOBILE SESSION BAR -->
+<div class="mob-session-bar" id="mob-session-bar">
+  <select class="mob-session-select" id="mob-session-select" onchange="onMobSessionChange(this.value)">
+    <option value="">— Select a session —</option>
+  </select>
+  <button class="mob-drill-toggle" id="mob-drill-toggle" onclick="toggleDrillDrawer()">Drills ＋</button>
+</div>
+
+<!-- MOBILE DRILL DRAWER -->
+<div class="mob-drill-drawer" id="mob-drill-drawer">
+  <div class="mob-drill-drawer-header">
+    <span class="mob-drill-drawer-title">Drill Library — tap to assign</span>
+    <button onclick="toggleDrillDrawer()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem">✕</button>
+  </div>
+  <input class="drill-search" id="mob-drill-search" placeholder="Search drills…" oninput="filterDrills(this.value)" style="margin-bottom:0.75rem">
+  <div id="mob-drill-library"></div>
+  <button class="drill-add-btn" onclick="openAddDrill()">＋ Add new drill…</button>
+</div>
 
 <div class="layout">
 
@@ -428,6 +498,30 @@ function renderDrillLibrary(drills) {
     });
   });
   document.getElementById('drill-library').innerHTML = html;
+  // Mirror to mobile drawer
+  const mob = document.getElementById('mob-drill-library');
+  if (mob) mob.innerHTML = html;
+}
+
+// ── MOBILE HELPERS ────────────────────────────────────────────────────────
+function onMobSessionChange(val) {
+  if (!val) return;
+  const [sessId, date] = val.split('|');
+  selectSession(sessId, date);
+}
+
+function toggleDrillDrawer() {
+  const drawer = document.getElementById('mob-drill-drawer');
+  const btn = document.getElementById('mob-drill-toggle');
+  const open = drawer.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  if (open) document.getElementById('mob-drill-search').focus();
+}
+
+// Sync mobile dropdown selection when sidebar item clicked
+function syncMobSelect(sessId, date) {
+  const sel = document.getElementById('mob-session-select');
+  if (sel) sel.value = `${sessId}|${date}`;
 }
 
 function renderEditDrillSelect() {
@@ -464,9 +558,13 @@ async function loadSessions() {
   // Generate date list for each session (weekly occurrences between date_start and date_end)
   const list = document.getElementById('session-list');
   list.innerHTML = '';
+  const mobSel = document.getElementById('mob-session-select');
+  mobSel.innerHTML = '<option value="">— Select a session —</option>';
+
   allSessions.forEach(sess => {
     const dates = getWeeklyDates(sess.date_start, sess.date_end);
     dates.forEach((date, i) => {
+      // Desktop sidebar item
       const div = document.createElement('div');
       div.className = 'sess-item';
       div.dataset.sessId = sess.id;
@@ -477,6 +575,13 @@ async function loadSessions() {
         <span class="pill pill-empty" id="status-${sess.id}-${date}">No Plan Yet</span>`;
       div.onclick = () => selectSession(sess.id, date);
       list.appendChild(div);
+
+      // Mobile dropdown option
+      const opt = document.createElement('option');
+      opt.value = `${sess.id}|${date}`;
+      opt.textContent = `Week ${i+1} — ${fmtDate(date)}`;
+      opt.dataset.statusId = `status-${sess.id}-${date}`;
+      mobSel.appendChild(opt);
     });
   });
 
@@ -487,6 +592,14 @@ async function loadSessions() {
     if (el) {
       el.className = `pill ${p.status === 'published' ? 'pill-pub' : 'pill-draft'}`;
       el.textContent = p.status === 'published' ? 'Published' : 'Draft';
+    }
+    // Update mobile dropdown option label too
+    const mobSel = document.getElementById('mob-session-select');
+    for (const opt of mobSel.options) {
+      if (opt.value === `${p.session_id}|${p.plan_date}`) {
+        const label = p.status === 'published' ? '✓' : '…';
+        opt.textContent = opt.textContent.replace(/ [✓…]$/, '') + ` ${label}`;
+      }
     }
   });
 }
@@ -514,6 +627,9 @@ async function selectSession(sessId, date) {
   document.querySelectorAll('.sess-item').forEach(el => {
     el.classList.toggle('active', el.dataset.sessId === sessId && el.dataset.date === date);
   });
+
+  // Sync mobile dropdown
+  syncMobSelect(sessId, date);
 
   currentSession = allSessions.find(s => s.id === sessId);
   if (!currentSession) return;
@@ -694,6 +810,10 @@ function onDrillChipClick(drillId) {
   if (editTarget) {
     document.getElementById('edit-drill').value = drillId;
     applyEdit();
+    // Close mobile drill drawer after assigning
+    const drawer = document.getElementById('mob-drill-drawer');
+    const btn = document.getElementById('mob-drill-toggle');
+    if (drawer) { drawer.classList.remove('open'); btn?.classList.remove('open'); }
   } else {
     toast('Tap a grid cell first, then tap a drill to assign it', false);
   }
