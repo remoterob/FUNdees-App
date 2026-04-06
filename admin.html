@@ -417,7 +417,7 @@ async function loadLeads(selectedId) {
   if (selectedId) sel.value = selectedId;
 }
 
-
+async function loadSessions() {
   const { data, error } = await sb
     .from('sessions_with_counts')
     .select('*')
