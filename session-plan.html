@@ -667,8 +667,26 @@ async function selectSession(sessId, date) {
     `${currentSession.title} — ${fmtDate(date)}`;
 
   const enrolled = (currentSession.enrolments||[]).filter(e => e.status === 'enrolled');
+
+  // Build lead selector — fetch all qualified leads/admins
+  const { data: leads, error: leadsErr } = await sb.from('members')
+    .select('id, full_name')
+    .or('is_qualified_lead.eq.true,is_admin.eq.true')
+    .order('full_name');
+  console.log('[Lead selector] leads:', leads, 'error:', leadsErr);
+  const leadOptions = (leads||[]).map(m =>
+    `<option value="${m.id}" ${m.id === currentSession.lead_member_id ? 'selected' : ''}>${m.full_name}</option>`
+  ).join('');
+
   document.getElementById('plan-meta').innerHTML =
-    `Lead: <strong>${currentMember.full_name}</strong> &nbsp;·&nbsp; ${enrolled.length} enrolled`;
+    `<label style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-right:0.4rem">Lead</label>
+     <select id="lead-select"
+       style="background:rgba(13,45,74,0.8);border:1px solid rgba(0,207,173,0.3);border-radius:2px;padding:0.25rem 0.6rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.82rem;outline:none;cursor:pointer;margin-right:0.75rem"
+       onchange="updateSessionLead(this.value)">
+       <option value="">— Unassigned —</option>
+       ${leadOptions}
+     </select>
+     <span style="color:var(--muted)">${enrolled.length} enrolled</span>`;
 
   // Avatars
   const avHtml = enrolled.slice(0,6).map(e => {
@@ -703,7 +721,18 @@ async function selectSession(sessId, date) {
   isDirty = false;
 }
 
-// ── LANE CONFIG ───────────────────────────────────────────────────────────
+async function updateSessionLead(leadId) {
+  console.log('[updateSessionLead] leadId:', leadId, 'sessionId:', currentSession?.id);
+  if (!currentSession?.id) { toast('No session selected', true); return; }
+  const { data, error } = await sb.from('sessions')
+    .update({ lead_member_id: leadId || null })
+    .eq('id', currentSession.id)
+    .select();
+  console.log('[updateSessionLead] result:', data, 'error:', error);
+  if (error) { toast('Failed to update lead: ' + error.message, true); return; }
+  currentSession.lead_member_id = leadId || null;
+  toast('✓ Lead updated');
+}
 function renderLaneConfig() {
   document.getElementById('lane-count-val').textContent = laneCount;
   const inp = document.getElementById('lane-name-inputs');
