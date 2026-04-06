@@ -127,11 +127,12 @@ select.field{cursor:pointer}
           <th>Price</th>
           <th>Enrolled</th>
           <th>Status</th>
+          <th>Lead</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody id="sessions-tbody">
-        <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem">Loading...</td></tr>
+        <tr><td colspan="8" style="color:var(--muted);text-align:center;padding:2rem">Loading...</td></tr>
       </tbody>
     </table>
 
@@ -341,6 +342,11 @@ select.field{cursor:pointer}
     <label class="lbl">Prerequisites</label>
     <input class="field" id="f-prereq" type="text" placeholder="e.g. AIDA2 or equivalent" style="width:100%">
 
+    <label class="lbl">Session Lead</label>
+    <select class="field" id="f-lead" style="width:100%">
+      <option value="">— No lead assigned —</option>
+    </select>
+
     <div class="msg" id="modal-msg"></div>
 
     <div class="modal-footer">
@@ -395,20 +401,34 @@ async function init() {
   loadImages();
   loadArticles();
   loadAnalytics();
+  loadLeads();
 }
 
-async function loadSessions() {
+async function loadLeads() {
+  const { data } = await sb.from('members')
+    .select('id, full_name')
+    .or('is_qualified_lead.eq.true,is_admin.eq.true')
+    .order('full_name');
+  const sel = document.getElementById('f-lead');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— No lead assigned —</option>' +
+    (data||[]).map(m => `<option value="${m.id}">${m.full_name}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+
+
   const { data, error } = await sb
     .from('sessions_with_counts')
     .select('*')
     .order('date_start', { ascending: true });
 
-  if (error) { document.getElementById('sessions-tbody').innerHTML = `<tr><td colspan="7" style="color:var(--coral)">${error.message}</td></tr>`; return; }
+  if (error) { document.getElementById('sessions-tbody').innerHTML = `<tr><td colspan="8" style="color:var(--coral)">${error.message}</td></tr>`; return; }
 
   document.getElementById('session-count').textContent = `${data.length} session${data.length !== 1 ? 's' : ''}`;
 
   if (data.length === 0) {
-    document.getElementById('sessions-tbody').innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem">No sessions yet. Create one above.</td></tr>';
+    document.getElementById('sessions-tbody').innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:2rem">No sessions yet. Create one above.</td></tr>';
     return;
   }
 
@@ -420,6 +440,7 @@ async function loadSessions() {
       <td>$${Number(s.price).toFixed(2)}</td>
       <td>${s.enrolled_count} / ${s.capacity}</td>
       <td><span class="badge b-${s.status}">${s.status.replace('_',' ')}</span></td>
+      <td style="font-size:0.8rem;color:var(--muted)" id="lead-${s.id}">${s.lead_member_id ? '…' : '<span style="opacity:0.4">None</span>'}</td>
       <td>
         <div class="td-actions">
           <button class="btn-o" onclick="editSession(${JSON.stringify(s).replace(/"/g,'&quot;')})">Edit</button>
@@ -428,6 +449,19 @@ async function loadSessions() {
         </div>
       </td>
     </tr>`).join('');
+
+  // Populate lead names for sessions that have one
+  const withLeads = data.filter(s => s.lead_member_id);
+  if (withLeads.length) {
+    const ids = [...new Set(withLeads.map(s => s.lead_member_id))];
+    const { data: leads } = await sb.from('members').select('id, full_name').in('id', ids);
+    const leadMap = {};
+    (leads||[]).forEach(m => { leadMap[m.id] = m.full_name; });
+    withLeads.forEach(s => {
+      const el = document.getElementById(`lead-${s.id}`);
+      if (el) el.innerHTML = `<span style="color:var(--sand)">${leadMap[s.lead_member_id] || '—'}</span>`;
+    });
+  }
 }
 
 function openModal(session=null) {
@@ -443,6 +477,7 @@ function openModal(session=null) {
   document.getElementById('f-location').value = session?.location || '';
   document.getElementById('f-desc').value     = session?.description || '';
   document.getElementById('f-prereq').value   = session?.prerequisites || '';
+  document.getElementById('f-lead').value     = session?.lead_member_id || '';
   const msg = document.getElementById('modal-msg'); msg.className='msg'; msg.textContent='';
   document.getElementById('session-modal').classList.add('open');
 }
@@ -462,6 +497,7 @@ async function saveSession() {
   const location = document.getElementById('f-location').value.trim();
   const desc     = document.getElementById('f-desc').value.trim();
   const prereq   = document.getElementById('f-prereq').value.trim();
+  const leadId   = document.getElementById('f-lead').value || null;
 
   const msg = document.getElementById('modal-msg');
   msg.className = 'msg'; msg.textContent = '';
@@ -472,7 +508,7 @@ async function saveSession() {
   const btn = document.getElementById('btn-save-session');
   btn.disabled = true; btn.textContent = 'Saving...';
 
-  const payload = { title, type, status, date_start: start, date_end: end, price, capacity, location: location||null, description: desc||null, prerequisites: prereq||null };
+  const payload = { title, type, status, date_start: start, date_end: end, price, capacity, location: location||null, description: desc||null, prerequisites: prereq||null, lead_member_id: leadId };
 
   const { error } = editingId
     ? await sb.from('sessions').update(payload).eq('id', editingId)
