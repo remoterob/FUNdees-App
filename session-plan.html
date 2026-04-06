@@ -674,8 +674,11 @@ async function selectSession(sessId, date) {
     .or('is_qualified_lead.eq.true,is_admin.eq.true')
     .order('full_name');
   console.log('[Lead selector] leads:', leads, 'error:', leadsErr);
+
+  // Lead is per-plan (per week), not per session
+  const currentLeadId = plan?.lead_member_id || null;
   const leadOptions = (leads||[]).map(m =>
-    `<option value="${m.id}" ${m.id === currentSession.lead_member_id ? 'selected' : ''}>${m.full_name}</option>`
+    `<option value="${m.id}" ${m.id === currentLeadId ? 'selected' : ''}>${m.full_name}</option>`
   ).join('');
 
   document.getElementById('plan-meta').innerHTML =
@@ -722,16 +725,24 @@ async function selectSession(sessId, date) {
 }
 
 async function updateSessionLead(leadId) {
-  console.log('[updateSessionLead] leadId:', leadId, 'sessionId:', currentSession?.id);
-  if (!currentSession?.id) { toast('No session selected', true); return; }
-  const { data, error } = await sb.from('sessions')
+  console.log('[updateSessionLead] leadId:', leadId, 'planId:', currentPlan?.id);
+
+  // If no plan exists yet, save a draft first so we have a plan_id to update
+  if (!currentPlan?.id) {
+    await savePlan('draft');
+  }
+  if (!currentPlan?.id) { toast('Save the plan first before assigning a lead', true); return; }
+
+  const { data, error } = await sb.from('session_plans')
     .update({ lead_member_id: leadId || null })
-    .eq('id', currentSession.id)
+    .eq('id', currentPlan.id)
     .select();
   console.log('[updateSessionLead] result:', data, 'error:', error);
   if (error) { toast('Failed to update lead: ' + error.message, true); return; }
-  currentSession.lead_member_id = leadId || null;
-  toast('✓ Lead updated');
+
+  // Keep local plan state in sync
+  currentPlan.lead_member_id = leadId || null;
+  toast('✓ Lead updated for this week');
 }
 function renderLaneConfig() {
   document.getElementById('lane-count-val').textContent = laneCount;

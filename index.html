@@ -1627,14 +1627,6 @@
       (sessionsData||[]).forEach(s => { sessMap[s.id] = s; });
       console.log('[My Sessions] sessMap keys:', Object.keys(sessMap));
 
-      // Fetch lead names for sessions that have one
-      const leadIds = [...new Set((sessionsData||[]).map(s => s.lead_member_id).filter(Boolean))];
-      const leadMap = {};
-      if (leadIds.length) {
-        const { data: leads } = await sb.from('members').select('id, full_name').in('id', leadIds);
-        (leads||[]).forEach(m => { leadMap[m.id] = m.full_name; });
-      }
-
       let html = '';
 
       for (const enr of enrolments) {
@@ -1649,8 +1641,15 @@
           .eq('status', 'published')
           .order('plan_date', { ascending: true });
         console.log('[My Sessions] plans:', plans, 'error:', planErr);
-
         if (planErr) throw new Error('Plans: ' + planErr.message);
+
+        // Collect all lead IDs across all plans for this session
+        const planLeadIds = [...new Set((plans||[]).map(p => p.lead_member_id).filter(Boolean))];
+        const planLeadMap = {};
+        if (planLeadIds.length) {
+          const { data: leadMembers } = await sb.from('members').select('id, full_name').in('id', planLeadIds);
+          (leadMembers||[]).forEach(m => { planLeadMap[m.id] = m.full_name; });
+        }
 
         // For each plan, get blocks separately
         const plansWithBlocks = [];
@@ -1662,7 +1661,6 @@
           console.log('[My Sessions] blocks for plan', plan.id, ':', blocks, 'error:', blkErr);
           if (blkErr) throw new Error('Blocks: ' + blkErr.message);
 
-          // 4. Get drill info for each unique drill_id
           const drillIds = [...new Set((blocks||[]).map(b => b.drill_id).filter(Boolean))];
           let drillMap = {};
           if (drillIds.length) {
@@ -1670,7 +1668,12 @@
             (drills||[]).forEach(d => { drillMap[d.id] = d; });
           }
 
-          plansWithBlocks.push({ ...plan, blocks: blocks||[], drillMap });
+          plansWithBlocks.push({
+            ...plan,
+            blocks: blocks||[],
+            drillMap,
+            leadName: plan.lead_member_id ? (planLeadMap[plan.lead_member_id] || null) : null
+          });
         }
 
         const typeTag = sess.type === 'pool'
@@ -1686,13 +1689,12 @@
                 <div style="font-size:0.78rem;color:rgba(240,237,230,0.5);margin-top:0.25rem">
                   📅 ${fmtDateRange(sess.date_start, sess.date_end)}
                   ${sess.location ? ` &nbsp;·&nbsp; 📍 ${sess.location}` : ''}
-                  ${sess.lead_member_id && leadMap[sess.lead_member_id] ? ` &nbsp;·&nbsp; 🤿 Lead: <strong style="color:rgba(240,237,230,0.75)">${leadMap[sess.lead_member_id]}</strong>` : ''}
                 </div>
               </div>
               <span style="background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.2);color:#00CFAD;font-size:0.72rem;font-weight:600;padding:0.3rem 0.75rem;border-radius:2px;white-space:nowrap;flex-shrink:0">Enrolled ✓</span>
             </div>
 
-            ${plansWithBlocks.length > 0 ? buildWeekPlans(plansWithBlocks, leadMap[sess.lead_member_id] || null) : `
+            ${plansWithBlocks.length > 0 ? buildWeekPlans(plansWithBlocks) : `
               <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:1.25rem;color:rgba(240,237,230,0.35);font-size:0.82rem;text-align:center">
                 No session plans published yet — check back closer to each session date.
               </div>`}
@@ -1718,7 +1720,7 @@
     return new Date(d+'T12:00:00').toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   }
 
-  function buildWeekPlans(plans, leadName) {
+  function buildWeekPlans(plans) {
     const TIME_SLOTS = ['6:00','6:10','6:20','6:30','6:40','6:50','7:00','7:10','7:20','7:30','7:40','7:50'];
     const LANE_COLOURS = ['#00CFAD','#F5A623','#4A90E2'];
     const today = new Date().toISOString().slice(0,10);
@@ -1743,7 +1745,7 @@
           <summary style="padding:0.85rem 1.1rem;cursor:pointer;display:flex;align-items:center;gap:0.75rem;list-style:none;user-select:none">
             <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;background:rgba(0,207,173,0.1);color:#00CFAD;padding:0.2rem 0.5rem;border-radius:2px;flex-shrink:0">Week ${weekNum}</span>
             <span style="font-size:0.88rem;font-weight:500;color:#F0EDE6;flex:1">${fmtPlanDate(plan.plan_date)}</span>
-            ${leadName ? `<span style="font-size:0.72rem;color:rgba(0,207,173,0.7)">🤿 ${leadName}</span>` : ''}
+            ${plan.leadName ? `<span style="font-size:0.72rem;color:rgba(0,207,173,0.7)">🤿 ${plan.leadName}</span>` : ''}
             <span style="font-size:0.65rem;${isPast?'color:rgba(240,237,230,0.3)':'color:#00CFAD'};text-transform:uppercase;letter-spacing:0.08em">${isPast?'Past':'Upcoming'}</span>
             <span style="color:rgba(240,237,230,0.3);font-size:0.8rem">▾</span>
           </summary>
