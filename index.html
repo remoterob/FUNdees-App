@@ -1615,37 +1615,43 @@
         return;
       }
 
-      // 2. Fetch session details separately for any that didn't join
+      // 2. Fetch session details separately
       const sessionIds = enrolments.map(e => e.session_id);
+      console.log('[My Sessions] fetching session IDs:', sessionIds);
       const { data: sessionsData, error: sessErr } = await sb.from('sessions')
         .select('*')
         .in('id', sessionIds);
+      console.log('[My Sessions] sessions result:', sessionsData, 'error:', sessErr);
       if (sessErr) throw new Error('Sessions: ' + sessErr.message);
       const sessMap = {};
       (sessionsData||[]).forEach(s => { sessMap[s.id] = s; });
+      console.log('[My Sessions] sessMap keys:', Object.keys(sessMap));
 
       let html = '';
 
       for (const enr of enrolments) {
         const sess = sessMap[enr.session_id];
         if (!sess) { console.warn('[My Sessions] no session found for', enr.session_id); continue; }
+        console.log('[My Sessions] processing session:', sess.id, sess.title);
 
-        // 2. Get published plans for this session
+        // Get published plans for this session
         const { data: plans, error: planErr } = await sb.from('session_plans')
           .select('*')
           .eq('session_id', sess.id)
           .eq('status', 'published')
           .order('plan_date', { ascending: true });
+        console.log('[My Sessions] plans:', plans, 'error:', planErr);
 
         if (planErr) throw new Error('Plans: ' + planErr.message);
 
-        // 3. For each plan, get blocks separately (avoids join issues)
+        // For each plan, get blocks separately
         const plansWithBlocks = [];
         for (const plan of (plans || [])) {
           const { data: blocks, error: blkErr } = await sb.from('plan_blocks')
             .select('*')
             .eq('plan_id', plan.id)
             .order('time_slot');
+          console.log('[My Sessions] blocks for plan', plan.id, ':', blocks, 'error:', blkErr);
           if (blkErr) throw new Error('Blocks: ' + blkErr.message);
 
           // 4. Get drill info for each unique drill_id
@@ -1685,6 +1691,7 @@
       }
 
       el.innerHTML = html || '<div style="color:var(--muted);font-size:0.85rem">No sessions found.</div>';
+      console.log('[My Sessions] render complete, html length:', html.length);
 
     } catch(err) {
       console.error('loadMySessions error:', err);
