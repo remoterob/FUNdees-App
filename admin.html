@@ -136,6 +136,40 @@ select.field{cursor:pointer}
       </tbody>
     </table>
 
+    <!-- MEMBERS MANAGEMENT -->
+    <div style="margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--dim)">
+      <div class="top-bar" style="margin-bottom:1rem">
+        <div>
+          <div class="page-title" style="font-size:1.6rem">Members</div>
+          <div style="color:var(--muted);font-size:0.82rem">Manage member accounts. Deactivated accounts retain all history for 7 years (ISA 2022).</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <select id="member-filter" class="field" style="width:auto;font-size:0.8rem" onchange="loadMembers()">
+            <option value="all">All Members</option>
+            <option value="active">Active</option>
+            <option value="pending">Pending</option>
+            <option value="expired">Expired</option>
+            <option value="cancelled">Deactivated</option>
+          </select>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Joined</th>
+            <th>Lead</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="members-tbody">
+          <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:2rem">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
     <!-- IMAGE MANAGEMENT -->
     <div style="margin-top:2.5rem">
       <div class="top-bar" style="margin-bottom:1rem">
@@ -402,6 +436,7 @@ async function init() {
   loadArticles();
   loadAnalytics();
   loadLeads();
+  loadMembers();
 }
 
 async function loadLeads(selectedId) {
@@ -938,6 +973,81 @@ async function deleteImage(name) {
   if (error) { toast('Delete failed: ' + error.message, true); return; }
   toast('Photo deleted.');
   loadImages();
+}
+
+async function loadMembers() {
+  const filter = document.getElementById('member-filter')?.value || 'all';
+  let query = sb.from('members')
+    .select('id, full_name, email, status, membership_start, is_qualified_lead, is_admin, deactivated_at')
+    .order('full_name');
+  if (filter !== 'all') query = query.eq('status', filter);
+
+  const { data, error } = await query;
+  const tbody = document.getElementById('members-tbody');
+  if (error) { tbody.innerHTML = `<tr><td colspan="6" style="color:var(--coral)">${error.message}</td></tr>`; return; }
+  if (!data?.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:2rem">No members found.</td></tr>'; return; }
+
+  const statusColour = { active:'#00CFAD', pending:'#F5A623', expired:'rgba(240,237,230,0.4)', cancelled:'rgba(255,92,58,0.7)' };
+
+  tbody.innerHTML = data.map(m => {
+    const isDeactivated = m.status === 'cancelled';
+    const statusLabel = isDeactivated ? 'Deactivated' : m.status.charAt(0).toUpperCase() + m.status.slice(1);
+    const col = statusColour[m.status] || 'var(--muted)';
+    const joined = m.membership_start ? new Date(m.membership_start).toLocaleDateString('en-NZ', {day:'numeric',month:'short',year:'numeric'}) : '—';
+    const leadBadge = m.is_admin ? '<span style="background:rgba(245,166,35,0.15);color:#F5A623;font-size:0.6rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:2px;text-transform:uppercase">Admin</span>'
+      : m.is_qualified_lead ? '<span style="background:rgba(0,207,173,0.12);color:#00CFAD;font-size:0.6rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:2px;text-transform:uppercase">Lead</span>'
+      : '<span style="color:rgba(240,237,230,0.2);font-size:0.75rem">—</span>';
+
+    return `<tr style="${isDeactivated ? 'opacity:0.55' : ''}">
+      <td><strong>${m.full_name}</strong></td>
+      <td style="font-size:0.8rem;color:var(--muted)">${m.email || '—'}</td>
+      <td><span style="color:${col};font-size:0.78rem;font-weight:600">${statusLabel}</span></td>
+      <td style="font-size:0.8rem;color:var(--muted)">${joined}</td>
+      <td>${leadBadge}</td>
+      <td>
+        <div class="td-actions">
+          ${isDeactivated
+            ? `<button class="btn-o" onclick="reactivateMember('${m.id}','${m.full_name.replace(/'/g,"\\'")}')">Reactivate</button>`
+            : `<button class="btn-o" onclick="toggleLeadRole('${m.id}', ${!!m.is_qualified_lead}, '${m.full_name.replace(/'/g,"\\'")}')">
+                ${m.is_qualified_lead ? 'Remove Lead' : 'Make Lead'}
+               </button>
+               <button class="btn-danger" onclick="deactivateMember('${m.id}','${m.full_name.replace(/'/g,"\\'")}')">Deactivate</button>`
+          }
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function deactivateMember(id, name) {
+  if (!confirm(`Deactivate ${name}?\n\nTheir account will be inactive but all records are retained for 7 years (ISA 2022). They can reactivate by signing up again with the same email.`)) return;
+  const { error } = await sb.from('members').update({
+    status: 'cancelled',
+    deactivated_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) { toast('Failed: ' + error.message, true); return; }
+  toast(`${name} deactivated ✓`);
+  loadMembers();
+}
+
+async function reactivateMember(id, name) {
+  if (!confirm(`Reactivate ${name}?\n\nThis will restore their account to pending status. They will need to pay for a new membership period.`)) return;
+  const { error } = await sb.from('members').update({
+    status: 'pending',
+    deactivated_at: null
+  }).eq('id', id);
+  if (error) { toast('Failed: ' + error.message, true); return; }
+  toast(`${name} reactivated ✓`);
+  loadMembers();
+}
+
+async function toggleLeadRole(id, isCurrentlyLead, name) {
+  const newVal = !isCurrentlyLead;
+  const { error } = await sb.from('members').update({ is_qualified_lead: newVal }).eq('id', id);
+  if (error) { toast('Failed: ' + error.message, true); return; }
+  toast(`${name} ${newVal ? 'is now a Lead ✓' : 'Lead role removed'}`);
+  loadMembers();
+  loadLeads(); // refresh lead dropdown cache
 }
 
 init();

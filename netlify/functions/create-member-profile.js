@@ -35,15 +35,54 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing required fields' }) };
     }
 
-    // Check if profile already exists (idempotent)
+    // Check if profile already exists for this auth user
     const { data: existing } = await supabaseAdmin
       .from('members')
-      .select('id')
+      .select('id, status')
       .eq('auth_user_id', auth_user_id)
       .maybeSingle();
 
     if (existing) {
+      // If previously deactivated, reactivate the account
+      if (existing.status === 'cancelled') {
+        await supabaseAdmin.from('members').update({
+          status: 'pending',
+          deactivated_at: null,
+          full_name,
+          phone:             phone || null,
+          date_of_birth:     date_of_birth || null,
+          emergency_contact: emergency_contact || null,
+          medical_confirmed:    medical_confirmed || false,
+          liability_confirmed:  liability_confirmed || false,
+          declarations_date:    declarations_date || null,
+        }).eq('id', existing.id);
+        return { statusCode: 200, headers: CORS, body: JSON.stringify({ id: existing.id, reactivated: true }) };
+      }
       return { statusCode: 200, headers: CORS, body: JSON.stringify({ id: existing.id, existed: true }) };
+    }
+
+    // Also check by email in case they signed up with a new auth account
+    const { data: byEmail } = await supabaseAdmin
+      .from('members')
+      .select('id, status, auth_user_id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (byEmail && byEmail.status === 'cancelled') {
+      // Reactivate and link to new auth user
+      await supabaseAdmin.from('members').update({
+        auth_user_id,
+        status: 'pending',
+        deactivated_at: null,
+        full_name,
+        phone:             phone || null,
+        date_of_birth:     date_of_birth || null,
+        emergency_contact: emergency_contact || null,
+        medical_confirmed:    medical_confirmed || false,
+        liability_confirmed:  liability_confirmed || false,
+        declarations_date:    declarations_date || null,
+      }).eq('id', byEmail.id);
+      return { statusCode: 200, headers: CORS, body: JSON.stringify({ id: byEmail.id, reactivated: true }) };
     }
 
     const { data, error } = await supabaseAdmin
