@@ -1599,6 +1599,7 @@
     }
 
     el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem">Loading…</div>';
+    window._drillModalData = []; // reset drill modal registry
 
     try {
       // 1. Get enrolments for this member
@@ -1807,13 +1808,19 @@
             contMap[`${timeSlots[si+s2]}|${l}`] = true;
           }
 
-          const safeSpecifics = (block.specifics||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
-          const safeDesc = (drill?.description||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
-          const safeName = (drill?.name||'Drill').replace(/'/g,"&#39;");
-          const modalData = `{"name":"${safeName}","desc":"${safeDesc}","specifics":"${safeSpecifics}","span":${span},"slot":"${slot}"}`;
+          // Store drill data in a registry to avoid JSON-in-HTML-attribute issues
+          const drillIdx = window._drillModalData ? window._drillModalData.length : 0;
+          if (!window._drillModalData) window._drillModalData = [];
+          window._drillModalData.push({
+            name: drill?.name || 'Drill',
+            desc: drill?.description || '',
+            specifics: block.specifics || '',
+            span,
+            slot
+          });
 
           html += `<div style="min-height:60px;padding:0.4rem;border:1px solid rgba(${a},0.25);background:rgba(${a},0.07);border-radius:2px;cursor:pointer"
-            onclick='openDrillModal(${JSON.stringify(modalData)})'>
+            onclick="openDrillModal(${drillIdx})">
             <div style="display:flex;align-items:flex-start;gap:0.35rem;margin-bottom:0.2rem">
               <span style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;color:${lc};line-height:1;flex-shrink:0">${block.drill_id}</span>
               <span style="font-size:0.72rem;font-weight:600;color:#F0EDE6;line-height:1.2;flex:1">${drill?.name||'Drill'}</span>
@@ -1835,9 +1842,9 @@
     return hadAny ? html : '<div style="color:rgba(240,237,230,0.3);font-size:0.78rem;padding:0.75rem 0">No drills entered for this session.</div>';
   }
 
-  function openDrillModal(dataStr) {
-    let d;
-    try { d = JSON.parse(typeof dataStr === 'string' ? dataStr : JSON.stringify(dataStr)); } catch(e) { console.error('drill modal parse',e); return; }
+  function openDrillModal(idx) {
+    const d = window._drillModalData?.[idx];
+    if (!d) return;
     const modal = document.getElementById('modal-drill-detail');
     const content = document.getElementById('drill-modal-content');
     content.innerHTML = `
