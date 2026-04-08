@@ -1734,8 +1734,21 @@
           </div>`;
       }
 
-      el.innerHTML = html || '<div style="color:var(--muted);font-size:0.85rem">No sessions found.</div>';
-      console.log('[My Sessions] render complete, html length:', html.length);
+      try {
+        el.innerHTML = html || '<div style="color:var(--muted);font-size:0.85rem">No sessions found.</div>';
+      } catch(htmlErr) {
+        console.error('[My Sessions] innerHTML error:', htmlErr);
+        el.innerHTML = '<div style="color:var(--coral);font-size:0.82rem;padding:1rem">Error rendering sessions. Please refresh.</div>';
+        return;
+      }
+      // Force the page visible — guard against any race that removes active
+      const page = document.getElementById('page-my-sessions');
+      if (page && !page.classList.contains('active')) {
+        console.warn('[My Sessions] page lost active class during load — restoring');
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        page.classList.add('active');
+      }
+      console.log('[My Sessions] render complete, html length:', html.length, 'page active:', page?.classList.contains('active'));
 
     } catch(err) {
       console.error('loadMySessions error:', err);
@@ -1923,7 +1936,10 @@
       return;
     }
 
-    el.innerHTML = data.map(ins => `
+    // Shuffle randomly so no instructor always appears first
+    const shuffled = [...data].sort(() => Math.random() - 0.5);
+
+    el.innerHTML = shuffled.map(ins => `
       <div style="background:rgba(13,45,74,0.4);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:1.5rem;margin-bottom:1rem"
         onmouseover="this.style.borderColor='rgba(0,207,173,0.25)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.07)'">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
