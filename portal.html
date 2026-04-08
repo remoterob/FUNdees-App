@@ -17,7 +17,7 @@
 <style>
 :root{--midnight:#0A1628;--deep:#0D2D4A;--surge:#00CFAD;--coral:#FF5C3A;--sand:#F0EDE6;--muted:rgba(240,237,230,0.55);--dim:rgba(255,255,255,0.07);--surge-dim:rgba(0,207,173,0.12)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:#07101e;color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh}
+body{background:#07101e;color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh;padding-top:64px}
 nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:64px;background:rgba(10,22,40,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--dim)}
 .nav-brand{display:flex;align-items:center;gap:0.75rem;text-decoration:none}
 .nav-brand img{height:36px;opacity:0.9}
@@ -94,25 +94,6 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
 </head>
 <body>
 
-<nav>
-  <a href="/" class="nav-brand">
-    <img src="/logo-white.png" alt="Logo">
-    <div class="nav-brand-text">Spearfishing<span>FUNdamentals</span></div>
-  </a>
-  <div class="nav-right">
-    <a href="/" class="nav-link">Home</a>
-    <a href="/#sessions" class="nav-link" onclick="window.location='/?page=sessions'">Pool Sessions</a>
-    <button class="nav-btn" onclick="doLogout()">Log Out</button>
-  </div>
-  <button id="hb-btn" class="hb-btn" onclick="toggleHamburger();return false;" aria-label="Menu"><span></span><span></span><span></span></button>
-</nav>
-<div id="mob-menu" class="mob-menu">
-  <a href="/">Home</a>
-  <a href="/sessions.html">Enrol</a>
-  <a href="/articles.html">Articles</a>
-  <a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a>
-  <a href="#" onclick="doLogout();return false;" class="mob-danger">Log Out</a>
-</div>
 
 <div class="wrap">
   <div id="loading">Loading your account...</div>
@@ -207,6 +188,7 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/nav.js"></script>
 <script>
 const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
@@ -567,22 +549,8 @@ init();
 })();
 </script>
 <script>
-function toggleHamburger() {
-  var btn  = document.getElementById('hb-btn');
-  var menu = document.getElementById('mob-menu');
-  if (!btn || !menu) return;
-  var open = menu.classList.toggle('open');
-  btn.classList.toggle('open', open);
-}
-document.addEventListener('click', function(e) {
-  var btn  = document.getElementById('hb-btn');
-  var menu = document.getElementById('mob-menu');
-  if (!menu || !menu.classList.contains('open')) return;
-  if (!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
-    menu.classList.remove('open');
-    btn.classList.remove('open');
-  }
-});
+function toggleHamburger() { if (window.fnToggleMenu) fnToggleMenu(); }
+
 </script>
 </body>
 </html>

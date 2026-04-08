@@ -17,7 +17,7 @@
 <style>
 :root{--midnight:#0A1628;--deep:#0D2D4A;--surge:#00CFAD;--coral:#FF5C3A;--sand:#F0EDE6;--muted:rgba(240,237,230,0.55);--dim:rgba(255,255,255,0.08);--surge-dim:rgba(0,207,173,0.1)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--midnight);color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+body{background:var(--midnight);color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:5rem 2rem 2rem}
 .box{width:100%;max-width:440px}
 .logo{display:flex;align-items:center;gap:0.75rem;margin-bottom:2rem;text-decoration:none}
 .logo img{height:40px;opacity:0.9}
@@ -190,6 +190,7 @@ input[type="checkbox"]{width:18px;height:18px;flex-shrink:0;accent-color:#00CFAD
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/nav.js"></script>
 <script>
 const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';

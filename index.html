@@ -2367,6 +2367,16 @@
     if (window.location.search.includes('deleted=1')) {
       showToast('Your account has been deleted.');
     }
+    if (window.location.search.includes('deactivated=1')) {
+      showToast('Your account has been deactivated. You can reactivate anytime.');
+    }
+
+    // Handle ?page= param from external nav links (e.g. nav.js linking /?page=courses)
+    const pageParam = new URLSearchParams(window.location.search).get('page');
+    if (pageParam) {
+      showPage(pageParam);
+      history.replaceState({}, '', '/');
+    }
   });
 </script>
 <script>
