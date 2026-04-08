@@ -1192,6 +1192,7 @@
   <ul class="nav-links" id="nav-links">
     <li><a href="#" onclick="navTo('home')">Home</a></li>
     <li><a href="/sessions.html">Enrol</a></li>
+    <li><a href="#" onclick="navTo('courses')">Courses</a></li>
     <li><a href="/articles.html">Articles</a></li>
     <li id="nav-my-sessions" class="hidden"><a href="#" onclick="navTo('my-sessions')">My Sessions</a></li>
     <li><a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a></li>
@@ -1211,6 +1212,7 @@
 <div class="mob-menu" id="mob-menu">
   <a href="/">Home</a>
   <a href="/sessions.html">Enrol</a>
+  <a href="#" onclick="toggleMenu();navTo('courses')">Courses</a>
   <a href="/articles.html">Articles</a>
   <a href="#" id="mob-my-sessions" onclick="toggleMenu();navTo('my-sessions')" style="display:none">My Sessions</a>
   <a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a>
@@ -1270,6 +1272,35 @@
       <button onclick="closeDrillModal()" style="position:absolute;top:0.85rem;right:0.85rem;background:none;border:none;color:rgba(240,237,230,0.4);cursor:pointer;font-size:1.1rem">✕</button>
       <div id="drill-modal-content"></div>
     </div>
+  </div>
+</div>
+
+<!-- ─── COURSES PAGE ─── -->
+<div id="page-courses" class="page">
+  <div style="max-width:860px;margin:0 auto;padding:3rem 2rem">
+
+    <!-- Header -->
+    <div style="margin-bottom:2.5rem">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--surge);margin-bottom:0.5rem">Training &amp; Development</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--sand);line-height:1;margin-bottom:1rem">Courses</div>
+      <div style="font-size:1rem;color:rgba(240,237,230,0.75);line-height:1.7;max-width:680px">
+        FUNdamentals is a structured peer training group. Courses are a great way to improve your technique, learn more about safety, and improve your depth and bottom time. FUNdees have a number of great instructors and affiliations with great instructors, and we recommend the following:
+      </div>
+    </div>
+
+    <!-- Depth training note -->
+    <div style="background:rgba(0,207,173,0.07);border:1px solid rgba(0,207,173,0.2);border-radius:4px;padding:1.1rem 1.25rem;margin-bottom:2.5rem;display:flex;gap:0.75rem;align-items:flex-start">
+      <span style="font-size:1.25rem;flex-shrink:0">🤿</span>
+      <div style="font-size:0.88rem;color:rgba(240,237,230,0.8);line-height:1.6">
+        <strong style="color:var(--surge)">Train with us over summer.</strong> Each of these instructors offer training that qualifies you to join the FUNdees crew for depth sessions over summer. Completing a course with any of our recommended instructors is your pathway into the open water programme.
+      </div>
+    </div>
+
+    <!-- Instructor cards -->
+    <div id="instructor-list">
+      <div style="color:var(--muted);font-size:0.85rem;padding:2rem 0;text-align:center">Loading…</div>
+    </div>
+
   </div>
 </div>
 
@@ -1569,6 +1600,7 @@
     window.scrollTo(0,0);
     if (id === 'sessions') loadSessions();
     if (id === 'my-sessions') loadMySessions();
+    if (id === 'courses') loadCourses();
   }
 
   function navTo(page) { closeMobileMenu(); showPage(page); }
@@ -1873,6 +1905,50 @@
     if (e.target === this) closeDrillModal();
   });
 
+
+  // ─── COURSES ─────────────────────────────────────────────────────────────
+  async function loadCourses() {
+    const el = document.getElementById('instructor-list');
+    if (!el) return;
+    const { data, error } = await sb.from('instructors')
+      .select('*')
+      .eq('active', true)
+      .order('sort_order')
+      .order('name');
+
+    if (error || !data?.length) {
+      el.innerHTML = `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:2rem;text-align:center;color:rgba(240,237,230,0.35);font-size:0.88rem">
+        Instructor listings coming soon — check back shortly.
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = data.map(ins => `
+      <div style="background:rgba(13,45,74,0.4);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:1.5rem;margin-bottom:1rem"
+        onmouseover="this.style.borderColor='rgba(0,207,173,0.25)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.07)'">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--sand);line-height:1;margin-bottom:0.2rem">${ins.name}</div>
+            ${ins.title ? `<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--surge);margin-bottom:0.75rem">${ins.title}</div>` : ''}
+            ${ins.bio ? `<div style="font-size:0.88rem;color:rgba(240,237,230,0.7);line-height:1.65">${ins.bio}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.4rem;flex-shrink:0">
+            ${ins.phone ? `<a href="tel:${ins.phone.replace(/\s/g,'')}" style="display:flex;align-items:center;gap:0.5rem;color:rgba(240,237,230,0.6);font-size:0.82rem;text-decoration:none;padding:0.35rem 0.75rem;border:1px solid rgba(255,255,255,0.08);border-radius:3px"
+              onmouseover="this.style.borderColor='rgba(0,207,173,0.3)';this.style.color='#00CFAD'"
+              onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='rgba(240,237,230,0.6)'">
+              📱 ${ins.phone}</a>` : ''}
+            ${ins.email ? `<a href="mailto:${ins.email}" style="display:flex;align-items:center;gap:0.5rem;color:rgba(240,237,230,0.6);font-size:0.82rem;text-decoration:none;padding:0.35rem 0.75rem;border:1px solid rgba(255,255,255,0.08);border-radius:3px"
+              onmouseover="this.style.borderColor='rgba(0,207,173,0.3)';this.style.color='#00CFAD'"
+              onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='rgba(240,237,230,0.6)'">
+              ✉ ${ins.email}</a>` : ''}
+            ${ins.website ? `<a href="${ins.website}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;color:rgba(240,237,230,0.6);font-size:0.82rem;text-decoration:none;padding:0.35rem 0.75rem;border:1px solid rgba(255,255,255,0.08);border-radius:3px"
+              onmouseover="this.style.borderColor='rgba(0,207,173,0.3)';this.style.color='#00CFAD'"
+              onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='rgba(240,237,230,0.6)'">
+              🌐 Website ↗</a>` : ''}
+          </div>
+        </div>
+      </div>`).join('');
+  }
 
   async function loadPortal() {
     if (!currentUser) { window.location.href = '/auth.html'; return; }

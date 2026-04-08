@@ -267,6 +267,20 @@ select.field{cursor:pointer}
     </div>
 
     <!-- ── ANALYTICS ─────────────────────────────────────── -->
+    <!-- INSTRUCTORS -->
+    <div style="margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--dim)">
+      <div class="top-bar" style="margin-bottom:1rem">
+        <div>
+          <div class="page-title" style="font-size:1.6rem">Courses &amp; Instructors</div>
+          <div style="color:var(--muted);font-size:0.82rem">Instructors shown on the Courses page. Drag to reorder.</div>
+        </div>
+        <button class="btn-p" onclick="openInstructorModal()">+ Add Instructor</button>
+      </div>
+      <div id="instructor-admin-list">
+        <div style="color:var(--muted);font-size:0.85rem;padding:1rem 0">Loading…</div>
+      </div>
+    </div>
+
     <div style="margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--dim)" id="analytics-section">
       <div class="page-title" style="font-size:1.6rem;margin-bottom:0.25rem">Analytics</div>
       <div style="color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem">Site traffic — unique visitors, devices, browsers and pages viewed.</div>
@@ -399,6 +413,40 @@ select.field{cursor:pointer}
   </div>
 </div>
 
+<!-- INSTRUCTOR MODAL -->
+<div class="overlay" id="instructor-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeInstructorModal()">✕</button>
+    <div class="modal-title" id="ins-modal-title">Add Instructor</div>
+    <label class="lbl">Name</label>
+    <input class="field" id="ins-name" type="text" placeholder="e.g. Sarah Jones" style="width:100%">
+    <label class="lbl">Title / Qualification</label>
+    <input class="field" id="ins-title" type="text" placeholder="e.g. AIDA 3★ Instructor, Freediving NZ" style="width:100%">
+    <label class="lbl">Bio / Offering</label>
+    <textarea class="field" id="ins-bio" rows="4" placeholder="Describe what they offer and why FUNdees recommend them…" style="width:100%;resize:vertical"></textarea>
+    <div class="form-grid">
+      <div>
+        <label class="lbl">Phone</label>
+        <input class="field" id="ins-phone" type="text" placeholder="e.g. 021 123 4567">
+      </div>
+      <div>
+        <label class="lbl">Email</label>
+        <input class="field" id="ins-email" type="email" placeholder="e.g. sarah@example.com">
+      </div>
+    </div>
+    <label class="lbl">Website</label>
+    <input class="field" id="ins-website" type="url" placeholder="https://…" style="width:100%">
+    <label class="lbl" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin-top:0.5rem">
+      <input type="checkbox" id="ins-active" checked style="accent-color:var(--teal)"> Show on Courses page
+    </label>
+    <div class="msg" id="ins-modal-msg"></div>
+    <div class="modal-footer">
+      <button class="btn-o" onclick="closeInstructorModal()">Cancel</button>
+      <button class="btn-p" id="btn-save-instructor" onclick="saveInstructor()">Save Instructor</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -437,6 +485,7 @@ async function init() {
   loadAnalytics();
   loadLeads();
   loadMembers();
+  loadInstructors();
 }
 
 async function loadLeads(selectedId) {
@@ -1048,6 +1097,90 @@ async function toggleLeadRole(id, isCurrentlyLead, name) {
   toast(`${name} ${newVal ? 'is now a Lead ✓' : 'Lead role removed'}`);
   loadMembers();
   loadLeads(); // refresh lead dropdown cache
+}
+
+// ── INSTRUCTORS ──────────────────────────────────────────────────────────
+let editingInstructorId = null;
+
+async function loadInstructors() {
+  const el = document.getElementById('instructor-admin-list');
+  if (!el) return;
+  const { data, error } = await sb.from('instructors').select('*').order('sort_order').order('name');
+  if (error) { el.innerHTML = `<div style="color:var(--coral);font-size:0.82rem">${error.message}</div>`; return; }
+  if (!data?.length) { el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0">No instructors yet. Add one above.</div>'; return; }
+
+  el.innerHTML = data.map(ins => `
+    <div style="display:flex;align-items:flex-start;gap:1rem;padding:0.85rem 1rem;background:rgba(13,45,74,0.35);border:1px solid rgba(255,255,255,0.07);border-radius:3px;margin-bottom:0.4rem">
+      <div style="flex:1">
+        <div style="font-weight:600;color:var(--sand)">${ins.name}</div>
+        ${ins.title ? `<div style="font-size:0.72rem;color:var(--surge);margin-top:0.1rem">${ins.title}</div>` : ''}
+        ${ins.bio ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;line-height:1.5">${ins.bio.substring(0,120)}${ins.bio.length>120?'…':''}</div>` : ''}
+        <div style="display:flex;gap:0.75rem;margin-top:0.4rem;flex-wrap:wrap">
+          ${ins.phone ? `<span style="font-size:0.72rem;color:var(--muted)">📱 ${ins.phone}</span>` : ''}
+          ${ins.email ? `<span style="font-size:0.72rem;color:var(--muted)">✉ ${ins.email}</span>` : ''}
+          ${ins.website ? `<span style="font-size:0.72rem;color:var(--muted)">🌐 ${ins.website}</span>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center">
+        ${!ins.active ? `<span style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);border:1px solid var(--dim);padding:0.1rem 0.4rem;border-radius:2px">Hidden</span>` : ''}
+        <button class="btn-o" onclick="editInstructor(${JSON.stringify(ins).replace(/"/g,'&quot;')})">Edit</button>
+        <button class="btn-danger" onclick="deleteInstructor('${ins.id}','${ins.name.replace(/'/g,"\\'")}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function openInstructorModal(ins=null) {
+  editingInstructorId = ins?.id || null;
+  document.getElementById('ins-modal-title').textContent = ins ? 'Edit Instructor' : 'Add Instructor';
+  document.getElementById('ins-name').value    = ins?.name    || '';
+  document.getElementById('ins-title').value   = ins?.title   || '';
+  document.getElementById('ins-bio').value     = ins?.bio     || '';
+  document.getElementById('ins-phone').value   = ins?.phone   || '';
+  document.getElementById('ins-email').value   = ins?.email   || '';
+  document.getElementById('ins-website').value = ins?.website || '';
+  document.getElementById('ins-active').checked = ins ? ins.active : true;
+  const msg = document.getElementById('ins-modal-msg'); msg.className='msg'; msg.textContent='';
+  document.getElementById('instructor-modal').classList.add('open');
+}
+
+function closeInstructorModal() { document.getElementById('instructor-modal').classList.remove('open'); }
+
+function editInstructor(ins) { openInstructorModal(ins); }
+
+async function saveInstructor() {
+  const name    = document.getElementById('ins-name').value.trim();
+  const title   = document.getElementById('ins-title').value.trim();
+  const bio     = document.getElementById('ins-bio').value.trim();
+  const phone   = document.getElementById('ins-phone').value.trim();
+  const email   = document.getElementById('ins-email').value.trim();
+  const website = document.getElementById('ins-website').value.trim();
+  const active  = document.getElementById('ins-active').checked;
+  const msg     = document.getElementById('ins-modal-msg');
+
+  if (!name) { msg.className='msg err'; msg.textContent='Name is required.'; return; }
+
+  const btn = document.getElementById('btn-save-instructor');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const payload = { name, title:title||null, bio:bio||null, phone:phone||null, email:email||null, website:website||null, active };
+  const { error } = editingInstructorId
+    ? await sb.from('instructors').update(payload).eq('id', editingInstructorId)
+    : await sb.from('instructors').insert(payload);
+
+  btn.disabled = false; btn.textContent = 'Save Instructor';
+  if (error) { msg.className='msg err'; msg.textContent='Save failed: '+error.message; return; }
+
+  closeInstructorModal();
+  toast(editingInstructorId ? 'Instructor updated ✓' : 'Instructor added ✓');
+  loadInstructors();
+}
+
+async function deleteInstructor(id, name) {
+  if (!confirm(`Remove ${name} from the Courses page?\n\nThis permanently deletes their listing.`)) return;
+  const { error } = await sb.from('instructors').delete().eq('id', id);
+  if (error) { toast('Delete failed: '+error.message, true); return; }
+  toast('Instructor removed.');
+  loadInstructors();
 }
 
 init();
