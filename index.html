@@ -1193,9 +1193,9 @@
     <li><a href="#" onclick="navTo('home')">Home</a></li>
     <li><a href="/sessions.html">Enrol</a></li>
     <li><a href="#" onclick="navTo('courses')">Courses</a></li>
+    <li><a href="#" onclick="navTo('inspiration')">Inspiration</a></li>
     <li><a href="/articles.html">Articles</a></li>
     <li id="nav-my-sessions" class="hidden"><a href="#" onclick="navTo('my-sessions')">My Sessions</a></li>
-    <li><a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a></li>
     <li id="nav-auth-guest"><a href="/auth.html">Sign In</a></li>
     <li id="nav-auth-guest2"><a href="/auth.html?tab=signup" class="nav-cta">Join Now</a></li>
     <li id="nav-auth-user" class="hidden"><a href="/portal.html">My Account</a></li>
@@ -1213,9 +1213,9 @@
   <a href="/">Home</a>
   <a href="/sessions.html">Enrol</a>
   <a href="#" onclick="toggleMenu();navTo('courses')">Courses</a>
+  <a href="#" onclick="toggleMenu();navTo('inspiration')">Inspiration</a>
   <a href="/articles.html">Articles</a>
   <a href="#" id="mob-my-sessions" onclick="toggleMenu();navTo('my-sessions')" style="display:none">My Sessions</a>
-  <a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a>
   <a href="/auth.html" id="mob-signin">Sign In</a>
   <a href="/auth.html?tab=signup" id="mob-join" class="mob-cta">Join Now</a>
   <a href="/portal.html" id="mob-account" style="display:none">My Account</a>
@@ -1299,6 +1299,45 @@
     <!-- Instructor cards -->
     <div id="instructor-list">
       <div style="color:var(--muted);font-size:0.85rem;padding:2rem 0;text-align:center">Loading…</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── DISH DETAIL MODAL ─── -->
+<div id="modal-dish" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(7,16,30,0.93);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1rem"
+  onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#0D2D4A;border:1px solid rgba(0,207,173,0.18);border-radius:8px;padding:1.75rem;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;position:relative">
+    <button onclick="document.getElementById('modal-dish').style.display='none'"
+      style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:rgba(240,237,230,0.4);cursor:pointer;font-size:1.2rem;line-height:1">✕</button>
+    <div id="modal-dish-content"></div>
+  </div>
+</div>
+
+<!-- ─── INSPIRATION PAGE ─── -->
+<div id="page-inspiration" class="page">
+  <div style="max-width:1100px;margin:0 auto;padding:3rem 2rem">
+
+    <!-- Header -->
+    <div style="margin-bottom:2rem">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--surge);margin-bottom:0.5rem">From the Ocean to the Table</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--sand);line-height:1;margin-bottom:0.75rem">Inspiration</div>
+      <div style="font-size:0.95rem;color:rgba(240,237,230,0.65);line-height:1.65;max-width:620px">Recipes and dishes from the FUNdees community — what to do with your catch once you've landed it.</div>
+    </div>
+
+    <!-- Filters -->
+    <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:2rem;align-items:center">
+      <select id="inspiration-species-filter"
+        style="background:rgba(13,45,74,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:3px;padding:0.45rem 0.75rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.85rem;outline:none;cursor:pointer"
+        onchange="filterInspiration()">
+        <option value="">All species</option>
+      </select>
+      <span style="font-size:0.78rem;color:var(--muted)" id="inspiration-count"></span>
+    </div>
+
+    <!-- Grid -->
+    <div id="inspiration-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem">
+      <div style="color:var(--muted);font-size:0.85rem;grid-column:1/-1;padding:2rem 0;text-align:center">Loading…</div>
     </div>
 
   </div>
@@ -1601,6 +1640,7 @@
     if (id === 'sessions') loadSessions();
     if (id === 'my-sessions') loadMySessions();
     if (id === 'courses') loadCourses();
+    if (id === 'inspiration') loadInspiration();
   }
 
   function navTo(page) { closeMobileMenu(); showPage(page); }
@@ -1918,6 +1958,123 @@
     if (e.target === this) closeDrillModal();
   });
 
+
+  // ─── INSPIRATION ──────────────────────────────────────────────────────────
+  let _allDishes = [];
+
+  async function loadInspiration() {
+    const grid = document.getElementById('inspiration-grid');
+    if (!grid) return;
+    if (_allDishes.length) { renderInspirationGrid(_allDishes); return; } // cached
+
+    grid.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;grid-column:1/-1;padding:2rem 0;text-align:center">Loading…</div>';
+
+    const { data, error } = await sb.from('dishes_archive')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data?.length) {
+      grid.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;grid-column:1/-1;padding:2rem 0;text-align:center">No dishes yet.</div>';
+      return;
+    }
+
+    _allDishes = data;
+
+    // Populate species filter
+    const sel = document.getElementById('inspiration-species-filter');
+    const slugs = [...new Set(data.map(d => d.species_slug).filter(Boolean))].sort();
+    slugs.forEach(slug => {
+      const opt = document.createElement('option');
+      opt.value = slug;
+      opt.textContent = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      sel.appendChild(opt);
+    });
+
+    renderInspirationGrid(data);
+  }
+
+  function filterInspiration() {
+    const slug = document.getElementById('inspiration-species-filter')?.value || '';
+    const filtered = slug ? _allDishes.filter(d => d.species_slug === slug) : _allDishes;
+    renderInspirationGrid(filtered);
+  }
+
+  function renderInspirationGrid(dishes) {
+    const grid = document.getElementById('inspiration-grid');
+    const count = document.getElementById('inspiration-count');
+    if (!grid) return;
+    if (count) count.textContent = `${dishes.length} dish${dishes.length !== 1 ? 'es' : ''}`;
+
+    if (!dishes.length) {
+      grid.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;grid-column:1/-1;padding:2rem 0;text-align:center">No dishes found.</div>';
+      return;
+    }
+
+    grid.innerHTML = dishes.map((d, i) => {
+      const speciesLabel = (d.species_slug || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const img = d.thumb_url || d.photo_url || '';
+      const shortDesc = d.description ? d.description.substring(0, 120) + (d.description.length > 120 ? '…' : '') : '';
+
+      return `
+        <div style="background:rgba(13,45,74,0.4);border:1px solid rgba(255,255,255,0.07);border-radius:6px;overflow:hidden;cursor:pointer;transition:border-color 0.15s"
+          onmouseover="this.style.borderColor='rgba(0,207,173,0.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.07)'"
+          onclick="openDishModal(${i})">
+          <div style="position:relative;aspect-ratio:4/3;overflow:hidden;background:rgba(10,22,40,0.5)">
+            ${img ? `<img src="${img}" alt="${d.name.replace(/"/g,'&quot;')}" loading="lazy"
+              style="width:100%;height:100%;object-fit:cover;display:block">` : `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.15);font-size:2rem">🐟</div>`}
+            <div style="position:absolute;top:8px;left:8px;background:rgba(0,207,173,0.85);color:#0A1628;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:0.2rem 0.55rem;border-radius:2px">${speciesLabel}</div>
+          </div>
+          <div style="padding:0.85rem">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;letter-spacing:0.04em;color:var(--sand);margin-bottom:0.3rem">${d.name}</div>
+            ${shortDesc ? `<div style="font-size:0.75rem;color:rgba(240,237,230,0.5);line-height:1.5">${shortDesc}</div>` : ''}
+            <div style="display:flex;gap:0.5rem;margin-top:0.6rem;flex-wrap:wrap">
+              ${d.recipe_url ? `<span style="font-size:0.65rem;color:var(--surge)">🔗 Recipe</span>` : ''}
+              ${d.description ? `<span style="font-size:0.65rem;color:rgba(240,237,230,0.3)">📖 Method</span>` : ''}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function openDishModal(idx) {
+    const d = _allDishes[document.getElementById('inspiration-species-filter')?.value
+      ? _allDishes.findIndex((x, i) => {
+          const slug = document.getElementById('inspiration-species-filter').value;
+          const filtered = slug ? _allDishes.filter(x => x.species_slug === slug) : _allDishes;
+          return x === filtered[idx];
+        })
+      : idx];
+    // Simpler: just use a global filtered list
+    const slug = document.getElementById('inspiration-species-filter')?.value || '';
+    const filtered = slug ? _allDishes.filter(x => x.species_slug === slug) : _allDishes;
+    const dish = filtered[idx];
+    if (!dish) return;
+
+    const speciesLabel = (dish.species_slug || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const modal = document.getElementById('modal-dish');
+    const content = document.getElementById('modal-dish-content');
+    content.innerHTML = `
+      <div style="display:flex;gap:1.25rem;flex-wrap:wrap;align-items:flex-start">
+        ${dish.photo_url ? `<div style="flex-shrink:0;width:100%;max-width:340px">
+          <a href="${dish.photo_url}" target="_blank" rel="noopener">
+            <img src="${dish.thumb_url || dish.photo_url}" alt="${dish.name.replace(/"/g,'&quot;')}"
+              style="width:100%;border-radius:6px;display:block">
+          </a>
+        </div>` : ''}
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--surge);margin-bottom:0.35rem">${speciesLabel}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--sand);line-height:1;margin-bottom:0.85rem">${dish.name}</div>
+          ${dish.recipe_url ? `<a href="${dish.recipe_url}" target="_blank" rel="noopener"
+            style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.25);color:var(--surge);font-size:0.78rem;font-weight:600;padding:0.4rem 0.85rem;border-radius:3px;text-decoration:none;margin-bottom:1rem">
+            🔗 View Full Recipe ↗
+          </a>` : ''}
+          ${dish.description ? `
+            <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(240,237,230,0.35);margin-bottom:0.5rem">Method / Notes</div>
+            <div style="font-size:0.85rem;color:rgba(240,237,230,0.75);line-height:1.75;white-space:pre-wrap">${dish.description}</div>` : ''}
+        </div>
+      </div>`;
+    modal.style.display = 'flex';
+  }
 
   // ─── COURSES ─────────────────────────────────────────────────────────────
   async function loadCourses() {

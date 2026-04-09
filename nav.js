@@ -127,6 +127,7 @@ navEl.innerHTML = `
     <li><a href="/" class="${isActive('/')}">Home</a></li>
     <li><a href="/sessions.html" class="${isActive('/sessions')}">Enrol</a></li>
     <li><a href="/?page=courses" class="${path==='/'&&location.search.includes('page=courses')?'fn-active':''}">Courses</a></li>
+    <li><a href="/?page=inspiration" class="${path==='/'&&location.search.includes('page=inspiration')?'fn-active':''}">Inspiration</a></li>
     <li><a href="/articles.html" class="${isActive('/articles')}">Articles</a></li>
     <li class="fn-my-sessions" style="display:none"><a href="/?page=my-sessions">My Sessions</a></li>
     <li><a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a></li>
@@ -150,6 +151,7 @@ mobEl.innerHTML = `
   <a href="/">Home</a>
   <a href="/sessions.html">Enrol</a>
   <a href="/?page=courses">Courses</a>
+  <a href="/?page=inspiration">Inspiration</a>
   <a href="/articles.html">Articles</a>
   <a class="fn-mob-my-sessions" href="/?page=my-sessions" style="display:none">My Sessions</a>
   <a href="https://fishbingo.netlify.app/" target="_blank">Fish Bingo</a>
