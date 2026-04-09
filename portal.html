@@ -28,7 +28,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .nav-link:hover{color:var(--surge)}
 .nav-btn{background:var(--coral);color:white;padding:0.45rem 1.1rem;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.1em;text-transform:uppercase;border:none;cursor:pointer;transition:opacity 0.2s}
 .nav-btn:hover{opacity:0.85}
-.wrap{max-width:860px;margin:0 auto;padding:5rem 2rem 3rem}
+.wrap{max-width:860px;margin:0 auto;padding:2rem 1.25rem 3rem}
 .greeting{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--sand);line-height:1}
 .email-sub{color:var(--muted);font-size:0.85rem;margin-top:0.25rem;margin-bottom:2rem}
 .card{background:rgba(13,45,74,0.5);border:1px solid var(--dim);border-radius:4px;padding:1.5rem;margin-bottom:1.5rem}
@@ -180,7 +180,7 @@ input.field::placeholder{color:rgba(240,237,230,0.25)}
     <!-- DELETE ACCOUNT -->
     <div style="margin-top:2.5rem;padding:1.5rem;border:1px solid rgba(255,92,58,0.2);border-radius:4px;background:rgba(255,92,58,0.04)">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--coral);margin-bottom:0.5rem">Danger Zone</div>
-      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;line-height:1.55">Permanently delete your account and all associated data. This cannot be undone.</p>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;line-height:1.55">Deactivate your account. Your membership history and data are retained for 7 years as required by the Incorporated Societies Act. You can reactivate at any time by signing up again with the same email.</p>
       <button onclick="confirmDeactivateAccount()" style="background:none;border:1px solid rgba(255,92,58,0.4);color:var(--coral);padding:0.6rem 1.25rem;border-radius:3px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(255,92,58,0.12)'" onmouseout="this.style.background='none'">Deactivate My Account</button>
     </div>
 
@@ -252,6 +252,7 @@ async function loadEnrolments() {
   };
 
   el.innerHTML = `
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
     <table class="enr-table">
       <thead>
         <tr>
@@ -275,7 +276,8 @@ async function loadEnrolments() {
           <td>${e.amount_paid ? `$${Number(e.amount_paid).toFixed(2)}` : '—'}</td>
         </tr>`).join('')}
       </tbody>
-    </table>`;
+    </table>
+    </div>`;
 }
 
 function render() {
