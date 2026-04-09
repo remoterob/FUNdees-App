@@ -1622,6 +1622,9 @@
         strip.style.display = 'none';
       }
     }
+
+    // Keep nav.js in sync (it's passive on index.html)
+    if (window.fnSetAuth) window.fnSetAuth(currentMember, hasSessions);
   }
 
   async function handleLogout() {

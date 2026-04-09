@@ -205,35 +205,23 @@ function fmt(d) {
 }
 
 async function init() {
-  // Try direct session first
+  // Get session — Supabase restores from localStorage synchronously
   const { data: { session } } = await sb.auth.getSession();
   if (session?.user) {
     user = session.user;
     await loadMember();
     return;
   }
-
-  // If no session yet, wait briefly for async restore (happens after Stripe redirect)
-  await new Promise(resolve => {
-    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, s) => {
-      if (s?.user) {
-        user = s.user;
-        subscription.unsubscribe();
-        resolve();
-      }
-    });
-    // Timeout after 3s — if still no session, redirect to login
-    setTimeout(() => { subscription.unsubscribe(); resolve(); }, 3000);
-  });
-
-  if (!user) { window.location.href = '/auth.html'; return; }
-  await loadMember();
+  // No session — redirect to login
+  window.location.href = '/auth.html';
 }
 
 async function loadMember() {
   const { data, error } = await sb.from('members').select('*').eq('auth_user_id', user.id).maybeSingle();
   if (error) { alert('Error loading profile: ' + error.message); return; }
   member = data;
+  // Tell nav.js about auth state
+  if (window.fnSetAuth) window.fnSetAuth(member, false);
   render();
   await loadEnrolments();
   document.getElementById('loading').style.display = 'none';

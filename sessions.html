@@ -133,37 +133,22 @@ async function init() {
   const { data: { session } } = await sb.auth.getSession();
   if (session?.user) {
     user = session.user;
-  } else {
-    // Wait briefly for async session restore (e.g. after Stripe redirect)
-    await new Promise(resolve => {
-      const { data: { subscription } } = sb.auth.onAuthStateChange((event, s) => {
-        if (s?.user) { user = s.user; subscription.unsubscribe(); resolve(); }
-      });
-      setTimeout(() => { subscription.unsubscribe(); resolve(); }, 2000);
-    });
-  }
-
-  if (user) {
     const { data } = await sb.from('members').select('*').eq('auth_user_id', user.id).maybeSingle();
     member = data;
     if (member) {
       const { data: enr } = await sb.from('enrolments').select('session_id,status').eq('member_id', member.id);
       myEnrolments = enr || [];
     }
-    document.getElementById('nav-auth')?.remove();
-    document.getElementById('mob-auth')?.remove();
   } else {
     document.getElementById('login-nudge').style.display = 'block';
-    document.getElementById('nav-auth')?.remove();
-    document.getElementById('mob-auth')?.remove();
   }
 
   await loadSessions();
 
   // Handle return from payment
   const p = new URLSearchParams(window.location.search);
-  if (p.get('enrolled') === 'success')    { toast('Enrolment confirmed! See you there. 🤿'); history.replaceState({}, '', '/sessions.html'); }
-  if (p.get('enrolled') === 'cancelled')  { toast('Payment cancelled — no charge made.', true); history.replaceState({}, '', '/sessions.html'); }
+  if (p.get('enrolled') === 'success')   { toast('Enrolment confirmed! See you there. 🤿'); history.replaceState({}, '', '/sessions.html'); }
+  if (p.get('enrolled') === 'cancelled') { toast('Payment cancelled — no charge made.', true); history.replaceState({}, '', '/sessions.html'); }
 }
 
 async function loadSessions() {
