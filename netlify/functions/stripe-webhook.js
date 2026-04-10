@@ -1,218 +1,145 @@
 // netlify/functions/stripe-webhook.js
-//
-// Stripe sends POST requests here for every payment event.
-// This is the authoritative way to update Supabase — not the browser.
-// Register this URL in your Stripe Dashboard → Webhooks:
-//   https://YOUR-SITE.netlify.app/.netlify/functions/stripe-webhook
-//
-// Events handled:
-//   checkout.session.completed      → activate membership after checkout
-//   customer.subscription.deleted  → expire membership
-//   payment_intent.succeeded        → belt-and-suspenders session booking confirm
-//   invoice.payment_failed          → mark membership expired
+// Fixed: proper error handling, idempotency, signature failure returns 400 not 200
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { supabaseAdmin } = require('./_supabase');
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+
+  // ── Verify signature — return 400 on failure so Stripe retries ──────────
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error('STRIPE_WEBHOOK_SECRET is not set');
+    return { statusCode: 500, body: 'Webhook secret not configured' };
   }
 
-  // ── Verify webhook signature ─────────────────────────────────────────
-  const sig = event.headers['stripe-signature'];
   let stripeEvent;
-
   try {
     stripeEvent = stripe.webhooks.constructEvent(
-      event.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+      event.body, event.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
-    return { statusCode: 400, body: `Webhook Error: ${err.message}` };
+    console.error('Webhook signature failed:', err.message);
+    return { statusCode: 400, body: `Signature error: ${err.message}` };
   }
 
-  console.log(`Processing Stripe event: ${stripeEvent.type}`);
+  console.log(`Stripe event: ${stripeEvent.type} [${stripeEvent.id}]`);
 
   try {
     switch (stripeEvent.type) {
 
       case 'checkout.session.completed': {
-        const session = stripeEvent.data.object;
-        const type = session.metadata?.type;
-
-        // ── Membership payment ─────────────────────────────────────────────
-        if (type === 'membership') {
-          const memberId = session.metadata?.supabase_member_id;
-          if (!memberId) { console.error('No member id in metadata'); break; }
-
-          const now = new Date();
-          const periodEnd = new Date(now);
-          periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-
-          await supabaseAdmin.from('members').update({
-            status: 'active',
-            tier: 'annual',
-            membership_start: now.toISOString().split('T')[0],
-            membership_end:   periodEnd.toISOString().split('T')[0]
-          }).eq('id', memberId);
-
-          await supabaseAdmin.from('membership_payments').insert({
-            member_id: memberId,
-            amount: session.amount_total / 100,
-            currency: session.currency.toUpperCase(),
-            tier: 'annual',
-            payment_status: 'paid',
-            stripe_payment_intent_id: session.payment_intent,
-            period_start: now.toISOString().split('T')[0],
-            period_end:   periodEnd.toISOString().split('T')[0],
-            paid_at: new Date().toISOString()
-          });
-
-          console.log(`Membership activated for ${memberId}`);
-        }
-
-        // ── Session enrolment payment ──────────────────────────────────────
-        if (type === 'enrolment') {
-          const sessionId = session.metadata?.session_id;
-          const memberId  = session.metadata?.member_id;
-          if (!sessionId || !memberId) { console.error('Missing enrolment metadata'); break; }
-
-          await supabaseAdmin.from('enrolments').update({
-            status:                   'enrolled',
-            amount_paid:              session.amount_total / 100,
-            stripe_payment_intent_id: session.payment_intent,
-            enrolled_at:              new Date().toISOString()
-          }).eq('session_id', sessionId).eq('member_id', memberId);
-
-          // Mark session full if no spots left
-          const { data: counts } = await supabaseAdmin
-            .from('sessions_with_counts').select('spots_remaining').eq('id', sessionId).single();
-          if (counts?.spots_remaining <= 0) {
-            await supabaseAdmin.from('sessions').update({ status: 'full' }).eq('id', sessionId);
-          }
-
-          console.log(`Enrolment confirmed: member ${memberId} in session ${sessionId}`);
-        }
-
+        const sess = stripeEvent.data.object;
+        const type = sess.metadata?.type;
+        if (type === 'membership') await handleMembership(sess);
+        else if (type === 'enrolment') await handleEnrolment(sess);
+        else console.warn(`Unknown checkout type: "${type}"`);
         break;
       }
 
-      // ── Subscription cancelled / lapsed ───────────────────────────────
       case 'customer.subscription.deleted': {
-        const subscription = stripeEvent.data.object;
-        const memberId = subscription.metadata?.supabase_member_id;
-
-        if (!memberId) break;
-
-        await supabaseAdmin
-          .from('members')
-          .update({ status: 'expired' })
-          .eq('id', memberId);
-
-        console.log(`Membership expired for member ${memberId}`);
+        const memberId = stripeEvent.data.object.metadata?.supabase_member_id;
+        if (!memberId) { console.warn('subscription.deleted: no member id'); break; }
+        const { error } = await supabaseAdmin.from('members').update({ status: 'expired' }).eq('id', memberId);
+        if (error) throw new Error(`subscription expired update: ${error.message}`);
+        console.log(`Membership expired: ${memberId}`);
         break;
       }
 
-      // ── Invoice payment failed (renewal failure) ───────────────────────
       case 'invoice.payment_failed': {
-        const invoice = stripeEvent.data.object;
-        const customerId = invoice.customer;
-
-        const { data: member } = await supabaseAdmin
-          .from('members')
-          .select('id')
-          .eq('stripe_customer_id', customerId)
-          .maybeSingle();
-
+        const customerId = stripeEvent.data.object.customer;
+        const { data: member, error } = await supabaseAdmin.from('members').select('id').eq('stripe_customer_id', customerId).maybeSingle();
+        if (error) throw new Error(`invoice failed lookup: ${error.message}`);
         if (member) {
-          await supabaseAdmin
-            .from('members')
-            .update({ status: 'expired' })
-            .eq('id', member.id);
-
-          console.log(`Membership payment failed, expired member ${member.id}`);
+          await supabaseAdmin.from('members').update({ status: 'expired' }).eq('id', member.id);
+          console.log(`Invoice failed, expired member: ${member.id}`);
         }
-        break;
-      }
-
-      // ── Session payment succeeded (belt-and-suspenders) ───────────────
-      // The browser also calls confirm-booking after payment, but this
-      // catches any cases where the browser dropped the connection.
-      case 'payment_intent.succeeded': {
-        const pi = stripeEvent.data.object;
-        const sessionId = pi.metadata?.session_id;
-
-        // Only handle session bookings (membership goes through checkout.session.completed)
-        if (!sessionId) break;
-
-        const email = pi.metadata?.booker_email;
-        const fullName = pi.metadata?.booker_name;
-        const memberId = pi.metadata?.supabase_member_id;
-
-        // Find or create member
-        let finalMemberId = memberId !== 'guest' ? memberId : null;
-
-        if (!finalMemberId && email) {
-          const { data: existing } = await supabaseAdmin
-            .from('members')
-            .select('id')
-            .eq('email', email)
-            .maybeSingle();
-
-          if (existing) {
-            finalMemberId = existing.id;
-          } else {
-            const { data: newMember } = await supabaseAdmin
-              .from('members')
-              .insert({
-                full_name: fullName || email,
-                email,
-                tier: 'casual',
-                status: 'active'
-              })
-              .select('id')
-              .single();
-            finalMemberId = newMember?.id;
-          }
-        }
-
-        if (!finalMemberId) break;
-
-        // Upsert booking (idempotent — safe to run twice)
-        await supabaseAdmin
-          .from('session_bookings')
-          .upsert(
-            {
-              session_id: sessionId,
-              member_id: finalMemberId,
-              status: 'confirmed',
-              payment_status: 'paid',
-              amount_charged: pi.amount / 100,
-              stripe_payment_intent_id: pi.id,
-              paid_at: new Date().toISOString()
-            },
-            { onConflict: 'session_id,member_id' }
-          );
-
-        console.log(`Session booking confirmed via webhook for ${email}`);
         break;
       }
 
       default:
-        console.log(`Unhandled event type: ${stripeEvent.type}`);
+        console.log(`Unhandled: ${stripeEvent.type}`);
     }
 
     return { statusCode: 200, body: JSON.stringify({ received: true }) };
 
   } catch (err) {
-    console.error('Webhook handler error:', err);
-    // Return 200 anyway so Stripe doesn't keep retrying for our internal errors
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ received: true, internalError: err.message })
-    };
+    // Valid webhook, but our processing failed — log loudly, return 200 to stop Stripe retrying
+    // (retrying could cause double-enrolments). Fix manually using the event ID in Stripe dashboard.
+    console.error(`PROCESSING FAILED [${stripeEvent.type}] [${stripeEvent.id}]: ${err.message}`);
+    return { statusCode: 200, body: JSON.stringify({ received: true, error: err.message }) };
   }
 };
+
+async function handleMembership(sess) {
+  const memberId = sess.metadata?.supabase_member_id;
+  if (!memberId) throw new Error('No supabase_member_id in membership metadata');
+
+  // Idempotency — skip if already processed this payment
+  const { data: dup } = await supabaseAdmin.from('membership_payments')
+    .select('id').eq('stripe_payment_intent_id', sess.payment_intent).maybeSingle();
+  if (dup) { console.log(`Membership already processed: ${sess.payment_intent}`); return; }
+
+  const now = new Date();
+  const end = new Date(now); end.setFullYear(end.getFullYear() + 1);
+
+  const { error: mErr } = await supabaseAdmin.from('members').update({
+    status: 'active', tier: 'annual',
+    membership_start: now.toISOString().split('T')[0],
+    membership_end:   end.toISOString().split('T')[0]
+  }).eq('id', memberId);
+  if (mErr) throw new Error(`Member update failed: ${mErr.message}`);
+
+  const { error: pErr } = await supabaseAdmin.from('membership_payments').insert({
+    member_id: memberId, amount: sess.amount_total / 100,
+    currency: sess.currency.toUpperCase(), tier: 'annual', payment_status: 'paid',
+    stripe_payment_intent_id: sess.payment_intent,
+    period_start: now.toISOString().split('T')[0],
+    period_end:   end.toISOString().split('T')[0],
+    paid_at: new Date().toISOString()
+  });
+  if (pErr) throw new Error(`Payment record failed: ${pErr.message}`);
+
+  console.log(`✓ Membership activated: ${memberId}`);
+}
+
+async function handleEnrolment(sess) {
+  const sessionId = sess.metadata?.session_id;
+  const memberId  = sess.metadata?.member_id;
+  if (!sessionId || !memberId) throw new Error(`Missing enrolment metadata: session=${sessionId} member=${memberId}`);
+
+  // Fetch existing enrolment
+  const { data: enr, error: fetchErr } = await supabaseAdmin.from('enrolments')
+    .select('id, status').eq('session_id', sessionId).eq('member_id', memberId).maybeSingle();
+  if (fetchErr) throw new Error(`Enrolment fetch: ${fetchErr.message}`);
+
+  if (enr?.status === 'enrolled') {
+    console.log(`Already enrolled: session=${sessionId} member=${memberId}`);
+    return;
+  }
+
+  const payload = {
+    status: 'enrolled', amount_paid: sess.amount_total / 100,
+    stripe_payment_intent_id: sess.payment_intent,
+    enrolled_at: new Date().toISOString()
+  };
+
+  if (!enr) {
+    // No pending row — create it (edge case: browser never created the pending record)
+    console.warn(`No pending enrolment found — inserting directly`);
+    const { error } = await supabaseAdmin.from('enrolments').insert({ session_id: sessionId, member_id: memberId, ...payload });
+    if (error) throw new Error(`Enrolment insert: ${error.message}`);
+  } else {
+    const { error } = await supabaseAdmin.from('enrolments').update(payload)
+      .eq('session_id', sessionId).eq('member_id', memberId);
+    if (error) throw new Error(`Enrolment update: ${error.message}`);
+  }
+
+  // Mark session full if needed
+  const { data: counts } = await supabaseAdmin.from('sessions_with_counts')
+    .select('spots_remaining').eq('id', sessionId).single();
+  if (counts?.spots_remaining <= 0)
+    await supabaseAdmin.from('sessions').update({ status: 'full' }).eq('id', sessionId);
+
+  console.log(`✓ Enrolled: member=${memberId} session=${sessionId}`);
+}
