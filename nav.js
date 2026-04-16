@@ -75,6 +75,11 @@ navEl.innerHTML = `
     <img src="/logo-white.png" alt="Spearfishing FUNdamentals">
     <div class="fn-brand-text">Spearfishing<span>FUNdamentals</span></div>
   </a>
+  <a href="https://nzunderwater.org.nz" target="_blank" rel="noopener" title="Proud Member of the New Zealand Underwater Association"
+    style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;margin-right:1rem;flex-shrink:0;border-left:1px solid rgba(255,255,255,0.1);padding-left:1rem">
+    <span style="font-size:0.55rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(240,237,230,0.3);line-height:1.3;max-width:48px">Proud Member</span>
+    <img src="/NZUA.png" alt="NZUA" style="height:30px;opacity:0.6;filter:invert(1);transition:opacity 0.2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+  </a>
   <ul class="fn-links" id="fn-links">
     <li><a href="/" class="${isActive('/')}">Home</a></li>
     <li><a href="/sessions.html" class="${isActive('/sessions')}">Enrol</a></li>
