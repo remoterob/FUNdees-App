@@ -21,6 +21,9 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions."training-chat"]
+  included_files = ["netlify/functions/manual_wave4.txt", "netlify/functions/manual_aida2.txt", "netlify/functions/manual_aida4.txt"]
+
 [[headers]]
   for = "/manifest.json"
   [headers.values]

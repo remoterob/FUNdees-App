@@ -1710,6 +1710,9 @@
 
       let html = '';
 
+      // Store session context globally for chatbot access
+      window._chatSessionCtx = window._chatSessionCtx || {};
+
       for (const enr of enrolments) {
         const sess = sessMap[enr.session_id];
         if (!sess) { console.warn('[My Sessions] no session found for', enr.session_id); continue; }
@@ -1755,6 +1758,33 @@
             drillMap,
             leadName: plan.lead_member_id ? (planLeadMap[plan.lead_member_id] || null) : null
           });
+
+          // Store context for chatbot
+          window._chatSessionCtx[plan.id] = {
+            sessionCtx: {
+              title:     sess.title,
+              type:      sess.type,
+              location:  sess.location,
+              dateStart: sess.date_start,
+              dateEnd:   sess.date_end,
+              leadName:  plan.lead_member_id ? (planLeadMap[plan.lead_member_id] || null) : null
+            },
+            planCtx: {
+              weekNum:   plansWithBlocks.length + 1,
+              planDate:  plan.plan_date,
+              notes:     plan.session_notes,
+              blocks: (blocks||[]).map(b => ({
+                lane:      b.lane,
+                laneName:  (plan.lane_names || ['Lane 1','Lane 2'])[b.lane - 1] || `Lane ${b.lane}`,
+                time_slot: b.time_slot,
+                drillName: drillMap[b.drill_id]?.name || 'Unknown drill',
+                specifics: b.specifics || ''
+              })),
+              drillLibrary: Object.values(drillMap).map(d =>
+                `${d.name}: ${d.description || 'No description'}`
+              ).join('\n')
+            }
+          };
         }
 
         const typeTag = sess.type === 'pool'
@@ -1858,6 +1888,50 @@
                 ${buildMemberGridRows(TIME_SLOTS, bySlot, laneCount, LANE_COLOURS, plan.drillMap)}
               </div>
             </div>
+
+            <!-- ── Coach FUNdee Chat ── -->
+            <div style="margin-top:1.25rem;border-top:1px solid rgba(255,255,255,0.07);padding-top:1.1rem">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+                <div style="display:flex;align-items:center;gap:0.5rem">
+                  <span style="font-size:1rem">🤿</span>
+                  <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;color:#00CFAD">Ask Coach FUNdee</span>
+                </div>
+                <button onclick="toggleChat('${plan.id}')"
+                  style="background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.25);color:#00CFAD;font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:0.3rem 0.75rem;border-radius:2px;cursor:pointer;font-family:'Barlow Condensed',sans-serif"
+                  id="chat-toggle-${plan.id}">Chat</button>
+              </div>
+
+              <!-- Starter questions -->
+              <div id="chat-starters-${plan.id}" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.75rem">
+                ${buildStarterQuestions(plan).map(q => `
+                  <button onclick="sendStarterQuestion('${plan.id}', this)"
+                    style="background:rgba(13,45,74,0.6);border:1px solid rgba(255,255,255,0.1);color:rgba(240,237,230,0.65);font-size:0.72rem;padding:0.3rem 0.65rem;border-radius:2px;cursor:pointer;font-family:'Barlow',sans-serif;text-align:left;transition:all 0.15s"
+                    onmouseover="this.style.borderColor='rgba(0,207,173,0.3)';this.style.color='#F0EDE6'"
+                    onmouseout="this.style.borderColor='rgba(255,255,255,0.1)';this.style.color='rgba(240,237,230,0.65)'"
+                  >${q}</button>`).join('')}
+              </div>
+
+              <!-- Chat panel (hidden until toggled) -->
+              <div id="chat-panel-${plan.id}" style="display:none">
+                <div id="chat-messages-${plan.id}"
+                  style="background:rgba(7,16,30,0.5);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:0.85rem;min-height:80px;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:0.65rem;margin-bottom:0.65rem;font-size:0.83rem;line-height:1.55">
+                  <div style="color:rgba(240,237,230,0.35);font-size:0.78rem;text-align:center">Hey mate! Ask me anything about this week's training. 🤙</div>
+                </div>
+                <div style="display:flex;gap:0.5rem">
+                  <input id="chat-input-${plan.id}" type="text"
+                    placeholder="Ask about drills, gear, prep, technique…"
+                    style="flex:1;background:rgba(13,45,74,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:3px;padding:0.6rem 0.85rem;color:#F0EDE6;font-family:'Barlow',sans-serif;font-size:0.83rem;outline:none"
+                    onfocus="this.style.borderColor='rgba(0,207,173,0.4)'"
+                    onblur="this.style.borderColor='rgba(255,255,255,0.1)'"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage('${plan.id}')}"
+                  >
+                  <button onclick="sendChatMessage('${plan.id}')"
+                    id="chat-send-${plan.id}"
+                    style="background:#00CFAD;color:#0A1628;border:none;padding:0.6rem 1rem;border-radius:3px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap;flex-shrink:0">Send</button>
+                </div>
+              </div>
+            </div>
+
           </div>
         </details>`;
     });
@@ -1955,6 +2029,133 @@
         </div>` : ''}
       ${d.span > 1 ? `<div style="margin-top:1rem;font-size:0.72rem;color:rgba(240,237,230,0.3)">⏱ This drill runs for ${d.span * 10} minutes</div>` : ''}`;
     modal.style.display = 'flex';
+  }
+
+  function buildStarterQuestions(plan) {
+    const drillNames = Object.values(plan.drillMap || {}).map(d => d.name);
+    const questions = [
+      'What should I eat before this session?',
+      'What gear do I need to bring?',
+      'How do I warm up properly?',
+      'How can I get the most from this week?',
+    ];
+    // Add drill-specific questions for the first 2 unique drills in the plan
+    const seen = new Set();
+    (plan.blocks || []).forEach(b => {
+      if (b.drill_id && !seen.has(b.drill_id) && seen.size < 2) {
+        seen.add(b.drill_id);
+        const drill = plan.drillMap?.[b.drill_id];
+        if (drill?.name) questions.push(`Explain the ${drill.name} drill`);
+      }
+    });
+    return questions.slice(0, 5);
+  }
+
+  function toggleChat(planId) {
+    const panel  = document.getElementById(`chat-panel-${planId}`);
+    const toggle = document.getElementById(`chat-toggle-${planId}`);
+    if (!panel) return;
+    const open = panel.style.display === 'none';
+    panel.style.display = open ? 'block' : 'none';
+    toggle.textContent  = open ? 'Close' : 'Chat';
+    if (open) document.getElementById(`chat-input-${planId}`)?.focus();
+  }
+
+  function sendStarterQuestion(planId, btn) {
+    const question = btn.textContent;
+    const panel = document.getElementById(`chat-panel-${planId}`);
+    if (panel) panel.style.display = 'block';
+    const toggle = document.getElementById(`chat-toggle-${planId}`);
+    if (toggle) toggle.textContent = 'Close';
+    const input = document.getElementById(`chat-input-${planId}`);
+    if (input) input.value = question;
+    sendChatMessage(planId);
+  }
+
+  // Per-plan message history
+  window._chatHistory = window._chatHistory || {};
+
+  async function sendChatMessage(planId) {
+    const input   = document.getElementById(`chat-input-${planId}`);
+    const msgBox  = document.getElementById(`chat-messages-${planId}`);
+    const sendBtn = document.getElementById(`chat-send-${planId}`);
+    if (!input || !msgBox) return;
+
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Append user message
+    input.value = '';
+    appendChatMsg(msgBox, text, 'user');
+    sendBtn.disabled = true;
+    sendBtn.textContent = '…';
+
+    // Init history for this plan
+    if (!window._chatHistory[planId]) window._chatHistory[planId] = [];
+    window._chatHistory[planId].push({ role: 'user', content: text });
+
+    // Grab context
+    const ctx = window._chatSessionCtx?.[planId] || {};
+
+    try {
+      const res = await fetch('/.netlify/functions/training-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages:       window._chatHistory[planId],
+          sessionContext: ctx.sessionCtx,
+          planContext:    ctx.planCtx
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Request failed');
+
+      window._chatHistory[planId].push({ role: 'assistant', content: data.reply });
+      appendChatMsg(msgBox, data.reply, 'assistant');
+
+    } catch (err) {
+      appendChatMsg(msgBox, `Sorry mate, something went wrong — ${err.message}. Try again!`, 'error');
+      // Remove the failed user message from history
+      window._chatHistory[planId].pop();
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Send';
+      input.focus();
+    }
+  }
+
+  function appendChatMsg(container, text, role) {
+    const div = document.createElement('div');
+    const isUser = role === 'user';
+    const isErr  = role === 'error';
+    div.style.cssText = `
+      padding: 0.6rem 0.85rem;
+      border-radius: 4px;
+      font-size: 0.83rem;
+      line-height: 1.6;
+      max-width: 88%;
+      white-space: pre-wrap;
+      word-break: break-word;
+      ${isUser
+        ? 'align-self:flex-end;background:rgba(0,207,173,0.15);border:1px solid rgba(0,207,173,0.25);color:#F0EDE6;margin-left:auto'
+        : isErr
+          ? 'background:rgba(255,92,58,0.1);border:1px solid rgba(255,92,58,0.2);color:rgba(255,92,58,0.9)'
+          : 'align-self:flex-start;background:rgba(13,45,74,0.7);border:1px solid rgba(255,255,255,0.08);color:rgba(240,237,230,0.85)'
+      }
+    `;
+    if (!isUser && !isErr) {
+      // Add coach label
+      const label = document.createElement('div');
+      label.style.cssText = 'font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#00CFAD;margin-bottom:0.35rem';
+      label.textContent = '🤿 Coach FUNdee';
+      div.appendChild(label);
+    }
+    const content = document.createElement('div');
+    content.textContent = text;
+    div.appendChild(content);
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
   }
 
   function closeDrillModal() {
