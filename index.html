@@ -1164,6 +1164,10 @@
   .pay-amount { font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem; color: var(--surge); line-height: 1; }
   .pay-desc { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
   @media (max-width: 768px) { .portal-grid { grid-template-columns: 1fr; } }
+  @keyframes fn-pulse {
+    0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
+    40%           { opacity: 1;    transform: scale(1); }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -2088,7 +2092,23 @@
     input.value = '';
     appendChatMsg(msgBox, text, 'user');
     sendBtn.disabled = true;
-    sendBtn.textContent = '…';
+    sendBtn.style.opacity = '0.5';
+    sendBtn.textContent = 'Sending…';
+
+    // Show animated "thinking" indicator
+    const thinkingEl = document.createElement('div');
+    thinkingEl.id = `chat-thinking-${planId}`;
+    thinkingEl.style.cssText = 'align-self:flex-start;background:rgba(13,45,74,0.7);border:1px solid rgba(255,255,255,0.08);padding:0.7rem 0.95rem;border-radius:4px;max-width:88%';
+    thinkingEl.innerHTML = `
+      <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#00CFAD;margin-bottom:0.4rem">🤿 Coach FUNdee</div>
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <span class="fn-dot" style="width:7px;height:7px;border-radius:50%;background:#00CFAD;opacity:0.3;animation:fn-pulse 1.4s infinite ease-in-out"></span>
+        <span class="fn-dot" style="width:7px;height:7px;border-radius:50%;background:#00CFAD;opacity:0.3;animation:fn-pulse 1.4s infinite ease-in-out;animation-delay:0.2s"></span>
+        <span class="fn-dot" style="width:7px;height:7px;border-radius:50%;background:#00CFAD;opacity:0.3;animation:fn-pulse 1.4s infinite ease-in-out;animation-delay:0.4s"></span>
+        <span style="color:rgba(240,237,230,0.4);font-size:0.78rem;font-style:italic;margin-left:0.35rem">thinking…</span>
+      </div>`;
+    msgBox.appendChild(thinkingEl);
+    msgBox.scrollTop = msgBox.scrollHeight;
 
     // Init history for this plan
     if (!window._chatHistory[planId]) window._chatHistory[planId] = [];
@@ -2111,15 +2131,18 @@
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Request failed');
 
+      thinkingEl.remove();
       window._chatHistory[planId].push({ role: 'assistant', content: data.reply });
       appendChatMsg(msgBox, data.reply, 'assistant');
 
     } catch (err) {
+      thinkingEl.remove();
       appendChatMsg(msgBox, `Sorry mate, something went wrong — ${err.message}. Try again!`, 'error');
       // Remove the failed user message from history
       window._chatHistory[planId].pop();
     } finally {
       sendBtn.disabled = false;
+      sendBtn.style.opacity = '1';
       sendBtn.textContent = 'Send';
       input.focus();
     }
