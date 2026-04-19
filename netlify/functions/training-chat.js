@@ -22,6 +22,25 @@ const MANUAL_AIDA4 = loadManual('manual_aida4.txt');
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' };
+
+  // GET is a health check — no auth needed, returns config state
+  if (event.httpMethod === 'GET') {
+    return {
+      statusCode: 200,
+      headers: CORS,
+      body: JSON.stringify({
+        ok: true,
+        hasApiKey:      !!process.env.ANTHROPIC_API_KEY,
+        apiKeyPrefix:   process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.substring(0, 10) + '...' : null,
+        manualsLoaded: {
+          wave4: MANUAL_WAVE4.length,
+          aida2: MANUAL_AIDA2.length,
+          aida4: MANUAL_AIDA4.length
+        }
+      })
+    };
+  }
+
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
   if (!process.env.ANTHROPIC_API_KEY) return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'API key not configured' }) };
 
@@ -41,7 +60,7 @@ exports.handler = async (event) => {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 1024,
         system: buildSystemPrompt(sessionContext, planContext),
         messages: messages.slice(-10)
@@ -50,8 +69,12 @@ exports.handler = async (event) => {
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('Anthropic error:', err);
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'AI service error' }) };
+      console.error('Anthropic error:', response.status, err);
+      return {
+        statusCode: 500,
+        headers: CORS,
+        body: JSON.stringify({ error: `AI service error (${response.status}): ${err.substring(0, 300)}` })
+      };
     }
 
     const data = await response.json();
