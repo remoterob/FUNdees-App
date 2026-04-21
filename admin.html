@@ -846,7 +846,7 @@ async function loadAnalytics() {
   let keepGoing = true;
   while (keepGoing) {
     const { data, error } = await sb.from('page_views')
-      .select('fingerprint, path, os, browser, created_at')
+      .select('fingerprint, page, os, browser, created_at')
       .order('created_at', { ascending: false })
       .range(from, from + pageSize - 1);
     if (error) { console.error('analytics fetch error:', error); break; }
