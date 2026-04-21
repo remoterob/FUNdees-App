@@ -810,33 +810,62 @@ async function deleteArticle(id, filename, thumbFilename) {
 
 // ── ANALYTICS ────────────────────────────────────────────────────────────────
 async function loadAnalytics() {
-  const { data, error } = await sb
-    .from('page_views')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(5000);
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0,10);
+  const weekAgoISO = new Date(now - 7*24*60*60*1000).toISOString();
 
-  if (error || !data || data.length === 0) {
-    document.getElementById('an-total').textContent = '0';
+  // Get TOTAL COUNT without pulling rows (using HEAD + exact count)
+  const { count: totalCount } = await sb.from('page_views')
+    .select('*', { count: 'exact', head: true });
+
+  // Today's count
+  const { count: todayCount } = await sb.from('page_views')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', todayStr + 'T00:00:00.000Z');
+
+  // This week's count
+  const { count: weekCount } = await sb.from('page_views')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', weekAgoISO);
+
+  // Populate top stats immediately
+  document.getElementById('an-total').textContent = (totalCount || 0).toLocaleString();
+  document.getElementById('an-today').textContent = (todayCount || 0).toLocaleString();
+  document.getElementById('an-week').textContent  = (weekCount || 0).toLocaleString();
+
+  if (!totalCount) {
     document.getElementById('an-unique').textContent = '0';
-    document.getElementById('an-today').textContent = '0';
-    document.getElementById('an-week').textContent = '0';
     return;
   }
 
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0,10);
-  const weekAgo = new Date(now - 7*24*60*60*1000);
+  // For unique visitors + breakdowns, page through ALL rows in 1000-row chunks.
+  // We need fingerprint, path, os, browser, created_at — so trim columns to save bandwidth.
+  const allRows = [];
+  const pageSize = 1000;
+  let from = 0;
+  let keepGoing = true;
+  while (keepGoing) {
+    const { data, error } = await sb.from('page_views')
+      .select('fingerprint, path, os, browser, created_at')
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1);
+    if (error) { console.error('analytics fetch error:', error); break; }
+    if (!data || data.length === 0) break;
+    allRows.push(...data);
+    if (data.length < pageSize) keepGoing = false;
+    else from += pageSize;
+    // Safety cap — don't fetch more than 20k rows
+    if (allRows.length >= 20000) keepGoing = false;
+  }
 
-  // Stat cards
+  const data = allRows;
+  if (data.length === 0) {
+    document.getElementById('an-unique').textContent = '0';
+    return;
+  }
+
   const uniqueFingerprints = new Set(data.map(r => r.fingerprint).filter(Boolean));
-  const todayViews = data.filter(r => r.created_at.slice(0,10) === todayStr).length;
-  const weekViews = data.filter(r => new Date(r.created_at) >= weekAgo).length;
-
-  document.getElementById('an-total').textContent  = data.length.toLocaleString();
   document.getElementById('an-unique').textContent = uniqueFingerprints.size.toLocaleString();
-  document.getElementById('an-today').textContent  = todayViews.toLocaleString();
-  document.getElementById('an-week').textContent   = weekViews.toLocaleString();
 
   // Views over 14 days
   const days14 = Array.from({length:14}, (_,i) => {

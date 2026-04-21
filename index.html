@@ -1682,7 +1682,15 @@
       return;
     }
 
-    el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem">Loading…</div>';
+    el.innerHTML = `
+      <div style="color:var(--muted);font-size:0.85rem;padding:2rem 0;text-align:center">
+        <div style="display:inline-flex;align-items:center;gap:0.75rem;padding:0.65rem 1.25rem;background:rgba(13,45,74,0.4);border:1px solid rgba(0,207,173,0.15);border-radius:4px">
+          <span class="fn-dot" style="width:7px;height:7px;border-radius:50%;background:#00CFAD;opacity:0.3;animation:fn-pulse 1.4s infinite ease-in-out"></span>
+          <span class="fn-dot" style="width:7px;height:7px;border-radius:50%;background:#00CFAD;opacity:0.3;animation:fn-pulse 1.4s infinite ease-in-out;animation-delay:0.2s"></span>
+          <span class="fn-dot" style="width:7px;height:7px;border-radius:50%;background:#00CFAD;opacity:0.3;animation:fn-pulse 1.4s infinite ease-in-out;animation-delay:0.4s"></span>
+          <span style="color:rgba(240,237,230,0.65);font-size:0.82rem">Loading your training…</span>
+        </div>
+      </div>`;
     window._drillModalData = []; // reset drill modal registry
 
     try {
@@ -1739,26 +1747,48 @@
           (leadMembers||[]).forEach(m => { planLeadMap[m.id] = m.full_name; });
         }
 
-        // For each plan, get blocks separately
-        const plansWithBlocks = [];
-        for (const plan of (plans || [])) {
+        // ─── BATCH FETCH ─── Get ALL blocks for ALL plans in one query, then
+        // ALL drills needed in one query. This replaces 2N sequential queries
+        // (where N = number of plans) with just 2 queries total.
+        const allPlanIds = (plans || []).map(p => p.id);
+        let allBlocks = [];
+        if (allPlanIds.length) {
           const { data: blocks, error: blkErr } = await sb.from('plan_blocks')
             .select('*')
-            .eq('plan_id', plan.id)
+            .in('plan_id', allPlanIds)
             .order('time_slot');
-          console.log('[My Sessions] blocks for plan', plan.id, ':', blocks, 'error:', blkErr);
           if (blkErr) throw new Error('Blocks: ' + blkErr.message);
+          allBlocks = blocks || [];
+        }
 
-          const drillIds = [...new Set((blocks||[]).map(b => b.drill_id).filter(Boolean))];
-          let drillMap = {};
-          if (drillIds.length) {
-            const { data: drills } = await sb.from('drills').select('*').in('id', drillIds);
-            (drills||[]).forEach(d => { drillMap[d.id] = d; });
-          }
+        // Group blocks by plan_id
+        const blocksByPlan = {};
+        allBlocks.forEach(b => {
+          if (!blocksByPlan[b.plan_id]) blocksByPlan[b.plan_id] = [];
+          blocksByPlan[b.plan_id].push(b);
+        });
+
+        // Fetch all drills needed across all plans in one query
+        const allDrillIds = [...new Set(allBlocks.map(b => b.drill_id).filter(Boolean))];
+        const globalDrillMap = {};
+        if (allDrillIds.length) {
+          const { data: drills } = await sb.from('drills').select('*').in('id', allDrillIds);
+          (drills||[]).forEach(d => { globalDrillMap[d.id] = d; });
+        }
+
+        // Now assemble plansWithBlocks with no further DB calls
+        const plansWithBlocks = [];
+        for (const plan of (plans || [])) {
+          const blocks = blocksByPlan[plan.id] || [];
+          // Build a drill map limited to drills used in this plan
+          const drillMap = {};
+          blocks.forEach(b => {
+            if (b.drill_id && globalDrillMap[b.drill_id]) drillMap[b.drill_id] = globalDrillMap[b.drill_id];
+          });
 
           plansWithBlocks.push({
             ...plan,
-            blocks: blocks||[],
+            blocks,
             drillMap,
             leadName: plan.lead_member_id ? (planLeadMap[plan.lead_member_id] || null) : null
           });
@@ -1774,10 +1804,10 @@
               leadName:  plan.lead_member_id ? (planLeadMap[plan.lead_member_id] || null) : null
             },
             planCtx: {
-              weekNum:   plansWithBlocks.length + 1,
+              weekNum:   plansWithBlocks.length,
               planDate:  plan.plan_date,
               notes:     plan.session_notes,
-              blocks: (blocks||[]).map(b => ({
+              blocks: blocks.map(b => ({
                 lane:      b.lane,
                 laneName:  (plan.lane_names || ['Lane 1','Lane 2'])[b.lane - 1] || `Lane ${b.lane}`,
                 time_slot: b.time_slot,
