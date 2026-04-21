@@ -32,8 +32,12 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body); }
   catch { return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) }; }
 
-  const { messages, sessionContext, planContext } = body;
+  const { messages, sessionContext, planContext, metadata } = body;
   if (!messages?.length) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'No messages' }) };
+
+  // Extract the latest user question for logging
+  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+  const userQuestion = lastUserMsg?.content || '';
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -54,6 +58,8 @@ exports.handler = async (event) => {
     if (!response.ok) {
       const err = await response.text();
       console.error('Anthropic error:', response.status, err);
+      // Log failed query too
+      logQuery(userQuestion, metadata, sessionContext, planContext, false);
       return {
         statusCode: 500, headers: CORS,
         body: JSON.stringify({ error: `AI service error (${response.status}): ${err.substring(0, 300)}` })
@@ -62,13 +68,46 @@ exports.handler = async (event) => {
 
     const data = await response.json();
     const reply = data.content?.find(b => b.type === 'text')?.text || '';
+
+    // Log successful query (fire-and-forget, don't block the response)
+    logQuery(userQuestion, metadata, sessionContext, planContext, true);
+
     return { statusCode: 200, headers: CORS, body: JSON.stringify({ reply }) };
 
   } catch (err) {
     console.error('training-chat error:', err);
+    logQuery(userQuestion, metadata, sessionContext, planContext, false);
     return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: err.message }) };
   }
 };
+
+// ── QUERY LOGGING ──────────────────────────────────────────────────────────
+async function logQuery(question, metadata, sessionCtx, planCtx, ok) {
+  if (!question) return;
+  const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/chatbot_queries`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        member_id:     metadata?.memberId    || null,
+        plan_id:       metadata?.planId      || null,
+        session_title: sessionCtx?.title     || null,
+        week_num:      planCtx?.weekNum      || null,
+        question:      question.substring(0, 2000),  // cap length
+        response_ok:   ok
+      })
+    });
+  } catch (e) {
+    console.warn('Failed to log chatbot query:', e.message);
+  }
+}
 
 function buildSystemPrompt(sessionCtx, planCtx) {
   const s = sessionCtx || {};

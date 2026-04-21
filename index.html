@@ -2154,7 +2154,11 @@
         body: JSON.stringify({
           messages:       window._chatHistory[planId],
           sessionContext: ctx.sessionCtx,
-          planContext:    ctx.planCtx
+          planContext:    ctx.planCtx,
+          metadata: {
+            memberId: currentMember?.id || null,
+            planId:   planId
+          }
         })
       });
 

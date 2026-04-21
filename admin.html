@@ -333,6 +333,47 @@ select.field{cursor:pointer}
           <canvas id="chart-browser" height="160"></canvas>
         </div>
       </div>
+
+      <!-- ─── Coach FUNdee usage ─── -->
+      <div style="margin-top:2rem;border-top:1px solid var(--dim);padding-top:2rem">
+        <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.5rem">
+          <span style="font-size:1.2rem">🤿</span>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--sand);line-height:1">Coach FUNdee Usage</div>
+        </div>
+        <div style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem">Questions members are asking the AI training assistant.</div>
+
+        <!-- Stat cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem">
+          <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.1rem">
+            <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:0.4rem">Total Queries</div>
+            <div id="chatbot-total" style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--surge);line-height:1">—</div>
+          </div>
+          <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.1rem">
+            <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:0.4rem">Unique Members</div>
+            <div id="chatbot-unique" style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--surge);line-height:1">—</div>
+          </div>
+          <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.1rem">
+            <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:0.4rem">This Week</div>
+            <div id="chatbot-week" style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--surge);line-height:1">—</div>
+          </div>
+          <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.1rem">
+            <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:0.4rem">Today</div>
+            <div id="chatbot-today" style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--surge);line-height:1">—</div>
+          </div>
+        </div>
+
+        <!-- Recent questions list -->
+        <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.25rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--surge)">Recent Questions</div>
+            <div id="chatbot-count-label" style="font-size:0.72rem;color:var(--muted)"></div>
+          </div>
+          <div id="chatbot-queries-list" style="display:flex;flex-direction:column;gap:0.65rem">
+            <div style="color:var(--muted);font-size:0.82rem;padding:1rem 0;text-align:center">Loading…</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -483,6 +524,7 @@ async function init() {
   loadImages();
   loadArticles();
   loadAnalytics();
+  loadChatbotStats();
   loadLeads();
   loadMembers();
   loadInstructors();
@@ -977,6 +1019,89 @@ function drawAnalyticsCharts(days, dayCounts, osCounts, brCounts) {
       }
     });
   }
+}
+
+// ─── CHATBOT ANALYTICS ──────────────────────────────────────────────────
+async function loadChatbotStats() {
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0,10);
+  const weekAgoISO = new Date(now - 7*24*60*60*1000).toISOString();
+
+  // Stat counts
+  const { count: totalCount } = await sb.from('chatbot_queries').select('*', { count: 'exact', head: true });
+  const { count: todayCount } = await sb.from('chatbot_queries').select('*', { count: 'exact', head: true }).gte('created_at', todayStr + 'T00:00:00.000Z');
+  const { count: weekCount  } = await sb.from('chatbot_queries').select('*', { count: 'exact', head: true }).gte('created_at', weekAgoISO);
+
+  document.getElementById('chatbot-total').textContent = (totalCount || 0).toLocaleString();
+  document.getElementById('chatbot-today').textContent = (todayCount || 0).toLocaleString();
+  document.getElementById('chatbot-week').textContent  = (weekCount || 0).toLocaleString();
+
+  const listEl = document.getElementById('chatbot-queries-list');
+
+  if (!totalCount) {
+    document.getElementById('chatbot-unique').textContent = '0';
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:0.82rem;padding:1rem 0;text-align:center">No chatbot queries yet.</div>';
+    return;
+  }
+
+  // Get the most recent 50 queries with member info
+  const { data: queries, error } = await sb.from('chatbot_queries')
+    .select('id, member_id, question, response_ok, session_title, week_num, created_at')
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error || !queries) {
+    listEl.innerHTML = `<div style="color:var(--coral);font-size:0.82rem">Error: ${error?.message || 'failed to load'}</div>`;
+    return;
+  }
+
+  // Fetch all relevant members in one query
+  const memberIds = [...new Set(queries.map(q => q.member_id).filter(Boolean))];
+  let memberMap = {};
+  if (memberIds.length) {
+    const { data: members } = await sb.from('members').select('id, full_name, email').in('id', memberIds);
+    (members || []).forEach(m => { memberMap[m.id] = m; });
+  }
+
+  // Unique members count (across ALL queries, not just top 50 — do a separate count)
+  const { data: uniqueMemberRows } = await sb.from('chatbot_queries')
+    .select('member_id')
+    .not('member_id', 'is', null);
+  const uniqueMembers = new Set((uniqueMemberRows || []).map(r => r.member_id));
+  document.getElementById('chatbot-unique').textContent = uniqueMembers.size.toLocaleString();
+
+  document.getElementById('chatbot-count-label').textContent = `Showing last ${queries.length}`;
+
+  listEl.innerHTML = queries.map(q => {
+    const member = memberMap[q.member_id];
+    const when = new Date(q.created_at);
+    const timeStr = when.toLocaleString('en-NZ', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+    const badge = q.response_ok
+      ? '<span style="background:rgba(0,207,173,0.1);color:var(--surge);font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:2px">OK</span>'
+      : '<span style="background:rgba(255,92,58,0.1);color:var(--coral);font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:2px">Failed</span>';
+    const contextBits = [];
+    if (q.session_title) contextBits.push(q.session_title);
+    if (q.week_num)      contextBits.push(`Week ${q.week_num}`);
+    const contextStr = contextBits.join(' · ');
+
+    return `
+      <div style="background:rgba(7,16,30,0.5);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:0.75rem 0.95rem">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;margin-bottom:0.4rem;flex-wrap:wrap">
+          <div style="font-size:0.78rem;color:var(--sand);font-weight:500">${member ? member.full_name || member.email : 'Unknown member'}</div>
+          <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0">
+            ${badge}
+            <span style="font-size:0.68rem;color:rgba(240,237,230,0.35)">${timeStr}</span>
+          </div>
+        </div>
+        ${contextStr ? `<div style="font-size:0.68rem;color:rgba(0,207,173,0.55);letter-spacing:0.04em;margin-bottom:0.35rem">${contextStr}</div>` : ''}
+        <div style="font-size:0.82rem;color:rgba(240,237,230,0.75);line-height:1.5;word-break:break-word">${escapeHtml(q.question)}</div>
+      </div>`;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 }
 
 
