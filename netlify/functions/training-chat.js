@@ -87,14 +87,27 @@ exports.handler = async (event) => {
 async function logQuery(question, metadata, sessionCtx, planCtx, ok) {
   if (!question) return;
   try {
-    await supabaseAdmin.from('chatbot_queries').insert({
+    const payload = {
       member_id:     metadata?.memberId    || null,
       plan_id:       metadata?.planId      || null,
       session_title: sessionCtx?.title     || null,
       week_num:      planCtx?.weekNum      || null,
       question:      question.substring(0, 2000),
       response_ok:   ok
-    });
+    };
+
+    const { error } = await supabaseAdmin.from('chatbot_queries').insert(payload);
+
+    if (error) {
+      console.error('Chatbot log insert error:', error.message, error.details, error.hint);
+      // If FK constraint fails on plan_id, retry without it
+      if (error.message?.includes('foreign key') || error.code === '23503') {
+        console.warn('Retrying without plan_id');
+        payload.plan_id = null;
+        const { error: err2 } = await supabaseAdmin.from('chatbot_queries').insert(payload);
+        if (err2) console.error('Chatbot log retry also failed:', err2.message);
+      }
+    }
   } catch (e) {
     console.warn('Failed to log chatbot query:', e.message);
   }
