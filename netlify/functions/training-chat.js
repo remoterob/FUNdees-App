@@ -3,6 +3,8 @@
 // Uses Claude's freediving knowledge (aligned with standard AIDA/Molchanovs curriculum principles)
 // plus the specific session/plan context from the member's enrolment.
 
+const { supabaseAdmin } = require('./_supabase');
+
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Headers': 'Content-Type',
@@ -84,25 +86,14 @@ exports.handler = async (event) => {
 // ── QUERY LOGGING ──────────────────────────────────────────────────────────
 async function logQuery(question, metadata, sessionCtx, planCtx, ok) {
   if (!question) return;
-  const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/chatbot_queries`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON,
-        'Authorization': `Bearer ${SUPABASE_ANON}`,
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        member_id:     metadata?.memberId    || null,
-        plan_id:       metadata?.planId      || null,
-        session_title: sessionCtx?.title     || null,
-        week_num:      planCtx?.weekNum      || null,
-        question:      question.substring(0, 2000),  // cap length
-        response_ok:   ok
-      })
+    await supabaseAdmin.from('chatbot_queries').insert({
+      member_id:     metadata?.memberId    || null,
+      plan_id:       metadata?.planId      || null,
+      session_title: sessionCtx?.title     || null,
+      week_num:      planCtx?.weekNum      || null,
+      question:      question.substring(0, 2000),
+      response_ok:   ok
     });
   } catch (e) {
     console.warn('Failed to log chatbot query:', e.message);
