@@ -61,7 +61,7 @@ exports.handler = async (event) => {
       const err = await response.text();
       console.error('Anthropic error:', response.status, err);
       // Log failed query too
-      logQuery(userQuestion, metadata, sessionContext, planContext, false);
+      await logQuery(userQuestion, metadata, sessionContext, planContext, false);
       return {
         statusCode: 500, headers: CORS,
         body: JSON.stringify({ error: `AI service error (${response.status}): ${err.substring(0, 300)}` })
@@ -71,14 +71,14 @@ exports.handler = async (event) => {
     const data = await response.json();
     const reply = data.content?.find(b => b.type === 'text')?.text || '';
 
-    // Log successful query (fire-and-forget, don't block the response)
-    logQuery(userQuestion, metadata, sessionContext, planContext, true);
+    // Log query — must await or Netlify kills the function before it completes
+    await logQuery(userQuestion, metadata, sessionContext, planContext, true);
 
     return { statusCode: 200, headers: CORS, body: JSON.stringify({ reply }) };
 
   } catch (err) {
     console.error('training-chat error:', err);
-    logQuery(userQuestion, metadata, sessionContext, planContext, false);
+    await logQuery(userQuestion, metadata, sessionContext, planContext, false);
     return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: err.message }) };
   }
 };
