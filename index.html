@@ -1168,6 +1168,16 @@
     0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
     40%           { opacity: 1;    transform: scale(1); }
   }
+
+  /* My Sessions: swap grid for cards on mobile */
+  @media (max-width: 600px) {
+    .plan-grid-desktop { display: none !important; }
+    .plan-cards-mobile { display: flex !important; }
+  }
+  @media (min-width: 601px) {
+    .plan-grid-desktop { display: block !important; }
+    .plan-cards-mobile { display: none !important; }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -1900,17 +1910,18 @@
 
       html += `
         <details style="background:rgba(13,45,74,0.35);border:1px solid rgba(255,255,255,0.07);border-radius:4px;overflow:hidden" ${!isPast ? 'open' : ''}>
-          <summary style="padding:0.85rem 1.1rem;cursor:pointer;display:flex;align-items:center;gap:0.75rem;list-style:none;user-select:none">
+          <summary style="padding:0.85rem 1rem;cursor:pointer;display:flex;align-items:center;gap:0.5rem;list-style:none;user-select:none;flex-wrap:wrap">
             <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;background:rgba(0,207,173,0.1);color:#00CFAD;padding:0.2rem 0.5rem;border-radius:2px;flex-shrink:0">Week ${weekNum}</span>
-            <span style="font-size:0.88rem;font-weight:500;color:#F0EDE6;flex:1">${fmtPlanDate(plan.plan_date)}</span>
-            ${plan.leadName ? `<span style="font-size:0.72rem;color:rgba(0,207,173,0.7)">🤿 ${plan.leadName}</span>` : ''}
-            <span style="font-size:0.65rem;${isPast?'color:rgba(240,237,230,0.3)':'color:#00CFAD'};text-transform:uppercase;letter-spacing:0.08em">${isPast?'Past':'Upcoming'}</span>
-            <span style="color:rgba(240,237,230,0.3);font-size:0.8rem">▾</span>
+            <span style="font-size:0.85rem;font-weight:500;color:#F0EDE6;flex:1;min-width:100px">${fmtPlanDate(plan.plan_date)}</span>
+            ${plan.leadName ? `<span style="font-size:0.68rem;color:rgba(0,207,173,0.7);white-space:nowrap">🤿 ${plan.leadName}</span>` : ''}
+            <span style="font-size:0.6rem;${isPast?'color:rgba(240,237,230,0.3)':'color:#00CFAD'};text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">${isPast?'Past':'Upcoming'}</span>
           </summary>
 
-          <div style="padding:0 1.1rem 1.1rem">
-            ${plan.session_notes ? `<div style="background:rgba(0,207,173,0.06);border:1px solid rgba(0,207,173,0.15);border-radius:3px;padding:0.75rem 1rem;font-size:0.8rem;color:rgba(240,237,230,0.7);margin-bottom:1rem;line-height:1.5">📋 ${plan.session_notes}</div>` : ''}
-            <div style="overflow-x:auto">
+          <div style="padding:0 1rem 1rem">
+            ${plan.session_notes ? `<div style="background:rgba(0,207,173,0.06);border:1px solid rgba(0,207,173,0.15);border-radius:3px;padding:0.65rem 0.85rem;font-size:0.78rem;color:rgba(240,237,230,0.7);margin-bottom:1rem;line-height:1.5">📋 ${plan.session_notes}</div>` : ''}
+
+            <!-- Desktop: grid layout -->
+            <div class="plan-grid-desktop" style="overflow-x:auto">
               <div style="min-width:420px">
                 <div style="display:grid;grid-template-columns:52px ${Array(laneCount).fill('1fr').join(' ')};gap:2px;margin-bottom:2px">
                   <div></div>
@@ -1921,6 +1932,11 @@
                 </div>
                 ${buildMemberGridRows(TIME_SLOTS, bySlot, laneCount, LANE_COLOURS, plan.drillMap)}
               </div>
+            </div>
+
+            <!-- Mobile: stacked drill cards -->
+            <div class="plan-cards-mobile" style="display:none;flex-direction:column;gap:0.5rem">
+              ${buildMobileCards(TIME_SLOTS, bySlot, laneCount, laneNames, LANE_COLOURS, plan.drillMap)}
             </div>
 
             <!-- ── Coach FUNdee Chat ── -->
@@ -2041,6 +2057,70 @@
     });
 
     return hadAny ? html : '<div style="color:rgba(240,237,230,0.3);font-size:0.78rem;padding:0.75rem 0">No drills entered for this session.</div>';
+  }
+
+  function buildMobileCards(timeSlots, bySlot, laneCount, laneNames, laneColours, drillMap) {
+    // Group unique drills by time slot, merging lanes into one card per slot
+    const rendered = new Set();
+    let html = '';
+
+    timeSlots.forEach(slot => {
+      if (!bySlot[slot]) return;
+
+      for (let l = 1; l <= laneCount; l++) {
+        const block = bySlot[slot]?.[l];
+        if (!block?.drill_id) continue;
+
+        // Skip if we already rendered this drill from an earlier lane at same time (often same drill across lanes)
+        const drillKey = `${slot}-${block.drill_id}`;
+        if (rendered.has(drillKey)) continue;
+        rendered.add(drillKey);
+
+        const drill = drillMap?.[block.drill_id];
+        const lc = laneColours[l-1];
+        const a = lc === '#00CFAD' ? '0,207,173' : lc === '#F5A623' ? '245,166,35' : '74,144,226';
+        const span = block.span || 1;
+
+        // Check if this drill appears in ALL lanes at this time
+        let allLanes = true;
+        for (let ll = 1; ll <= laneCount; ll++) {
+          if (bySlot[slot]?.[ll]?.drill_id !== block.drill_id) { allLanes = false; break; }
+        }
+        const laneLabel = allLanes ? 'All lanes' : laneNames[l-1];
+
+        // Store drill data in registry for modal
+        const drillIdx = window._drillModalData ? window._drillModalData.length : 0;
+        if (!window._drillModalData) window._drillModalData = [];
+        window._drillModalData.push({
+          name: drill?.name || 'Drill',
+          desc: drill?.description || '',
+          specifics: block.specifics || '',
+          span, slot
+        });
+
+        html += `
+          <div style="background:rgba(${a},0.06);border:1px solid rgba(${a},0.2);border-radius:4px;padding:0.75rem 0.85rem;cursor:pointer"
+            onclick="openDrillModal(${drillIdx})">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.3rem">
+              <div style="display:flex;align-items:center;gap:0.4rem">
+                <span style="font-family:'Bebas Neue',sans-serif;font-size:0.82rem;color:rgba(240,237,230,0.3)">${slot}</span>
+                <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.95rem;color:${lc}">${drill?.name || 'Drill'}</span>
+              </div>
+              <div style="display:flex;gap:0.35rem;align-items:center;flex-shrink:0">
+                ${span > 1 ? `<span style="font-size:0.58rem;font-weight:700;padding:0.1rem 0.35rem;border-radius:2px;background:rgba(${a},0.15);color:${lc}">${span * 10}min</span>` : ''}
+                <span style="font-size:0.58rem;color:rgba(240,237,230,0.3);text-transform:uppercase;letter-spacing:0.06em">${laneLabel}</span>
+              </div>
+            </div>
+            ${block.specifics
+              ? `<div style="font-size:0.75rem;color:rgba(240,237,230,0.6);line-height:1.45">${block.specifics.substring(0, 140)}${block.specifics.length > 140 ? '…' : ''}</div>`
+              : drill?.description
+                ? `<div style="font-size:0.75rem;color:rgba(240,237,230,0.4);line-height:1.45;font-style:italic">${drill.description.substring(0, 120)}${drill.description.length > 120 ? '…' : ''}</div>`
+                : ''}
+          </div>`;
+      }
+    });
+
+    return html || '<div style="color:rgba(240,237,230,0.3);font-size:0.78rem;padding:0.75rem 0">No drills entered.</div>';
   }
 
   function openDrillModal(idx) {
