@@ -2071,8 +2071,8 @@
         const block = bySlot[slot]?.[l];
         if (!block?.drill_id) continue;
 
-        // Skip if we already rendered this drill from an earlier lane at same time (often same drill across lanes)
-        const drillKey = `${slot}-${block.drill_id}`;
+        // Only merge lanes when drill AND specifics are identical — different instructions must show separately
+        const drillKey = `${slot}-${block.drill_id}-${block.specifics || ''}`;
         if (rendered.has(drillKey)) continue;
         rendered.add(drillKey);
 
@@ -2081,10 +2081,11 @@
         const a = lc === '#00CFAD' ? '0,207,173' : lc === '#F5A623' ? '245,166,35' : '74,144,226';
         const span = block.span || 1;
 
-        // Check if this drill appears in ALL lanes at this time
+        // Check if this drill+specifics combo appears in ALL lanes at this time
         let allLanes = true;
         for (let ll = 1; ll <= laneCount; ll++) {
-          if (bySlot[slot]?.[ll]?.drill_id !== block.drill_id) { allLanes = false; break; }
+          const lb = bySlot[slot]?.[ll];
+          if (lb?.drill_id !== block.drill_id || (lb?.specifics || '') !== (block.specifics || '')) { allLanes = false; break; }
         }
         const laneLabel = allLanes ? 'All lanes' : laneNames[l-1];
 
