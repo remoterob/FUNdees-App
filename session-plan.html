@@ -212,12 +212,18 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
   .layout{grid-template-columns:1fr}
   .sidebar{display:none}
   .mob-session-bar{display:flex}
-  .main{padding:1rem}
-  .plan-header{flex-direction:column;gap:0.75rem}
-  .plan-header>div:last-child{flex-direction:row;flex-wrap:wrap}
+  .main{padding:1rem;padding-bottom:5rem}
+  .plan-header{flex-direction:column;gap:0.5rem}
+  .plan-header-actions{display:none}
   .lane-cfg{gap:0.5rem}
   .edit-grid{grid-template-columns:1fr}
   .export-bar{flex-direction:column;align-items:flex-start}
+  .clone-bar{flex-direction:column;align-items:flex-start}
+  /* Nav: hide title & save buttons — mobile action bar handles saves */
+  .nav-sep,.nav-title,.nav-badge{display:none}
+  #btn-preview,#btn-draft,#btn-publish{display:none!important}
+  .mob-action-bar{display:flex}
+  .toast{bottom:5rem;right:1rem;left:1rem;text-align:center}
 }
 
 @media print {
@@ -250,6 +256,21 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:300;background:var(--deep);border-left:3px solid var(--surge);border:1px solid var(--surge-border);color:var(--sand);padding:0.75rem 1.1rem;border-radius:3px;font-size:0.82rem;transform:translateY(80px);opacity:0;transition:all 0.3s}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.err{border-left-color:var(--coral);border-color:rgba(255,92,58,0.3)}
+
+/* ── MOBILE ACTION BAR (sticky bottom) ── */
+.mob-action-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;background:rgba(10,22,40,0.98);border-top:1px solid var(--dim);padding:0.6rem 1rem;gap:0.5rem;align-items:center;justify-content:stretch}
+.mob-action-bar .mob-action-preview{flex-shrink:0;background:none;border:1px solid var(--dim);border-radius:2px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.45rem 0.7rem;cursor:pointer;transition:all 0.15s}
+.mob-action-bar .mob-action-preview:hover{border-color:var(--surge-border);color:var(--surge)}
+.mob-action-bar .mob-action-draft{flex:1;background:none;border:1px solid var(--amber-border);color:var(--amber);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.5rem 0;border-radius:2px;cursor:pointer;transition:all 0.15s}
+.mob-action-bar .mob-action-draft:hover{background:var(--amber-dim)}
+.mob-action-bar .mob-action-publish{flex:2;background:var(--surge);color:var(--midnight);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.5rem 0;border-radius:2px;border:none;cursor:pointer;transition:all 0.15s}
+.mob-action-bar .mob-action-publish:hover{background:#00e8c0}
+.mob-action-bar .mob-action-publish.published{background:none;border:1px solid var(--surge-border);color:var(--surge)}
+
+/* ── CLONE BAR ── */
+.clone-bar{margin-top:0.75rem;padding:0.9rem 1.1rem;background:rgba(13,45,74,0.3);border:1px solid var(--dim);border-radius:4px;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.clone-bar-txt{font-size:0.8rem;color:var(--muted)}
+.clone-bar-txt strong{color:var(--sand);font-weight:500}
 </style>
 </head>
 <body>
@@ -276,7 +297,15 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
   <select class="mob-session-select" id="mob-session-select" onchange="onMobSessionChange(this.value)">
     <option value="">— Select a session —</option>
   </select>
+  <button class="mob-drill-toggle" onclick="openCloneModal()" id="mob-clone-btn" style="display:none" title="Clone plan from another session">⧉</button>
   <button class="mob-drill-toggle" id="mob-drill-toggle" onclick="toggleDrillDrawer()">Drills ＋</button>
+</div>
+
+<!-- MOBILE ACTION BAR -->
+<div class="mob-action-bar" id="mob-action-bar">
+  <button class="mob-action-preview" id="mob-btn-preview" onclick="togglePreview()">👁</button>
+  <button class="mob-action-draft" onclick="savePlan('draft')">Save Draft</button>
+  <button class="mob-action-publish" id="mob-btn-publish" onclick="savePlan('published')">Publish Plan</button>
 </div>
 
 <!-- MOBILE DRILL DRAWER -->
@@ -326,7 +355,7 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
           <div class="plan-meta" id="plan-meta"></div>
           <div class="avatars" id="plan-avatars"></div>
         </div>
-        <div style="display:flex;gap:0.6rem;flex-shrink:0;flex-wrap:wrap">
+        <div class="plan-header-actions" style="display:flex;gap:0.6rem;flex-shrink:0;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="togglePreview()">👁 Member View</button>
           <button class="btn btn-amber btn-sm" onclick="exportPrint()">⬇ Export / Print</button>
         </div>
@@ -386,6 +415,14 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
 
       <hr>
 
+      <!-- Clone bar -->
+      <div class="clone-bar">
+        <div class="clone-bar-txt">
+          <strong>Clone from Another Session</strong> — copy all drills, lanes &amp; notes into this plan
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openCloneModal()">⧉ Clone Plan</button>
+      </div>
+
       <!-- Export bar -->
       <div class="export-bar">
         <div class="export-bar-txt">
@@ -398,6 +435,30 @@ hr{border:none;border-top:1px solid var(--dim);margin:1.25rem 0}
       </div>
     </div>
   </main>
+</div>
+
+<!-- Clone Plan Modal -->
+<div class="modal-overlay" id="modal-clone">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-clone')">✕</button>
+    <div class="modal-title">Clone Session Plan</div>
+    <div class="modal-sub">Copy all drills, lanes, and notes from another session into this plan.</div>
+    <div style="display:flex;flex-direction:column;gap:0.85rem">
+      <div class="fld">
+        <label>Copy plan from</label>
+        <select id="clone-source-select" style="width:100%;background:rgba(10,22,40,0.6);border:1px solid var(--dim);border-radius:2px;padding:0.5rem 0.65rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.82rem;outline:none">
+          <option value="">— Select a session —</option>
+        </select>
+      </div>
+      <div id="clone-warning" style="display:none;background:rgba(255,92,58,0.08);border:1px solid rgba(255,92,58,0.3);border-radius:3px;padding:0.65rem 0.85rem;font-size:0.8rem;color:var(--coral)">
+        ⚠ This will overwrite the current plan's drills, lanes, and notes. This cannot be undone until you navigate away without saving.
+      </div>
+    </div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;margin-top:1.25rem">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-clone')">Cancel</button>
+      <button class="btn btn-surge btn-sm" id="clone-confirm-btn" onclick="confirmClone()">Clone Plan</button>
+    </div>
+  </div>
 </div>
 
 <!-- Add Drill Modal -->
@@ -707,12 +768,26 @@ async function selectSession(sessId, date) {
   document.getElementById('btn-preview').style.display = 'inline-flex';
   document.getElementById('btn-draft').style.display = 'inline-flex';
   document.getElementById('btn-publish').style.display = 'inline-flex';
-  if (plan?.status === 'published') {
+  const isPublished = plan?.status === 'published';
+  if (isPublished) {
     document.getElementById('btn-publish').textContent = '✓ Published';
     document.getElementById('btn-publish').className = 'btn btn-outline btn-sm';
   } else {
     document.getElementById('btn-publish').textContent = 'Publish Plan';
     document.getElementById('btn-publish').className = 'btn btn-surge btn-sm';
+  }
+  // Show mobile clone button in session bar
+  const mobCloneBtn = document.getElementById('mob-clone-btn');
+  if (mobCloneBtn) mobCloneBtn.style.display = 'inline-block';
+
+  // Mobile action bar publish state
+  const mobPub = document.getElementById('mob-btn-publish');
+  if (isPublished) {
+    mobPub.textContent = '✓ Published';
+    mobPub.classList.add('published');
+  } else {
+    mobPub.textContent = 'Publish Plan';
+    mobPub.classList.remove('published');
   }
 
   // Store date for saving
@@ -1021,6 +1096,9 @@ async function savePlan(status) {
   if (status === 'published') {
     document.getElementById('btn-publish').textContent = '✓ Published';
     document.getElementById('btn-publish').className = 'btn btn-outline btn-sm';
+    const mobPub = document.getElementById('mob-btn-publish');
+    mobPub.textContent = '✓ Published';
+    mobPub.classList.add('published');
   }
 }
 
@@ -1029,6 +1107,7 @@ function togglePreview() {
   previewMode = !previewMode;
   document.getElementById('btn-preview').textContent = previewMode ? '✏ Edit Mode' : '👁 Member View';
   document.getElementById('btn-preview').className = previewMode ? 'btn btn-amber btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('mob-btn-preview').textContent = previewMode ? '✏' : '👁';
   document.getElementById('edit-panel').classList.remove('open');
   editTarget = null;
   renderGrid();
@@ -1047,6 +1126,78 @@ function exportPrint() {
 function copyLink() {
   const url = `${window.location.origin}/session-plan.html?session=${currentPlan?._sessId}&date=${currentPlan?._date}&view=member`;
   navigator.clipboard.writeText(url).then(() => toast('Link copied to clipboard'));
+}
+
+// ── CLONE PLAN ────────────────────────────────────────────────────────────
+async function openCloneModal() {
+  const sel = document.getElementById('clone-source-select');
+  sel.innerHTML = '<option value="">— Loading… —</option>';
+  openModal('modal-clone');
+
+  const { data: plans } = await sb.from('session_plans')
+    .select('id, session_id, plan_date, status')
+    .order('plan_date', { ascending: false });
+
+  sel.innerHTML = '<option value="">— Select a session to copy from —</option>';
+  (plans || []).forEach(p => {
+    if (p.session_id === currentPlan?._sessId && p.plan_date === currentPlan?._date) return;
+    const sess = allSessions.find(s => s.id === p.session_id);
+    const statusLabel = p.status === 'published' ? '✓' : '…';
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${statusLabel} ${fmtDate(p.plan_date)} — ${sess?.title || 'Session'}`;
+    sel.appendChild(opt);
+  });
+
+  if (sel.options.length === 1) {
+    sel.innerHTML = '<option value="">— No other plans available —</option>';
+  }
+
+  const hasContent = Object.keys(planBlocks).length > 0 ||
+    document.getElementById('session-notes').value.trim().length > 0;
+  document.getElementById('clone-warning').style.display = hasContent ? 'block' : 'none';
+}
+
+async function confirmClone() {
+  const sourcePlanId = document.getElementById('clone-source-select').value;
+  if (!sourcePlanId) { toast('Select a session to clone from', true); return; }
+
+  const hasContent = Object.keys(planBlocks).length > 0 ||
+    document.getElementById('session-notes').value.trim().length > 0;
+  if (hasContent && !confirm('This will overwrite your current plan content (drills, lanes, notes). Continue?')) return;
+
+  const btn = document.getElementById('clone-confirm-btn');
+  btn.textContent = 'Cloning…';
+  btn.disabled = true;
+
+  const { data: sourcePlan, error } = await sb.from('session_plans')
+    .select('*, plan_blocks(*)')
+    .eq('id', sourcePlanId)
+    .single();
+
+  btn.textContent = 'Clone Plan';
+  btn.disabled = false;
+
+  if (error || !sourcePlan) { toast('Failed to load source plan', true); return; }
+
+  laneCount = sourcePlan.lane_count || 2;
+  laneNames = [...(sourcePlan.lane_names || ['Lane 1', 'Lane 2'])];
+
+  planBlocks = {};
+  (sourcePlan.plan_blocks || []).forEach(b => {
+    planBlocks[`${b.time_slot}|${b.lane}`] = {
+      drill_id: b.drill_id,
+      span: b.span || 1,
+      specifics: b.specifics || ''
+    };
+  });
+
+  document.getElementById('session-notes').value = sourcePlan.session_notes || '';
+  isDirty = true;
+  closeModal('modal-clone');
+  renderLaneConfig();
+  renderGrid();
+  toast('✓ Plan cloned — review and save when ready');
 }
 
 // ── ADD DRILL ─────────────────────────────────────────────────────────────
