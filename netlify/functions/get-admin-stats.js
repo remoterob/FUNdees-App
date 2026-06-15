@@ -1,20 +1,24 @@
 // netlify/functions/get-admin-stats.js
 //
 // Returns dashboard metrics for the admin panel.
-// In production add auth middleware to verify the caller is an admin.
+// Requires a valid Supabase JWT belonging to a member with is_admin = true.
 
 const { supabaseAdmin } = require('./_supabase');
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Content-Type': 'application/json'
-};
+const { corsHeaders } = require('./_cors');
+const { authenticate } = require('./_auth');
 
 exports.handler = async (event) => {
+  const CORS_HEADERS = corsHeaders(event);
+
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers: CORS_HEADERS, body: '' };
+  }
+
+  // ── Admin-only ────────────────────────────────────────────────────────
+  const { member, error: authError, statusCode } = await authenticate(event);
+  if (authError) return { statusCode, headers: CORS_HEADERS, body: JSON.stringify({ error: authError }) };
+  if (!member?.is_admin) {
+    return { statusCode: 403, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Admin access required' }) };
   }
 
   try {
@@ -75,7 +79,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: CORS_HEADERS,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({ error: 'Could not load stats.' })
     };
   }
 };

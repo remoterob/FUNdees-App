@@ -7,15 +7,11 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { supabaseAdmin } = require('./_supabase');
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json'
-};
+const { corsHeaders } = require('./_cors');
 
 exports.handler = async (event) => {
+  const CORS_HEADERS = corsHeaders(event);
+
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
@@ -30,6 +26,10 @@ exports.handler = async (event) => {
       email,
       fullName
     } = JSON.parse(event.body);
+
+    if (!sessionId || !email || !fullName) {
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Missing required fields' }) };
+    }
 
     // ── Fetch session to get price and check capacity ────────────────────
     const { data: poolSession, error: sessionErr } = await supabaseAdmin
@@ -89,7 +89,11 @@ exports.handler = async (event) => {
         booker_email: email,
         booker_name: fullName,
         supabase_member_id: member?.id || 'guest',
-        is_member: String(isActiveMember)
+        is_member: String(isActiveMember),
+        // Recorded so confirm-booking can verify the charge matches a real
+        // price for THIS session (defence-in-depth against tampering).
+        member_price_cents: String(Math.round(poolSession.member_price * 100)),
+        casual_price_cents: String(Math.round(poolSession.casual_price * 100))
       }
     });
 
@@ -110,7 +114,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: CORS_HEADERS,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({ error: 'Could not start payment. Please try again.' })
     };
   }
 };

@@ -3,15 +3,11 @@
 // Uses service role key to delete from auth.users (anon key can't do this).
 
 const { supabaseAdmin } = require('./_supabase');
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json'
-};
+const { corsHeaders } = require('./_cors');
 
 exports.handler = async (event) => {
+  const CORS = corsHeaders(event);
+
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' };
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
 
@@ -45,6 +41,6 @@ exports.handler = async (event) => {
 
   } catch (err) {
     console.error('delete-account error:', err);
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: err.message }) };
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Could not delete account.' }) };
   }
 };

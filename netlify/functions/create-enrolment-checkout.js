@@ -4,21 +4,27 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { supabaseAdmin } = require('./_supabase');
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json'
-};
+const { corsHeaders } = require('./_cors');
+const { authenticate } = require('./_auth');
 
 exports.handler = async (event) => {
+  const CORS = corsHeaders(event);
+
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' };
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
 
   try {
-    const { sessionId, memberId, email, fullName } = JSON.parse(event.body);
-    if (!sessionId || !memberId || !email) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing fields' }) };
+    // ── Caller must be authenticated and acting as themselves ────────────
+    const { user, member: authMember, error: authError, statusCode } = await authenticate(event);
+    if (authError) return { statusCode, headers: CORS, body: JSON.stringify({ error: authError }) };
+    if (!authMember) return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'No member profile' }) };
+
+    const { sessionId } = JSON.parse(event.body);
+    // Identity is taken from the verified token, NOT the request body.
+    const memberId = authMember.id;
+    const email    = authMember.email || user.email;
+    const fullName = user.user_metadata?.full_name || authMember.email;
+    if (!sessionId) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing fields' }) };
 
     // Fetch session
     const { data: session, error: sErr } = await supabaseAdmin
@@ -90,6 +96,6 @@ exports.handler = async (event) => {
 
   } catch (err) {
     console.error('create-enrolment-checkout error:', err);
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: err.message }) };
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Could not start checkout. Please try again.' }) };
   }
 };

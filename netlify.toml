@@ -40,9 +40,6 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
-[[headers]]
-  for = "/.netlify/functions/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Headers = "Content-Type, Authorization"
-    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+# CORS for functions is set per-response in netlify/functions/_cors.js
+# (origin reflected from an allow-list). Do NOT add a wildcard ACAO header
+# here — it would conflict with the per-function header and break browsers.

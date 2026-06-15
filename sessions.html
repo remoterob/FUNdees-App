@@ -235,15 +235,15 @@ async function enrol(sessionId) {
   btn.disabled = true; btn.textContent = 'Redirecting...';
 
   try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = '/auth.html'; return; }
     const res = await fetch('/.netlify/functions/create-enrolment-checkout', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId,
-        memberId:  member.id,
-        email:     user.email,
-        fullName:  member.full_name
-      })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({ sessionId })
     });
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || 'Could not start checkout');

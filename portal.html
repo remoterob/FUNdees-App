@@ -407,15 +407,18 @@ async function doPayment() {
   const btn = event.target;
   btn.disabled = true; btn.textContent = 'Redirecting...';
   try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = '/auth.html'; return; }
     const res = await fetch('/.netlify/functions/create-membership-checkout', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
       body: JSON.stringify({
         tier: 'annual',
         fullName: member?.full_name || '',
-        email: user.email,
-        phone: member?.phone || '',
-        emergencyContact: member?.emergency_contact || ''
+        phone: member?.phone || ''
       })
     });
     const d = await res.json();

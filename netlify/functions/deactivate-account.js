@@ -1,21 +1,17 @@
 // netlify/functions/deactivate-account.js
 // Deactivates a member account (sets status to 'cancelled', records date).
 // Does NOT delete any data — records retained for 7 years per ISA 2022.
-const { createClient } = require('@supabase/supabase-js');
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
+const { supabaseAdmin } = require('./_supabase');
+const { corsHeaders } = require('./_cors');
 
 exports.handler = async (event) => {
+  const CORS = corsHeaders(event);
+
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' };
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
 
   try {
-    const token = (event.headers.authorization || '').replace('Bearer ', '');
-    const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    const token = (event.headers.authorization || event.headers.Authorization || '').replace('Bearer ', '');
 
     // Verify the token and get user
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
@@ -38,6 +34,6 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers: CORS, body: JSON.stringify({ success: true }) };
   } catch(err) {
     console.error('deactivate-account error:', err);
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: err.message }) };
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Could not deactivate account.' }) };
   }
 };

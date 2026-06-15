@@ -47,12 +47,20 @@ exports.handler = async (event) => {
       }
 
       case 'invoice.payment_failed': {
-        const customerId = stripeEvent.data.object.customer;
-        const { data: member, error } = await supabaseAdmin.from('members').select('id').eq('stripe_customer_id', customerId).maybeSingle();
-        if (error) throw new Error(`invoice failed lookup: ${error.message}`);
-        if (member) {
-          await supabaseAdmin.from('members').update({ status: 'expired' }).eq('id', member.id);
-          console.log(`Invoice failed, expired member: ${member.id}`);
+        // Memberships are one-time payments (mode: 'payment'), so a failed
+        // *invoice* should NOT expire an active member — that only applies to
+        // recurring subscriptions. Log for visibility and let
+        // customer.subscription.deleted handle genuine subscription lapses.
+        const inv = stripeEvent.data.object;
+        if (inv.subscription) {
+          const { data: member, error } = await supabaseAdmin.from('members').select('id').eq('stripe_customer_id', inv.customer).maybeSingle();
+          if (error) throw new Error(`invoice failed lookup: ${error.message}`);
+          if (member) {
+            await supabaseAdmin.from('members').update({ status: 'expired' }).eq('id', member.id);
+            console.log(`Subscription invoice failed, expired member: ${member.id}`);
+          }
+        } else {
+          console.warn(`invoice.payment_failed for non-subscription invoice ${inv.id} — ignored`);
         }
         break;
       }
@@ -64,10 +72,13 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: JSON.stringify({ received: true }) };
 
   } catch (err) {
-    // Valid webhook, but our processing failed — log loudly, return 200 to stop Stripe retrying
-    // (retrying could cause double-enrolments). Fix manually using the event ID in Stripe dashboard.
+    // Valid webhook, but our processing failed. Return 500 so Stripe RETRIES —
+    // this is safe because every handler is idempotent (membership_payments has
+    // a UNIQUE payment-intent, enrolments check status, status updates are
+    // repeatable). Retrying recovers from transient DB blips instead of leaving
+    // a customer "paid but not activated".
     console.error(`PROCESSING FAILED [${stripeEvent.type}] [${stripeEvent.id}]: ${err.message}`);
-    return { statusCode: 200, body: JSON.stringify({ received: true, error: err.message }) };
+    return { statusCode: 500, body: JSON.stringify({ received: false, error: 'processing failed' }) };
   }
 };
 
