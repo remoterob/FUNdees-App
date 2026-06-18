@@ -184,6 +184,78 @@ These will immediately appear on the Sessions page.
 
 ---
 
+## STEP 10 — Send Auth Emails via Resend (Password Reset)
+
+The "Forgot password?" flow (`auth.html` → `reset-password.html`) is already coded.
+It calls Supabase's `resetPasswordForEmail()`, which sends the email through
+**Supabase's own email service** — but that is throttled to a handful of messages
+per hour and is intended only for testing. To deliver reliably (and from your own
+verified domain), point Supabase Auth at **Resend's SMTP server**.
+
+This covers *all* auth emails — password reset, signup confirmation, magic links.
+No code changes are needed.
+
+### 10a — Get a Resend API key (skip if you already did this for daily backups)
+
+1. Go to **https://resend.com** → **API Keys** → **Create API Key**
+   (a "Sending access" key is enough). Copy the `re_...` value.
+2. Make sure your domain `spearfishingfundamentals.com` is **verified** in Resend
+   (**Domains** → the domain shows a green *Verified*). The same domain already
+   used by the daily backup will work.
+
+### 10b — Configure SMTP in Supabase
+
+1. Supabase Dashboard → **Project Settings → Authentication → SMTP Settings**
+   (newer dashboards: **Authentication → Emails → SMTP**).
+2. Toggle **"Enable Custom SMTP"** on and enter:
+
+   | Field | Value |
+   |-------|-------|
+   | Host | `smtp.resend.com` |
+   | Port | `465` |
+   | Username | `resend` |
+   | Password | your Resend API key (`re_...`) |
+   | Sender email | `noreply@spearfishingfundamentals.com` |
+   | Sender name | `Spearfishing FUNdamentals` |
+
+   ⚠️ The **sender email's domain must be the verified Resend domain**, or Resend
+   rejects the send. `noreply@` does not need to be a real mailbox.
+3. **Save.** Once custom SMTP is enabled you can also raise the email **rate limit**
+   under the same Authentication settings (the default is conservative).
+
+### 10c — Allow-list the reset redirect URL (the common gotcha)
+
+The reset link redirects back to `/reset-password.html`. Supabase will refuse a
+redirect to any URL that isn't on its allow-list.
+
+1. Supabase Dashboard → **Authentication → URL Configuration**.
+2. Set **Site URL** to your live site (e.g. `https://spearfishingfundamentals.com`).
+3. Under **Redirect URLs**, add every origin the app runs on:
+   ```
+   https://spearfishingfundamentals.com/reset-password.html
+   https://www.spearfishingfundamentals.com/reset-password.html
+   https://fundees.netlify.app/reset-password.html
+   ```
+   (Add `http://localhost:8888/reset-password.html` too if you test with `netlify dev`.)
+
+### 10d — Test it
+
+1. On `/auth.html` click **"Forgot password?"**, enter a real member's email, **Send Reset Link**.
+2. Check the inbox — the email should arrive within seconds, **from**
+   `noreply@spearfishingfundamentals.com`.
+3. Confirm delivery in **Resend → Emails** (the send is logged there).
+4. Click the link → you land on `/reset-password.html` → set a new password → it
+   redirects to sign in. Log in with the new password to confirm.
+
+If the email never arrives, check **Resend → Emails** for a failed/blocked send
+(usually an unverified sender domain), and Supabase → **Logs → Auth** for SMTP errors.
+
+> Optional — branding: the default reset email is plain text from Supabase.
+> To style it, edit **Authentication → Emails → Templates → "Reset Password"** in
+> the Supabase dashboard (HTML + the `{{ .ConfirmationURL }}` variable).
+
+---
+
 ## File Structure Reference
 
 ```

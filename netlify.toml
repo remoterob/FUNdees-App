@@ -21,6 +21,11 @@
 [functions]
   node_bundler = "esbuild"
 
+# Daily data backup → emailed to the club secretary.
+# 18:00 UTC = 06:00 NZST (07:00 during NZDT). Adjust the cron as needed.
+[functions."daily-backup"]
+  schedule = "0 18 * * *"
+
 [[headers]]
   for = "/manifest.json"
   [headers.values]
