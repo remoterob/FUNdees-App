@@ -86,6 +86,29 @@ select.field{cursor:pointer}
   .upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
   .upload-progress { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 0.75rem; overflow: hidden; display: none; }
   .upload-progress-bar { height: 100%; background: var(--surge); border-radius: 2px; width: 0; transition: width 0.3s; }
+
+  /* Contact cell (Members table) */
+  .contact-cell{font-size:0.8rem;color:var(--muted);line-height:1.5}
+  .contact-cell a{text-decoration:none}
+  .contact-cell .c-email a{color:var(--surge)}
+  .contact-cell .c-phone a{color:var(--sand)}
+  .contact-cell .c-ice{font-size:0.72rem;margin-top:0.15rem}
+  .contact-cell .c-ice b{color:var(--coral);font-weight:600;letter-spacing:0.05em}
+
+  /* Mobile-friendly responsive table — rows become stacked cards */
+  @media (max-width: 760px){
+    .wrap{padding:5rem 1rem 3rem}
+    table.responsive thead{display:none}
+    table.responsive, table.responsive tbody, table.responsive tr, table.responsive td{display:block;width:100%}
+    table.responsive tr{margin-bottom:0.85rem;border:1px solid var(--dim);border-radius:4px;background:rgba(13,45,74,0.4);padding:0.35rem 0.6rem}
+    table.responsive tr:hover td{background:none}
+    table.responsive td{border-bottom:1px solid var(--dim);padding:0.6rem 0.2rem;display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+    table.responsive td:last-child{border-bottom:none}
+    table.responsive td::before{content:attr(data-label);flex:0 0 34%;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:600;padding-top:0.15rem}
+    table.responsive td > *{text-align:right;margin-left:auto}
+    table.responsive .contact-cell{text-align:right}
+    table.responsive .td-actions{flex-wrap:wrap;justify-content:flex-end}
+  }
 </style>
 </head>
 <body>
@@ -153,11 +176,11 @@ select.field{cursor:pointer}
           </select>
         </div>
       </div>
-      <table>
+      <table id="members-table" class="responsive">
         <thead>
           <tr>
             <th>Name</th>
-            <th>Email</th>
+            <th>Contact</th>
             <th>Status</th>
             <th>Joined</th>
             <th>Lead</th>
@@ -1181,7 +1204,7 @@ async function deleteImage(name) {
 async function loadMembers() {
   const filter = document.getElementById('member-filter')?.value || 'all';
   let query = sb.from('members')
-    .select('id, full_name, email, status, membership_start, is_qualified_lead, is_admin, deactivated_at')
+    .select('id, full_name, email, phone, emergency_contact, status, membership_start, is_qualified_lead, is_admin, deactivated_at')
     .order('full_name');
   if (filter !== 'all') query = query.eq('status', filter);
 
@@ -1201,13 +1224,22 @@ async function loadMembers() {
       : m.is_qualified_lead ? '<span style="background:rgba(0,207,173,0.12);color:#00CFAD;font-size:0.6rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:2px;text-transform:uppercase">Lead</span>'
       : '<span style="color:rgba(240,237,230,0.2);font-size:0.75rem">—</span>';
 
+    const phoneHref = m.phone ? m.phone.replace(/[^\d+]/g, '') : '';
+    const contact = (m.email || m.phone || m.emergency_contact)
+      ? `<div class="contact-cell">
+           ${m.email ? `<div class="c-email"><a href="mailto:${m.email}">${m.email}</a></div>` : ''}
+           ${m.phone ? `<div class="c-phone"><a href="tel:${phoneHref}">📞 ${m.phone}</a></div>` : ''}
+           ${m.emergency_contact ? `<div class="c-ice"><b>ICE</b> ${m.emergency_contact}</div>` : ''}
+         </div>`
+      : '<span style="color:var(--muted)">—</span>';
+
     return `<tr style="${isDeactivated ? 'opacity:0.55' : ''}">
-      <td><strong>${m.full_name}</strong></td>
-      <td style="font-size:0.8rem;color:var(--muted)">${m.email || '—'}</td>
-      <td><span style="color:${col};font-size:0.78rem;font-weight:600">${statusLabel}</span></td>
-      <td style="font-size:0.8rem;color:var(--muted)">${joined}</td>
-      <td>${leadBadge}</td>
-      <td>
+      <td data-label="Name"><strong>${m.full_name}</strong></td>
+      <td data-label="Contact">${contact}</td>
+      <td data-label="Status"><span style="color:${col};font-size:0.78rem;font-weight:600">${statusLabel}</span></td>
+      <td data-label="Joined" style="font-size:0.8rem;color:var(--muted)">${joined}</td>
+      <td data-label="Role">${leadBadge}</td>
+      <td data-label="Actions">
         <div class="td-actions">
           ${isDeactivated
             ? `<button class="btn-o" onclick="reactivateMember('${m.id}','${m.full_name.replace(/'/g,"\\'")}')">Reactivate</button>`
