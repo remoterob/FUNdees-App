@@ -228,7 +228,7 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
 
       <div class="card" style="margin-bottom:1.25rem">
         <div class="sec-h" style="margin-top:0">Assisted Matching</div>
-        <p class="hint" style="margin-top:0">Pairs unassigned competitors by experience (experienced with newer divers; intermediates together) and honours preferred-partner requests. Review the suggestions, then create the teams — each competitor is emailed.</p>
+        <p class="hint" style="margin-top:0">Pairs unassigned competitors by experience (experienced with newer divers; intermediates together) and honours preferred-partner requests. Creates the teams for you to review — <strong>nobody is emailed automatically</strong>. Edit any team below, then use each team's <strong>Notify</strong> button when you're ready.</p>
         <button class="btn" id="btn-suggest" style="margin-top:1rem" onclick="suggestPairs()">Suggest Pairs</button>
         <div class="msg" id="admin-msg"></div>
         <div id="suggestions" style="margin-top:1.25rem"></div>
@@ -589,7 +589,8 @@ async function loadCook(){
   state.myTeamId = team.id;
   const { data: entries } = await sb.from('sc_cooking_entries').select('*').eq('team_id', team.id);
   const byCat = {}; (entries||[]).forEach(e=>byCat[e.category]=e);
-  gate.innerHTML = `<div class="notice">Submitting dishes for <strong>${team.name}</strong>. One dish per category — judges score Presentation, Flavour, Creativity and Wow.</div>`;
+  state.cookByCat = byCat;
+  gate.innerHTML = `<div class="notice">Submitting dishes for <strong>${team.name}</strong>. One dish per category, each with a photo — judges score Presentation, Flavour, Creativity and Wow.</div>`;
   main.style.display='block';
   document.getElementById('cook-cats').innerHTML = COOK_CATS.map(([cat,label])=>{
     const e = byCat[cat];
@@ -598,22 +599,33 @@ async function loadCook(){
       ${e?.image_url?`<img src="${e.image_url}" style="width:100%;max-height:180px;object-fit:cover;border-radius:4px;margin-bottom:0.6rem">`:''}
       <label class="lbl">Dish name</label>
       <input class="field" id="ck-title-${cat}" value="${(e?.title||'').replace(/"/g,'&quot;')}" placeholder="e.g. Kingfish ceviche">
-      <label class="lbl">Photo ${e?.image_url?'(replace)':'(optional)'}</label>
-      <input class="field" id="ck-photo-${cat}" type="file" accept="image/*" style="padding:0.5rem">
+      <label class="lbl">Photo ${e?.image_url?'(replace — optional)':'(required)'}</label>
+      <input class="field" id="ck-photo-${cat}" type="file" accept="image/*" style="padding:0.5rem" onchange="previewDishPhoto(this,'${cat}')">
+      <img id="ck-preview-${cat}" alt="preview" style="display:none;width:100%;max-height:180px;object-fit:cover;border-radius:4px;margin-top:0.6rem">
       <button class="btn" style="margin-top:0.9rem" onclick="saveDish('${cat}')">${e?'Update':'Submit'} ${label}</button>
       ${e?`<button class="btn btn-o" style="margin-top:0.9rem;margin-left:0.5rem" onclick="deleteDish('${e.id}')">Remove</button>`:''}
       <div class="msg" id="ck-msg-${cat}"></div>
     </div>`;
   }).join('');
 }
+function previewDishPhoto(input, cat){
+  const img = document.getElementById('ck-preview-'+cat);
+  const file = input.files[0];
+  if (!file){ img.style.display='none'; img.src=''; return; }
+  const r = new FileReader();
+  r.onload = e => { img.src = e.target.result; img.style.display='block'; };
+  r.readAsDataURL(file);
+}
 async function saveDish(cat){
   const msg = document.getElementById('ck-msg-'+cat); msg.className='msg';
   const title = document.getElementById('ck-title-'+cat).value.trim();
   const file = document.getElementById('ck-photo-'+cat).files[0];
   if (!title){ msg.className='msg err'; msg.textContent='Enter a dish name.'; return; }
+  const existing = state.cookByCat?.[cat];
+  if (!file && !existing?.image_url){ msg.className='msg err'; msg.textContent='A photo of the dish is required.'; return; }
   try {
     let photo_url;
-    if (file){ try { photo_url = await uploadCatchPhoto(file); } catch(e){ msg.className='msg err'; msg.textContent='Photo upload failed — try again or save without a photo.'; return; } }
+    if (file){ try { photo_url = await uploadCatchPhoto(file); } catch(e){ msg.className='msg err'; msg.textContent='Photo upload failed — please try again.'; return; } }
     await scApi('/.netlify/functions/sc-cook-entry', { category:cat, title, photo_url });
     msg.className='msg ok'; msg.textContent='Saved ✓'; loadCook();
   } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
@@ -804,7 +816,7 @@ function renderSuggestions(){
       ${t.length>2?'<span class="pill pill-draft">trio</span>':''}
       <div style="font-size:0.85rem">${t.map(c=>`${c.name} <span style="color:var(--muted);font-size:0.72rem">(${c.experience||'—'})</span>`).join(' &nbsp;+&nbsp; ')}</div>
     </div>`).join('') +
-    `<button class="btn" onclick="createAllSuggested(this)">Create All Teams &amp; Notify</button>
+    `<button class="btn" onclick="createAllSuggested(this)">Create All Teams</button>
      <button class="btn btn-o" style="margin-left:0.5rem" onclick="state.suggest=[];renderSuggestions()">Discard</button>`;
 }
 
@@ -835,12 +847,11 @@ async function createAllSuggested(btn){
     for (let idx=0; idx<state.suggest.length; idx++){
       const id = await createTeam(names[idx]);
       for (const c of state.suggest[idx]) await addMember(id, c.id);
-      await notifyTeam(id);
     }
     state.suggest = [];
     await loadAdmin();
-    const m=document.getElementById('admin-msg'); m.className='msg ok'; m.textContent='Teams created and competitors notified ✓';
-  } catch(e){ adminErr(e); btn.disabled=false; btn.textContent='Create All Teams & Notify'; }
+    const m=document.getElementById('admin-msg'); m.className='msg ok'; m.textContent='Teams created ✓ — review/edit below, then Notify each team when ready.';
+  } catch(e){ adminErr(e); btn.disabled=false; btn.textContent='Create All Teams'; }
 }
 
 async function addMemberBtn(teamId){

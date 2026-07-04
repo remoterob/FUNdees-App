@@ -52,17 +52,22 @@ exports.handler = async (event) => {
     if (!title) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Dish name is required.' }) };
 
     const { data: existing } = await supabaseAdmin.from('sc_cooking_entries')
-      .select('id').eq('team_id', teamId).eq('category', category).maybeSingle();
+      .select('id, image_url').eq('team_id', teamId).eq('category', category).maybeSingle();
 
     if (existing) {
+      // A photo is required — allow keeping the existing one, but never end up with none.
+      if (!body.photo_url && !existing.image_url)
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'A photo of the dish is required.' }) };
       const patch = { title, submitted_by: member.id };
       if (body.photo_url) patch.image_url = body.photo_url;   // keep old photo if none supplied
       const { data, error } = await supabaseAdmin.from('sc_cooking_entries').update(patch).eq('id', existing.id).select('*').single();
       if (error) throw error;
       return { statusCode: 200, headers, body: JSON.stringify({ entry: data }) };
     } else {
+      if (!body.photo_url)
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'A photo of the dish is required.' }) };
       const { data, error } = await supabaseAdmin.from('sc_cooking_entries')
-        .insert({ competition_id: comp.id, team_id: teamId, category, title, image_url: body.photo_url || null, submitted_by: member.id })
+        .insert({ competition_id: comp.id, team_id: teamId, category, title, image_url: body.photo_url, submitted_by: member.id })
         .select('*').single();
       if (error) throw error;
       return { statusCode: 200, headers, body: JSON.stringify({ entry: data }) };
