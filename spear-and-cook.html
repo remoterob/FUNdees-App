@@ -253,13 +253,14 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script>
 const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 window.sb = sb;
 
-const state = { member:null, competition:null, competitor:null, admin:{competitors:[],teams:[],tms:[]}, suggest:[] };
+const state = { member:null, competition:null, competitor:null, admin:{competitors:[],teams:[],tms:[]}, suggest:[], catchFile:null, dishFiles:{} };
 window.state = state;
 
 function show(id){ ['loading','guest','no-comp','app'].forEach(x => document.getElementById(x).style.display = (x===id?'block':'none')); }
@@ -475,13 +476,19 @@ async function loadCatch(){
   await loadCatchList();
 }
 
-function previewCatchPhoto(input){
+async function previewCatchPhoto(input){
   const img = document.getElementById('c-photo-preview');
-  const file = input.files[0];
-  if (!file){ img.style.display='none'; img.src=''; return; }
-  const r = new FileReader();
-  r.onload = e => { img.src = e.target.result; img.style.display='block'; };
-  r.readAsDataURL(file);
+  const msg = document.getElementById('catch-msg');
+  const raw = input.files[0];
+  state.catchFile = null;
+  if (!raw){ img.style.display='none'; img.src=''; return; }
+  msg.className='msg'; msg.textContent='Processing photo…'; msg.style.display='block'; msg.style.color='var(--muted)';
+  try {
+    const f = await processImage(raw);
+    state.catchFile = f;
+    img.src = URL.createObjectURL(f); img.style.display='block';
+    msg.style.display='none';
+  } catch(e){ img.style.display='none'; msg.className='msg err'; msg.textContent=e.message; }
 }
 
 function catchPreview(){
@@ -516,10 +523,40 @@ async function loadCatchList(){
   }).join('') : '<div class="hint">No catches logged yet.</div>';
 }
 
-async function uploadCatchPhoto(file){
-  const ext = (file.name.split('.').pop() || 'jpg');
-  const path = `Media/spear-cook/${state.competition.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await sb.storage.from('Fundees').upload(path, file, { cacheControl:'3600' });
+// Re-encode any browser-decodable image to a downscaled JPEG (also compresses).
+async function canvasJpeg(file, maxDim=1600, quality=0.85){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('decode')); i.src=url; });
+    let w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) throw new Error('decode');
+    if (Math.max(w,h) > maxDim){ const s = maxDim/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    const blob = await new Promise(r=>c.toBlob(r,'image/jpeg',quality));
+    if (!blob) throw new Error('encode');
+    return new File([blob],'photo.jpg',{type:'image/jpeg'});
+  } finally { URL.revokeObjectURL(url); }
+}
+
+// Always returns a real JPEG File. HEIC (iPhone) is decoded via heic2any when
+// the browser itself can't (e.g. Chrome/Android/desktop).
+async function processImage(file){
+  try { return await canvasJpeg(file); }
+  catch(e){
+    if (window.heic2any){
+      const out = await heic2any({ blob:file, toType:'image/jpeg', quality:0.85 });
+      const blob = Array.isArray(out) ? out[0] : out;
+      try { return await canvasJpeg(new File([blob],'photo.jpg',{type:'image/jpeg'})); }
+      catch(_){ return new File([blob],'photo.jpg',{type:'image/jpeg'}); }
+    }
+    throw new Error('Could not read this image. Please try a different photo (JPEG).');
+  }
+}
+
+async function uploadBlob(file){
+  const path = `Media/spear-cook/${state.competition.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+  const { error } = await sb.storage.from('Fundees').upload(path, file, { cacheControl:'3600', contentType:'image/jpeg' });
   if (error) throw error;
   return sb.storage.from('Fundees').getPublicUrl(path).data.publicUrl;
 }
@@ -529,14 +566,14 @@ async function logCatch(){
   const slug = document.getElementById('c-species').value;
   const kg = Number(document.getElementById('c-weight').value)||0;
   const cm = Number(document.getElementById('c-length').value)||0;
-  const file = document.getElementById('c-photo').files[0];
+  const file = state.catchFile;
   if (!slug || kg<=0){ msg.className='msg err'; msg.textContent='Pick a species and enter a weight.'; return; }
   if (!file){ msg.className='msg err'; msg.textContent='A photo of your catch is required.'; return; }
 
   btn.disabled=true; btn.textContent='Saving…';
   try {
     let photo_url = null;
-    try { photo_url = await uploadCatchPhoto(file); }
+    try { photo_url = await uploadBlob(file); }
     catch(e){ msg.className='msg err'; msg.textContent='Photo upload failed — please try again. ('+e.message+')'; btn.disabled=false; btn.textContent='Log Catch'; return; }
     const { data:{ session } } = await sb.auth.getSession();
     const res = await fetch('/.netlify/functions/sc-log-claim', {
@@ -547,6 +584,7 @@ async function logCatch(){
     msg.className='msg ok'; msg.textContent='Catch logged ✓';
     document.getElementById('c-weight').value=''; document.getElementById('c-length').value='';
     document.getElementById('c-photo').value=''; document.getElementById('c-photo-preview').style.display='none';
+    state.catchFile = null;
     catchPreview();
     await loadCatchList();
   } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
@@ -608,24 +646,30 @@ async function loadCook(){
     </div>`;
   }).join('');
 }
-function previewDishPhoto(input, cat){
+async function previewDishPhoto(input, cat){
   const img = document.getElementById('ck-preview-'+cat);
-  const file = input.files[0];
-  if (!file){ img.style.display='none'; img.src=''; return; }
-  const r = new FileReader();
-  r.onload = e => { img.src = e.target.result; img.style.display='block'; };
-  r.readAsDataURL(file);
+  const msg = document.getElementById('ck-msg-'+cat);
+  const raw = input.files[0];
+  state.dishFiles[cat] = null;
+  if (!raw){ img.style.display='none'; img.src=''; return; }
+  msg.className='msg'; msg.textContent='Processing photo…'; msg.style.display='block'; msg.style.color='var(--muted)';
+  try {
+    const f = await processImage(raw);
+    state.dishFiles[cat] = f;
+    img.src = URL.createObjectURL(f); img.style.display='block';
+    msg.style.display='none';
+  } catch(e){ img.style.display='none'; msg.className='msg err'; msg.textContent=e.message; }
 }
 async function saveDish(cat){
   const msg = document.getElementById('ck-msg-'+cat); msg.className='msg';
   const title = document.getElementById('ck-title-'+cat).value.trim();
-  const file = document.getElementById('ck-photo-'+cat).files[0];
+  const file = state.dishFiles?.[cat];
   if (!title){ msg.className='msg err'; msg.textContent='Enter a dish name.'; return; }
   const existing = state.cookByCat?.[cat];
   if (!file && !existing?.image_url){ msg.className='msg err'; msg.textContent='A photo of the dish is required.'; return; }
   try {
     let photo_url;
-    if (file){ try { photo_url = await uploadCatchPhoto(file); } catch(e){ msg.className='msg err'; msg.textContent='Photo upload failed — please try again.'; return; } }
+    if (file){ try { photo_url = await uploadBlob(file); } catch(e){ msg.className='msg err'; msg.textContent='Photo upload failed — please try again.'; return; } }
     await scApi('/.netlify/functions/sc-cook-entry', { category:cat, title, photo_url });
     msg.className='msg ok'; msg.textContent='Saved ✓'; loadCook();
   } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
