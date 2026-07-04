@@ -54,14 +54,16 @@ exports.handler = async (event) => {
     }
 
     const teamMap = {};
-    (teams || []).forEach(t => { teamMap[t.id] = { team_id: t.id, name: t.name, cook_score: 0, entries: [] }; });
+    (teams || []).forEach(t => { teamMap[t.id] = { team_id: t.id, name: t.name, cook_score: 0, entries: [], _sum: 0, _n: 0 }; });
     for (const e of (entries || [])) {
       const a = agg[e.id] || { sum: 0, count: 0 };
-      const avg = a.count ? a.sum / a.count : 0;
+      const avg = a.count ? a.sum / a.count : 0;   // this dish's average judge total (out of 20)
       const tm = teamMap[e.team_id]; if (!tm) continue;
       tm.entries.push({ category: e.category, title: e.title, avg, count: a.count });
-      tm.cook_score += avg;
+      if (a.count > 0) { tm._sum += avg; tm._n += 1; }
     }
+    // Team cook score = the AVERAGE of its judged dishes, out of 20 (not a sum).
+    Object.values(teamMap).forEach(t => { t.cook_score = t._n ? t._sum / t._n : 0; delete t._sum; delete t._n; });
 
     const result = Object.values(teamMap).sort((x, y) => y.cook_score - x.cook_score);
     return { statusCode: 200, headers, body: JSON.stringify({ visible: true, teams: result }) };

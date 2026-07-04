@@ -761,8 +761,8 @@ async function loadScores(){
       cookVisible = true; cookTeams = d.teams || [];
       cookBox.innerHTML = cookTeams.length
         ? cookTeams.map((t,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem">
-            <div style="display:flex;justify-content:space-between"><span>${i+1}. ${t.name}</span><span style="color:var(--surge);font-weight:600">${t.cook_score.toFixed(1)}</span></div>
-            <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">${t.entries.map(e=>`${e.category}: ${e.avg.toFixed(1)} (${e.count})`).join(' · ')||'no dishes'}</div></div>`).join('')
+            <div style="display:flex;justify-content:space-between"><span>${i+1}. ${t.name}</span><span style="color:var(--surge);font-weight:600">${t.cook_score.toFixed(1)}<span style="color:var(--muted);font-size:0.75rem">/20</span></span></div>
+            <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">${t.entries.map(e=>`${e.category}: ${e.avg.toFixed(1)}/20 (${e.count})`).join(' · ')||'no dishes'}</div></div>`).join('')
         : '<div class="hint">No cook entries yet.</div>';
     }
   } catch(e){ cookBox.innerHTML = `<div class="msg err">${e.message}</div>`; }
