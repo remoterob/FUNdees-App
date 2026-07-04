@@ -1,5 +1,5 @@
 // sw.js — Service Worker for Spearfishing FUNdamentals PWA
-const CACHE = 'fundees-v8';
+const CACHE = 'fundees-v9';
 const STATIC = [
   '/',
   '/index.html',

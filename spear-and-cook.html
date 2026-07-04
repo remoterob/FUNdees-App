@@ -325,6 +325,17 @@ function renderCompetitor(){
     .forEach(k => { const el = document.getElementById('f-'+k); if (el) el.value = r[k] || ''; });
 
   const st = document.getElementById('reg-status');
+  const btnSave = document.getElementById('btn-save');
+  const regClosed = state.competition.registration_open === false;
+
+  if (regClosed && !state.competitor){
+    st.className = 'notice warn';
+    st.innerHTML = '🔒 Registration isn\'t open yet. Check back soon.';
+    if (btnSave) btnSave.disabled = true;
+    return;
+  }
+  if (btnSave) btnSave.disabled = false;
+
   if (!state.competitor){
     st.className = 'notice warn';
     st.innerHTML = '👋 You haven\'t registered yet. Fill in your details below and save to enter.';
@@ -855,6 +866,8 @@ async function loadAdmin(){
 function renderToggles(){
   const c = state.competition;
   document.getElementById('admin-toggles').innerHTML = `
+    <label style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;cursor:pointer">
+      <input type="checkbox" ${c.registration_open?'checked':''} onchange="toggleComp('registration_open',this.checked)" style="width:18px;height:18px;accent-color:var(--surge)"> Registration open <span style="color:var(--muted);font-size:0.75rem">(new competitors can sign up)</span></label>
     <label style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;cursor:pointer">
       <input type="checkbox" ${c.spearing_open?'checked':''} onchange="toggleComp('spearing_open',this.checked)" style="width:18px;height:18px;accent-color:var(--surge)"> Catch logging open</label>
     <label style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;cursor:pointer">

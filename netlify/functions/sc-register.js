@@ -39,11 +39,25 @@ exports.handler = async (event) => {
     // The one active competition
     const { data: comp, error: compErr } = await supabaseAdmin
       .from('sc_competitions')
-      .select('id, status, rules_version')
+      .select('*')
       .eq('status', 'active')
       .maybeSingle();
     if (compErr) throw compErr;
     if (!comp) return { statusCode: 400, headers, body: JSON.stringify({ error: 'No competition is open right now.' }) };
+
+    // Is this member already registered? (existing competitors can always edit)
+    const { data: existing } = await supabaseAdmin
+      .from('sc_competitors')
+      .select('id')
+      .eq('competition_id', comp.id)
+      .eq('member_id', member.id)
+      .maybeSingle();
+
+    // Registration gate — blocks NEW sign-ups when closed. `registration_open`
+    // being undefined (pre-migration) is treated as open for safety.
+    if (comp.registration_open === false && !existing) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Registration is not open yet. Check back soon.' }) };
+    }
 
     // Whitelist the writable fields ('' → null)
     const fields = {};
@@ -62,13 +76,6 @@ exports.handler = async (event) => {
     }
 
     // Upsert the competitor row for (competition, member)
-    const { data: existing } = await supabaseAdmin
-      .from('sc_competitors')
-      .select('id')
-      .eq('competition_id', comp.id)
-      .eq('member_id', member.id)
-      .maybeSingle();
-
     let row;
     if (existing) {
       const { data, error } = await supabaseAdmin
