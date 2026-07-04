@@ -101,6 +101,10 @@ select.field{cursor:pointer}
     table.responsive td > *{text-align:right;margin-left:auto}
     table.responsive .contact-cell{text-align:right}
     table.responsive .td-actions{flex-wrap:wrap;justify-content:flex-end}
+    .top-bar{flex-wrap:wrap;gap:0.6rem}
+    .form-grid{grid-template-columns:1fr}
+    .col-mobile-1{grid-template-columns:1fr !important}
+    .modal{padding:1.5rem}
   }
 </style>
 </head>
@@ -122,7 +126,7 @@ select.field{cursor:pointer}
       <button class="btn-p" onclick="openModal()">+ New Session</button>
     </div>
 
-    <table id="sessions-table">
+    <table id="sessions-table" class="responsive">
       <thead>
         <tr>
           <th>Title</th>
@@ -210,7 +214,7 @@ select.field{cursor:pointer}
 
       <!-- Upload area -->
       <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.5rem;margin-bottom:1.5rem">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+        <div class="col-mobile-1" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
           <div>
             <label style="display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem">Article Title</label>
             <input class="field" id="article-title" type="text" placeholder="e.g. Freediving Safety Guidelines" style="width:100%">
@@ -223,7 +227,7 @@ select.field{cursor:pointer}
         <label style="display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem">Description (optional)</label>
         <input class="field" id="article-desc" type="text" placeholder="Brief description of the article" style="width:100%;margin-bottom:1rem">
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;align-items:start">
+        <div class="col-mobile-1" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;align-items:start">
           <div>
             <label style="display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.35rem">Thumbnail Image (optional)</label>
             <div class="upload-area" style="padding:0.75rem;min-height:unset" id="article-thumb-area">
@@ -253,7 +257,7 @@ select.field{cursor:pointer}
         <div id="article-msg" style="margin-top:0.5rem;font-size:0.8rem"></div>
       </div>
 
-      <table id="articles-table" style="width:100%;border-collapse:collapse;background:rgba(13,45,74,0.4);border-radius:4px;overflow:hidden">
+      <table id="articles-table" class="responsive" style="width:100%;border-collapse:collapse;background:rgba(13,45,74,0.4);border-radius:4px;overflow:hidden">
         <thead>
           <tr>
             <th style="text-align:left;padding:0.75rem 1rem;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--dim);background:rgba(10,22,40,0.4)">Thumb</th>
@@ -310,7 +314,7 @@ select.field{cursor:pointer}
       </div>
 
       <!-- Charts row -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.5rem">
+      <div class="col-mobile-1" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.5rem">
 
         <!-- Views over time -->
         <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.25rem;grid-column:1/3">
@@ -325,7 +329,7 @@ select.field{cursor:pointer}
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
+      <div class="col-mobile-1" style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
         <!-- OS breakdown -->
         <div style="background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:4px;padding:1.25rem">
           <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--surge);margin-bottom:0.75rem">Operating System</div>
@@ -566,14 +570,14 @@ async function loadSessions() {
 
   document.getElementById('sessions-tbody').innerHTML = data.map(s => `
     <tr>
-      <td><strong>${s.title}</strong>${s.location ? `<br><span style="font-size:0.75rem;color:var(--muted)">${s.location}</span>` : ''}</td>
-      <td><span class="badge b-${s.type}">${s.type}</span></td>
-      <td style="font-size:0.8rem">${fmt(s.date_start)}<br>${fmt(s.date_end)}</td>
-      <td>$${Number(s.price).toFixed(2)}</td>
-      <td>${s.enrolled_count} / ${s.capacity}</td>
-      <td><span class="badge b-${s.status}">${s.status.replace('_',' ')}</span></td>
-      <td style="font-size:0.8rem;color:var(--muted)" id="lead-${s.id}">${s.lead_member_id ? '…' : '<span style="opacity:0.4">None</span>'}</td>
-      <td>
+      <td data-label="Session"><strong>${s.title}</strong>${s.location ? `<br><span style="font-size:0.75rem;color:var(--muted)">${s.location}</span>` : ''}</td>
+      <td data-label="Type"><span class="badge b-${s.type}">${s.type}</span></td>
+      <td data-label="Dates" style="font-size:0.8rem">${fmt(s.date_start)}<br>${fmt(s.date_end)}</td>
+      <td data-label="Price">$${Number(s.price).toFixed(2)}</td>
+      <td data-label="Enrolled">${s.enrolled_count} / ${s.capacity}</td>
+      <td data-label="Status"><span class="badge b-${s.status}">${s.status.replace('_',' ')}</span></td>
+      <td data-label="Lead" style="font-size:0.8rem;color:var(--muted)" id="lead-${s.id}">${s.lead_member_id ? '…' : '<span style="opacity:0.4">None</span>'}</td>
+      <td data-label="Actions">
         <div class="td-actions">
           <button class="btn-o" onclick="editSession(${JSON.stringify(s).replace(/"/g,'&quot;')})">Edit</button>
           <button class="btn-o" onclick="viewEnrolments('${s.id}','${s.title.replace(/'/g,"\\'")}')">Enrolments</button>
@@ -735,22 +739,22 @@ async function loadArticles() {
       ? sb.storage.from('Fundees').getPublicUrl('ArticleThumbs/' + a.thumb_filename).data.publicUrl
       : null;
     return `<tr>
-      <td style="padding:0.6rem 1rem;border-bottom:1px solid var(--dim)">
+      <td data-label="Thumb" style="padding:0.6rem 1rem;border-bottom:1px solid var(--dim)">
         ${thumbUrl
           ? `<img src="${thumbUrl}" style="width:56px;height:42px;object-fit:cover;border-radius:3px;display:block">`
           : `<div style="width:56px;height:42px;background:rgba(255,255,255,0.06);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:1.1rem">📄</div>`
         }
       </td>
-      <td style="padding:0.85rem 1rem;font-size:0.85rem;border-bottom:1px solid var(--dim)">
+      <td data-label="Title" style="padding:0.85rem 1rem;font-size:0.85rem;border-bottom:1px solid var(--dim)">
         <strong>${a.title}</strong>
         ${a.description ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">${a.description}</div>` : ''}
       </td>
-      <td style="padding:0.85rem 1rem;font-size:0.82rem;border-bottom:1px solid var(--dim);color:var(--muted)">${a.category || '—'}</td>
-      <td style="padding:0.85rem 1rem;border-bottom:1px solid var(--dim)">
+      <td data-label="Category" style="padding:0.85rem 1rem;font-size:0.82rem;border-bottom:1px solid var(--dim);color:var(--muted)">${a.category || '—'}</td>
+      <td data-label="File" style="padding:0.85rem 1rem;border-bottom:1px solid var(--dim)">
         <a href="${publicUrl}" target="_blank" style="font-size:0.75rem;font-weight:700;color:${extColor};text-decoration:none;background:rgba(255,255,255,0.06);padding:0.2rem 0.5rem;border-radius:2px">${ext}</a>
       </td>
-      <td style="padding:0.85rem 1rem;font-size:0.78rem;color:var(--muted);border-bottom:1px solid var(--dim)">${new Date(a.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}</td>
-      <td style="padding:0.85rem 1rem;border-bottom:1px solid var(--dim)">
+      <td data-label="Uploaded" style="padding:0.85rem 1rem;font-size:0.78rem;color:var(--muted);border-bottom:1px solid var(--dim)">${new Date(a.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}</td>
+      <td data-label="Actions" style="padding:0.85rem 1rem;border-bottom:1px solid var(--dim)">
         <button class="btn-danger" onclick="deleteArticle('${a.id}','${a.filename}','${a.thumb_filename||''}')">Delete</button>
       </td>
     </tr>`;
