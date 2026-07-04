@@ -18,14 +18,7 @@
 :root{--midnight:#0A1628;--deep:#0D2D4A;--surge:#00CFAD;--coral:#FF5C3A;--sand:#F0EDE6;--muted:rgba(240,237,230,0.55);--dim:rgba(255,255,255,0.07);--surge-dim:rgba(0,207,173,0.12)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:#07101e;color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh}
-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:64px;background:rgba(10,22,40,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--dim)}
-.nav-brand{display:flex;align-items:center;gap:0.75rem;text-decoration:none}
-.nav-brand img{height:36px;opacity:0.9}
-.nav-brand-text{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.95rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--sand);line-height:1.1}
-.nav-brand-text span{display:block;font-size:0.55rem;letter-spacing:0.2em;color:var(--surge)}
-.nav-right{display:flex;gap:1rem;align-items:center}
-.nav-link{color:var(--muted);text-decoration:none;font-size:0.82rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:500;cursor:pointer;background:none;border:none;transition:color 0.2s}
-.nav-link:hover{color:var(--surge)}
+/* top nav is provided by nav.js (shared across the app) */
 .wrap{max-width:1100px;margin:0 auto;padding:5rem 2rem 3rem}
 .page-title{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--sand);margin-bottom:0.25rem}
 .page-sub{color:var(--muted);font-size:0.85rem;margin-bottom:2rem}
@@ -112,19 +105,7 @@ select.field{cursor:pointer}
 </style>
 </head>
 <body>
-<nav>
-  <a href="/" class="nav-brand">
-    <img src="/logo-white.png" alt="Logo">
-    <div class="nav-brand-text">Spearfishing<span>Admin</span></div>
-  </a>
-  <div class="nav-right">
-    <a href="/session-plan.html" class="nav-link">Session Plans</a>
-    <a href="/portal.html" class="nav-link">My Account</a>
-    <a href="/sessions.html" class="nav-link">Sessions</a>
-    <a href="/articles.html" class="nav-link">Articles</a>
-    <button class="nav-link" onclick="doLogout()">Log Out</button>
-  </div>
-</nav>
+<!-- top nav injected by nav.js -->
 
 <div class="wrap">
   <div id="access-denied" class="access-denied" style="display:none">
@@ -518,6 +499,7 @@ select.field{cursor:pointer}
 const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+window.sb = sb;
 
 let editingId = null;
 
@@ -536,7 +518,8 @@ async function init() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = '/auth.html'; return; }
 
-  const { data: member } = await sb.from('members').select('is_admin').eq('auth_user_id', session.user.id).maybeSingle();
+  const { data: member } = await sb.from('members').select('is_admin, is_qualified_lead').eq('auth_user_id', session.user.id).maybeSingle();
+  if (window.fnSetAuth) window.fnSetAuth(member || null, false);
   if (!member?.is_admin) {
     document.getElementById('access-denied').style.display = 'block';
     return;
@@ -1378,5 +1361,6 @@ init();
     });
   }
 </script>
+<script src="/nav.js"></script>
 </body>
 </html>

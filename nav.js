@@ -9,7 +9,7 @@ const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
 
 // Pages that manage auth themselves — nav.js stays completely passive here
-const SELF_AUTH_PAGES = ['/', '/index.html', '/portal.html', '/auth.html', '/reset-password.html', '/spear-and-cook.html'];
+const SELF_AUTH_PAGES = ['/', '/index.html', '/portal.html', '/auth.html', '/reset-password.html', '/spear-and-cook.html', '/admin.html'];
 const isSelfAuthPage = SELF_AUTH_PAGES.includes(window.location.pathname);
 
 // ── CSS ───────────────────────────────────────────────────────────────────
