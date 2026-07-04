@@ -186,7 +186,24 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
     <div class="panel" id="panel-cook"><div class="placeholder"><div class="ico">🍳</div><div>Cook-off entries open on competition day.</div></div></div>
     <div class="panel" id="panel-judge"><div class="placeholder"><div class="ico">🎚️</div><div>Judging opens when the cook-off begins.</div></div></div>
     <div class="panel" id="panel-scores"><div class="placeholder"><div class="ico">🏆</div><div>The leaderboard appears here once scoring starts.</div></div></div>
-    <div class="panel" id="panel-admin"><div class="placeholder"><div class="ico">⚙️</div><div>Organiser tools (matching, verifying catches, exports) arrive in the next phases.</div></div></div>
+    <div class="panel" id="panel-admin">
+      <div class="notice" id="admin-stats">Loading…</div>
+
+      <div class="card" style="margin-bottom:1.25rem">
+        <div class="sec-h" style="margin-top:0">Assisted Matching</div>
+        <p class="hint" style="margin-top:0">Pairs unassigned competitors by experience (experienced with newer divers; intermediates together) and honours preferred-partner requests. Review the suggestions, then create the teams — each competitor is emailed.</p>
+        <button class="btn" id="btn-suggest" style="margin-top:1rem" onclick="suggestPairs()">Suggest Pairs</button>
+        <button class="btn btn-o" id="btn-new-team" style="margin-top:1rem;margin-left:0.5rem" onclick="newEmptyTeam()">+ Empty Team</button>
+        <div class="msg" id="admin-msg"></div>
+        <div id="suggestions" style="margin-top:1.25rem"></div>
+      </div>
+
+      <div class="sec-h">Teams</div>
+      <div id="admin-teams"><div class="hint">No teams yet.</div></div>
+
+      <div class="sec-h">Unassigned Competitors</div>
+      <div id="admin-unassigned"><div class="hint">—</div></div>
+    </div>
   </div>
 </div>
 
@@ -197,7 +214,8 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 window.sb = sb;
 
-const state = { member:null, competition:null, competitor:null };
+const state = { member:null, competition:null, competitor:null, admin:{competitors:[],teams:[],tms:[]}, suggest:[] };
+window.state = state;
 
 function show(id){ ['loading','guest','no-comp','app'].forEach(x => document.getElementById(x).style.display = (x===id?'block':'none')); }
 
@@ -388,6 +406,161 @@ async function acceptRules(){
   btn.disabled = false; btn.textContent = 'Accept Rules';
 }
 
+// ── ADMIN: matching + teams ──
+function compName(c){ return c.members?.full_name || '(no name)'; }
+function expRank(e){ return e==='Experienced'?3 : e==='Intermediate'?2 : e==='Beginner'?1 : 0; }
+function adminErr(e){ const m=document.getElementById('admin-msg'); m.className='msg err'; m.textContent=e.message||String(e); }
+
+async function loadAdmin(){
+  if (!state.member?.is_admin) return;
+  const cid = state.competition.id;
+  const [{ data: comps }, { data: teams }, { data: tms }] = await Promise.all([
+    sb.from('sc_competitors').select('id, experience, preferred_partner, paid, member_id, members(full_name)').eq('competition_id', cid),
+    sb.from('sc_teams').select('id, name, boat').eq('competition_id', cid).order('created_at'),
+    sb.from('sc_team_members').select('id, team_id, competitor_id')
+  ]);
+  state.admin = { competitors: comps||[], teams: teams||[], tms: tms||[] };
+  renderAdmin();
+}
+
+function renderAdmin(){
+  const { competitors, teams, tms } = state.admin;
+  const teamIds = new Set(teams.map(t=>t.id));
+  const mems = tms.filter(m=>teamIds.has(m.team_id));
+  const byId = {}; competitors.forEach(c=>byId[c.id]=c);
+  const assigned = new Set(mems.map(m=>m.competitor_id));
+  const unassigned = competitors.filter(c=>!assigned.has(c.id));
+
+  document.getElementById('admin-stats').innerHTML =
+    `Registered <strong>${competitors.length}</strong> · Assigned <strong>${assigned.size}</strong> · Unassigned <strong>${unassigned.length}</strong>`;
+
+  const uOpts = unassigned.map(c=>`<option value="${c.id}">${compName(c)} (${c.experience||'—'})</option>`).join('');
+
+  document.getElementById('admin-teams').innerHTML = teams.length ? teams.map(t=>{
+    const list = mems.filter(m=>m.team_id===t.id);
+    const rows = list.map(m=>{ const c=byId[m.competitor_id];
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--dim)">
+        <span>${c?compName(c):'?'} <span style="color:var(--muted);font-size:0.72rem">(${c?.experience||'—'})${c&&!c.paid?' · <span style="color:var(--coral)">unpaid</span>':''}</span></span>
+        <button class="btn-o" style="padding:0.25rem 0.6rem;font-size:0.7rem;margin:0" onclick="removeMember('${m.id}')">Remove</button></div>`;
+    }).join('') || '<div class="hint">No members</div>';
+    return `<div class="card" style="margin-bottom:0.6rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <strong>${t.name}</strong>
+        <span><button class="btn-o" style="padding:0.3rem 0.7rem;font-size:0.72rem;margin:0" onclick="notifyTeamBtn('${t.id}',this)">Notify</button>
+        <button class="btn-o" style="padding:0.3rem 0.7rem;font-size:0.72rem;margin:0 0 0 0.35rem;border-color:rgba(255,92,58,0.4);color:var(--coral)" onclick="deleteTeam('${t.id}','${(t.name||'').replace(/'/g,"\\'")}')">Delete</button></span>
+      </div>${rows}
+      ${unassigned.length?`<div style="margin-top:0.6rem;display:flex;gap:0.4rem">
+        <select class="field" id="add-${t.id}" style="flex:1">${uOpts}</select>
+        <button class="btn-o" style="margin:0" onclick="addMemberBtn('${t.id}')">Add</button></div>`:''}
+    </div>`;
+  }).join('') : '<div class="hint">No teams yet.</div>';
+
+  document.getElementById('admin-unassigned').innerHTML = unassigned.length ? unassigned.map(c=>
+    `<div style="padding:0.4rem 0;border-bottom:1px solid var(--dim);font-size:0.85rem">${compName(c)}
+      <span style="color:var(--muted);font-size:0.72rem">(${c.experience||'—'})${!c.paid?' · <span style="color:var(--coral)">unpaid</span>':''}${c.preferred_partner?` · wants: ${c.preferred_partner}`:''}</span></div>`
+  ).join('') : '<div class="hint">Everyone is assigned 🎉</div>';
+}
+
+// Experience-balanced pairing, honouring preferred partners first
+function computePairs(pool){
+  const taken = new Set(); const teams = [];
+  for (const a of pool){
+    if (taken.has(a.id)) continue;
+    const pref = (a.preferred_partner||'').trim().toLowerCase();
+    if (!pref) continue;
+    const b = pool.find(x => !taken.has(x.id) && x.id!==a.id && (x.name||'').toLowerCase().includes(pref));
+    if (b){ teams.push([a,b]); taken.add(a.id); taken.add(b.id); }
+  }
+  const rest = pool.filter(x=>!taken.has(x.id)).sort((x,y)=>expRank(x.experience)-expRank(y.experience));
+  let i=0, j=rest.length-1;
+  while(i<j){ teams.push([rest[i], rest[j]]); i++; j--; }
+  if (i===j){ const solo=rest[i]; if (teams.length) teams[0].push(solo); else teams.push([solo]); }
+  return teams;
+}
+
+function suggestPairs(){
+  const { competitors, teams, tms } = state.admin;
+  const teamIds = new Set(teams.map(t=>t.id));
+  const assigned = new Set(tms.filter(m=>teamIds.has(m.team_id)).map(m=>m.competitor_id));
+  const pool = competitors.filter(c=>!assigned.has(c.id))
+    .map(c=>({ id:c.id, name:compName(c), experience:c.experience, preferred_partner:c.preferred_partner }));
+  if (pool.length < 2){ adminErr(new Error('Need at least 2 unassigned competitors to suggest pairs.')); return; }
+  state.suggest = computePairs(pool);
+  document.getElementById('admin-msg').className = 'msg';
+  renderSuggestions();
+}
+
+function renderSuggestions(){
+  const box = document.getElementById('suggestions');
+  if (!state.suggest?.length){ box.innerHTML=''; return; }
+  const base = state.admin.teams.length;
+  box.innerHTML = state.suggest.map((t,idx)=>`
+    <div class="card" style="background:rgba(10,22,40,0.5);margin-bottom:0.5rem;padding:0.85rem 1rem">
+      <input class="field" id="sug-name-${idx}" value="Team ${base+idx+1}" style="max-width:220px;margin-bottom:0.5rem">
+      ${t.length>2?'<span class="pill pill-draft">trio</span>':''}
+      <div style="font-size:0.85rem">${t.map(c=>`${c.name} <span style="color:var(--muted);font-size:0.72rem">(${c.experience||'—'})</span>`).join(' &nbsp;+&nbsp; ')}</div>
+    </div>`).join('') +
+    `<button class="btn" onclick="createAllSuggested(this)">Create All Teams &amp; Notify</button>
+     <button class="btn btn-o" style="margin-left:0.5rem" onclick="state.suggest=[];renderSuggestions()">Discard</button>`;
+}
+
+async function createTeam(name){
+  const { data, error } = await sb.from('sc_teams')
+    .insert({ competition_id: state.competition.id, name, created_by: state.member.id }).select('id').single();
+  if (error) throw error; return data.id;
+}
+async function addMember(teamId, competitorId){
+  const { error } = await sb.from('sc_team_members').insert({ team_id: teamId, competitor_id: competitorId });
+  if (error) throw error;
+}
+async function notifyTeam(teamId){
+  const { data:{ session } } = await sb.auth.getSession();
+  const res = await fetch('/.netlify/functions/sc-notify-team', {
+    method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+    body: JSON.stringify({ team_id: teamId })
+  });
+  if (!res.ok){ const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Notify failed'); }
+}
+
+async function createAllSuggested(btn){
+  const names = state.suggest.map((t,idx)=>{
+    const el = document.getElementById('sug-name-'+idx); return (el?.value||'').trim() || ('Team '+(idx+1));
+  });
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    for (let idx=0; idx<state.suggest.length; idx++){
+      const id = await createTeam(names[idx]);
+      for (const c of state.suggest[idx]) await addMember(id, c.id);
+      await notifyTeam(id);
+    }
+    state.suggest = [];
+    await loadAdmin();
+    const m=document.getElementById('admin-msg'); m.className='msg ok'; m.textContent='Teams created and competitors notified ✓';
+  } catch(e){ adminErr(e); btn.disabled=false; btn.textContent='Create All Teams & Notify'; }
+}
+
+async function addMemberBtn(teamId){
+  const sel = document.getElementById('add-'+teamId); if (!sel?.value) return;
+  try { await addMember(teamId, sel.value); await loadAdmin(); } catch(e){ adminErr(e); }
+}
+async function removeMember(tmId){
+  try { await sb.from('sc_team_members').delete().eq('id', tmId); await loadAdmin(); } catch(e){ adminErr(e); }
+}
+async function deleteTeam(id, name){
+  if (!confirm(`Delete ${name}? Its members become unassigned.`)) return;
+  try { await sb.from('sc_teams').delete().eq('id', id); await loadAdmin(); } catch(e){ adminErr(e); }
+}
+async function newEmptyTeam(){
+  const n = prompt('Team name?', 'Team '+(state.admin.teams.length+1)); if (!n) return;
+  try { await createTeam(n.trim()); await loadAdmin(); } catch(e){ adminErr(e); }
+}
+async function notifyTeamBtn(id, btn){
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try { await notifyTeam(id); btn.textContent = 'Sent ✓'; }
+  catch(e){ btn.textContent = 'Failed'; }
+  setTimeout(()=>{ btn.disabled=false; btn.textContent='Notify'; }, 2500);
+}
+
 // ── tabs ──
 document.getElementById('tabs').addEventListener('click', e => {
   const t = e.target.closest('.tab'); if (!t) return;
@@ -395,6 +568,7 @@ document.getElementById('tabs').addEventListener('click', e => {
   document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
   t.classList.add('active');
   document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+  if (t.dataset.tab === 'admin') loadAdmin();
 });
 
 boot();
