@@ -477,7 +477,7 @@ async function loadCatch(){
   if (!state.species){ const { data: sp } = await sb.from('sc_species').select('*').eq('active', true).order('name'); state.species = sp||[]; }
   document.getElementById('c-species').innerHTML = state.species.map(s=>`<option value="${s.slug}" data-base="${s.base_points}">${s.name}</option>`).join('');
 
-  const closed = !state.competition.spearing_open && !state.member.is_admin;
+  const closed = !state.competition.spearing_open;
   gate.innerHTML = closed
     ? '<div class="notice warn">Catch logging is currently closed by the organisers.</div>'
     : `<div class="notice">Logging for <strong>${state.myTeamName}</strong>. Each catch scores 100 base + 1 point per 100g (max +80).</div>`;
@@ -694,7 +694,7 @@ async function deleteDish(id){
 async function loadJudge(){
   const gate = document.getElementById('judge-gate'), main = document.getElementById('judge-main');
   if (!state.competitor){ gate.innerHTML='<div class="notice warn">Register on the Competitor tab first.</div>'; main.style.display='none'; return; }
-  if (!state.competition.judging_open && !state.member.is_admin){ gate.innerHTML="<div class=\"notice warn\">Judging isn't open yet.</div>"; main.style.display='none'; return; }
+  if (!state.competition.judging_open){ gate.innerHTML="<div class=\"notice warn\">Judging isn't open yet.</div>"; main.style.display='none'; return; }
   const team = await myTeamRow();
   const myTeamId = team?.id || null;
   const [{ data: entries }, { data: myVotes }] = await Promise.all([

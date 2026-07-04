@@ -31,7 +31,7 @@ exports.handler = async (event) => {
 
     const { data: comp } = await supabaseAdmin.from('sc_competitions').select('id, judging_open').eq('status', 'active').maybeSingle();
     if (!comp) return { statusCode: 400, headers, body: JSON.stringify({ error: 'No competition is open right now.' }) };
-    if (!comp.judging_open && !member.is_admin) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Judging is not open.' }) };
+    if (!comp.judging_open) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Judging is not open.' }) };
 
     // Entry + its team
     const { data: entry } = await supabaseAdmin.from('sc_cooking_entries').select('id, team_id, competition_id').eq('id', entry_id).maybeSingle();

@@ -56,7 +56,7 @@ exports.handler = async (event) => {
     }
 
     // ── Create a claim ──
-    if (!comp.spearing_open && !member.is_admin)
+    if (!comp.spearing_open)
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Catch logging is currently closed.' }) };
 
     const { data: tm } = await supabaseAdmin.from('sc_team_members').select('team_id').eq('competitor_id', competitor.id).maybeSingle();
