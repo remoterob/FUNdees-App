@@ -96,6 +96,7 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
 
     <!-- COMPETITOR -->
     <div class="panel active" id="panel-competitor">
+      <div class="notice">📅 Competition day: <strong>21 November 2026</strong> — subject to weather.</div>
       <div class="notice" id="reg-status"></div>
       <div id="entry-actions"></div>
       <div class="card">
@@ -164,6 +165,7 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
 
     <!-- RULES -->
     <div class="panel" id="panel-rules">
+      <div class="notice">📅 Competition day: <strong>21 November 2026</strong> — subject to weather.</div>
       <div class="card">
         <div class="sec-h">Competition Rules</div>
         <div class="rules-body" id="rules-body">Loading rules…</div>
@@ -213,7 +215,9 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
       <div id="judge-main" style="display:none"><div id="judge-list"></div></div>
     </div>
     <div class="panel" id="panel-scores">
-      <div class="sec-h" style="margin-top:0">Catch Leaderboard</div>
+      <div class="sec-h" style="margin-top:0">Overall</div>
+      <div id="scores-overall"><div class="hint">Loading…</div></div>
+      <div class="sec-h">Catch Leaderboard</div>
       <div id="scores-catch"><div class="hint">Loading…</div></div>
       <div class="sec-h">Cook-off Results</div>
       <div id="scores-cook"><div class="hint">Loading…</div></div>
@@ -248,6 +252,13 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
 
       <div class="sec-h">Unassigned Competitors</div>
       <div id="admin-unassigned"><div class="hint">—</div></div>
+
+      <div class="sec-h">Export</div>
+      <div class="card">
+        <button class="btn-o" style="margin:0" onclick="exportCompetitors()">Export Competitors CSV</button>
+        <button class="btn-o" style="margin:0 0 0 0.5rem" onclick="exportResults()">Export Results CSV</button>
+        <div class="msg" id="export-msg"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -721,24 +732,106 @@ async function saveVote(id){
   catch(e){ msg.className='msg err'; msg.textContent=e.message; }
 }
 
-// SCORES — catch leaderboard (open) + cook results (gated)
+// SCORES — overall (combined, gated) + catch (open) + cook (gated)
 async function loadScores(){
   const { data: ct } = await sb.from('sc_team_catch_totals').select('*').eq('competition_id', state.competition.id).order('catch_points', { ascending:false });
-  document.getElementById('scores-catch').innerHTML = (ct&&ct.length)
-    ? ct.map((r,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem;display:flex;justify-content:space-between">
+  const catchArr = ct || [];
+  document.getElementById('scores-catch').innerHTML = catchArr.length
+    ? catchArr.map((r,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem;display:flex;justify-content:space-between">
         <span>${i+1}. ${r.name}</span><span style="color:var(--surge);font-weight:600">${r.catch_points} pts <span style="color:var(--muted);font-size:0.75rem">(${r.catch_count})</span></span></div>`).join('')
     : '<div class="hint">No catches yet.</div>';
 
-  const box = document.getElementById('scores-cook');
+  const cookBox = document.getElementById('scores-cook');
+  let cookTeams = null, cookVisible = false;
   try {
     const d = await scApi('/.netlify/functions/sc-cook-results', {});
-    if (!d.visible){ box.innerHTML = '<div class="notice warn">🔒 Cook results are hidden until the organisers reveal them.</div>'; return; }
-    box.innerHTML = (d.teams && d.teams.length)
-      ? d.teams.map((t,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem">
-          <div style="display:flex;justify-content:space-between"><span>${i+1}. ${t.name}</span><span style="color:var(--surge);font-weight:600">${t.cook_score.toFixed(1)}</span></div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">${t.entries.map(e=>`${e.category}: ${e.avg.toFixed(1)} (${e.count})`).join(' · ')||'no dishes'}</div></div>`).join('')
-      : '<div class="hint">No cook entries yet.</div>';
-  } catch(e){ box.innerHTML = `<div class="msg err">${e.message}</div>`; }
+    if (!d.visible){ cookBox.innerHTML = '<div class="notice warn">🔒 Cook results are hidden until the organisers reveal them.</div>'; }
+    else {
+      cookVisible = true; cookTeams = d.teams || [];
+      cookBox.innerHTML = cookTeams.length
+        ? cookTeams.map((t,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem">
+            <div style="display:flex;justify-content:space-between"><span>${i+1}. ${t.name}</span><span style="color:var(--surge);font-weight:600">${t.cook_score.toFixed(1)}</span></div>
+            <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">${t.entries.map(e=>`${e.category}: ${e.avg.toFixed(1)} (${e.count})`).join(' · ')||'no dishes'}</div></div>`).join('')
+        : '<div class="hint">No cook entries yet.</div>';
+    }
+  } catch(e){ cookBox.innerHTML = `<div class="msg err">${e.message}</div>`; }
+
+  // Overall = normalised catch% + cook% (each vs the top team). Gated on cook reveal.
+  const ov = document.getElementById('scores-overall');
+  if (!cookVisible){
+    ov.innerHTML = '<div class="notice warn">Combined ranking appears once the organisers reveal cook results. Catch standings are shown below.</div>';
+    return;
+  }
+  const catchMap = {}; catchArr.forEach(r=>catchMap[r.team_id] = { name:r.name, val:r.catch_points||0 });
+  const cookMap = {}; cookTeams.forEach(t=>cookMap[t.team_id] = { name:t.name, val:t.cook_score||0 });
+  const catchMax = Math.max(1, ...catchArr.map(r=>r.catch_points||0));
+  const cookMax = Math.max(1, ...cookTeams.map(t=>t.cook_score||0));
+  const ids = new Set([...Object.keys(catchMap), ...Object.keys(cookMap)]);
+  const rows = [...ids].map(id=>{
+    const name = catchMap[id]?.name || cookMap[id]?.name || '';
+    const cp = (catchMap[id]?.val||0)/catchMax*100;
+    const kp = (cookMap[id]?.val||0)/cookMax*100;
+    return { name, cp, kp, overall: cp+kp };
+  }).sort((a,b)=>b.overall-a.overall);
+  ov.innerHTML = rows.length
+    ? rows.map((r,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem">
+        <div style="display:flex;justify-content:space-between"><span>${i+1}. ${r.name}</span><span style="color:var(--surge);font-weight:600">${r.overall.toFixed(0)}</span></div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">catch ${r.cp.toFixed(0)}% · cook ${r.kp.toFixed(0)}%</div></div>`).join('')
+    : '<div class="hint">No scores yet.</div>';
+}
+
+// ── CSV EXPORT (admin) ──
+function toCsv(headers, rows){
+  const esc = v => { v = (v==null?'':String(v)); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  return [headers.join(','), ...rows.map(r=>r.map(esc).join(','))].join('\r\n');
+}
+function downloadCsv(name, csv){
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function exportCompetitors(){
+  const msg = document.getElementById('export-msg'); msg.className='msg';
+  try {
+    const cid = state.competition.id;
+    const [{ data: comps }, { data: teams }, { data: tms }] = await Promise.all([
+      sb.from('sc_competitors').select('id, experience, preferred_partner, age_group, gender, club, safety_contact, safety_phone, paid, members(full_name, email, phone)').eq('competition_id', cid),
+      sb.from('sc_teams').select('id, name').eq('competition_id', cid),
+      sb.from('sc_team_members').select('team_id, competitor_id')
+    ]);
+    const teamName = {}; (teams||[]).forEach(t=>teamName[t.id]=t.name);
+    const teamOf = {}; (tms||[]).forEach(m=>teamOf[m.competitor_id]=teamName[m.team_id]||'');
+    const headers = ['Name','Email','Phone','Experience','Age Group','Gender','Club','Preferred Partner','Safety Contact','Safety Phone','Paid','Team'];
+    const rows = (comps||[]).map(c=>[c.members?.full_name||'', c.members?.email||'', c.members?.phone||'', c.experience||'', c.age_group||'', c.gender||'', c.club||'', c.preferred_partner||'', c.safety_contact||'', c.safety_phone||'', c.paid?'yes':'no', teamOf[c.id]||'']);
+    downloadCsv('spear-cook-competitors.csv', toCsv(headers, rows));
+    msg.className='msg ok'; msg.textContent=`Exported ${rows.length} competitors ✓`;
+  } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
+}
+
+async function exportResults(){
+  const msg = document.getElementById('export-msg'); msg.className='msg';
+  try {
+    const cid = state.competition.id;
+    const { data: ct } = await sb.from('sc_team_catch_totals').select('*').eq('competition_id', cid);
+    const catchMap = {}; (ct||[]).forEach(r=>catchMap[r.team_id]={ name:r.name, val:r.catch_points||0, count:r.catch_count||0 });
+    let cookMap = {};
+    try { const d = await scApi('/.netlify/functions/sc-cook-results', {}); if (d.visible) (d.teams||[]).forEach(t=>cookMap[t.team_id]={ name:t.name, val:t.cook_score||0 }); } catch(_){}
+    const ids = new Set([...Object.keys(catchMap), ...Object.keys(cookMap)]);
+    const catchMax = Math.max(1, ...Object.values(catchMap).map(x=>x.val));
+    const cookMax = Math.max(1, ...Object.values(cookMap).map(x=>x.val));
+    const headers = ['Team','Catch Points','Catch Count','Cook Score','Catch %','Cook %','Overall %'];
+    const rows = [...ids].map(id=>{
+      const c = catchMap[id]||{ name: cookMap[id]?.name||'', val:0, count:0 };
+      const ck = cookMap[id]?.val||0;
+      const cp = c.val/catchMax*100, kp = ck/cookMax*100;
+      return { name:c.name, catch:c.val, count:c.count, cook:ck, cp, kp, overall:cp+kp };
+    }).sort((a,b)=>b.overall-a.overall)
+      .map(r=>[r.name, r.catch, r.count, r.cook.toFixed(1), r.cp.toFixed(1), r.kp.toFixed(1), r.overall.toFixed(1)]);
+    downloadCsv('spear-cook-results.csv', toCsv(headers, rows));
+    msg.className='msg ok'; msg.textContent=`Exported ${rows.length} teams ✓`;
+  } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
 }
 
 // ── ADMIN: matching + teams ──
