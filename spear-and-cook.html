@@ -182,12 +182,37 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
     </div>
 
     <!-- PLACEHOLDERS -->
-    <div class="panel" id="panel-catch"><div class="placeholder"><div class="ico">🐟</div><div>Catch logging opens once the competition is underway.</div></div></div>
+    <div class="panel" id="panel-catch">
+      <div id="catch-gate"></div>
+      <div id="catch-main" style="display:none">
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="sec-h" style="margin-top:0">Log a Catch</div>
+          <label class="lbl">Species</label>
+          <select class="field" id="c-species" onchange="catchPreview()"></select>
+          <div class="grid2">
+            <div><label class="lbl">Weight (kg)</label><input class="field" id="c-weight" type="number" min="0" step="0.01" placeholder="e.g. 2.4" oninput="catchPreview()"></div>
+            <div><label class="lbl">Length (cm, optional)</label><input class="field" id="c-length" type="number" min="0" step="0.1" placeholder="e.g. 45"></div>
+          </div>
+          <label class="lbl">Photo (optional)</label>
+          <input class="field" id="c-photo" type="file" accept="image/*" style="padding:0.5rem">
+          <div class="notice" id="c-preview" style="margin-top:1rem">Select a species and weight to see the points.</div>
+          <button class="btn" id="btn-log" onclick="logCatch()">Log Catch</button>
+          <div class="msg" id="catch-msg"></div>
+        </div>
+        <div class="sec-h">Your Team's Catches — <span id="catch-total">0</span> pts</div>
+        <div id="catch-list"><div class="hint">No catches logged yet.</div></div>
+      </div>
+    </div>
     <div class="panel" id="panel-cook"><div class="placeholder"><div class="ico">🍳</div><div>Cook-off entries open on competition day.</div></div></div>
     <div class="panel" id="panel-judge"><div class="placeholder"><div class="ico">🎚️</div><div>Judging opens when the cook-off begins.</div></div></div>
     <div class="panel" id="panel-scores"><div class="placeholder"><div class="ico">🏆</div><div>The leaderboard appears here once scoring starts.</div></div></div>
     <div class="panel" id="panel-admin">
       <div class="notice" id="admin-stats">Loading…</div>
+
+      <div class="card" style="margin-bottom:1.25rem">
+        <div class="sec-h" style="margin-top:0">Competition Controls</div>
+        <div id="admin-toggles"></div>
+      </div>
 
       <div class="card" style="margin-bottom:1.25rem">
         <div class="sec-h" style="margin-top:0">Assisted Matching</div>
@@ -406,6 +431,108 @@ async function acceptRules(){
   btn.disabled = false; btn.textContent = 'Accept Rules';
 }
 
+// ── CATCH ──
+function scPoints(base, g){ return (base||0) + Math.min(80, Math.max(0, Math.floor((g||0)/100))); }
+
+async function loadCatch(){
+  const gate = document.getElementById('catch-gate'), main = document.getElementById('catch-main');
+  if (!state.competitor){ gate.innerHTML = '<div class="notice warn">Register on the Competitor tab first.</div>'; main.style.display='none'; return; }
+
+  const { data: tm } = await sb.from('sc_team_members').select('team_id, sc_teams(name)').eq('competitor_id', state.competitor.id).maybeSingle();
+  if (!tm?.team_id){ gate.innerHTML = "<div class=\"notice warn\">You'll be able to log catches once you've been assigned to a team.</div>"; main.style.display='none'; return; }
+  state.myTeamId = tm.team_id; state.myTeamName = tm.sc_teams?.name || '';
+
+  if (!state.species){ const { data: sp } = await sb.from('sc_species').select('*').eq('active', true).order('name'); state.species = sp||[]; }
+  document.getElementById('c-species').innerHTML = state.species.map(s=>`<option value="${s.slug}" data-base="${s.base_points}">${s.name}</option>`).join('');
+
+  const closed = !state.competition.spearing_open && !state.member.is_admin;
+  gate.innerHTML = closed
+    ? '<div class="notice warn">Catch logging is currently closed by the organisers.</div>'
+    : `<div class="notice">Logging for <strong>${state.myTeamName}</strong>. Each catch scores 100 base + 1 point per 100g (max +80).</div>`;
+  main.style.display = 'block';
+  document.getElementById('btn-log').disabled = closed;
+  catchPreview();
+  await loadCatchList();
+}
+
+function catchPreview(){
+  const sel = document.getElementById('c-species'); const opt = sel.options[sel.selectedIndex];
+  const base = opt ? Number(opt.dataset.base)||0 : 0;
+  const kg = Number(document.getElementById('c-weight').value)||0;
+  const g = Math.floor(kg*1000);
+  const box = document.getElementById('c-preview');
+  box.innerHTML = kg > 0
+    ? `<strong>${opt?.text||''}</strong> at ${kg} kg → <strong style="color:var(--surge)">${scPoints(base,g)} pts</strong> <span style="color:var(--muted);font-size:0.8rem">(base ${base} + ${Math.min(80,Math.floor(g/100))} weight)</span>`
+    : 'Enter a weight to see the points.';
+}
+
+async function loadCatchList(){
+  const { data } = await sb.from('sc_claims')
+    .select('*, sc_competitors(members(full_name))')
+    .eq('team_id', state.myTeamId).eq('deleted', false).order('created_at', { ascending:false });
+  const rows = data||[];
+  document.getElementById('catch-total').textContent = rows.reduce((s,r)=>s+(r.points||0),0);
+  document.getElementById('catch-list').innerHTML = rows.length ? rows.map(r=>{
+    const who = r.sc_competitors?.members?.full_name || '';
+    const canDel = (r.competitor_id===state.competitor.id && !r.verified) || state.member.is_admin;
+    return `<div class="card" style="margin-bottom:0.5rem;padding:0.7rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:1rem">
+      <div style="display:flex;gap:0.75rem;align-items:center">
+        ${r.photo_url?`<img src="${r.photo_url}" style="width:46px;height:46px;object-fit:cover;border-radius:3px">`:''}
+        <div><strong>${r.species}</strong> <span style="color:var(--muted);font-size:0.78rem">${(r.weight_g/1000).toFixed(2)} kg${r.length_mm?` · ${(r.length_mm/10).toFixed(0)} cm`:''}</span>
+          <div style="font-size:0.72rem;color:var(--muted)">${who}${r.verified?' · <span style="color:var(--surge)">verified</span>':''}</div></div>
+      </div>
+      <div style="text-align:right"><div style="color:var(--surge);font-weight:600">${r.points} pts</div>
+        ${canDel?`<button class="btn-o" style="padding:0.2rem 0.55rem;font-size:0.68rem;margin:0.3rem 0 0" onclick="deleteCatch('${r.id}')">Remove</button>`:''}</div>
+    </div>`;
+  }).join('') : '<div class="hint">No catches logged yet.</div>';
+}
+
+async function uploadCatchPhoto(file){
+  const ext = (file.name.split('.').pop() || 'jpg');
+  const path = `SpearCook/${state.competition.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await sb.storage.from('Fundees').upload(path, file, { cacheControl:'3600' });
+  if (error) throw error;
+  return sb.storage.from('Fundees').getPublicUrl(path).data.publicUrl;
+}
+
+async function logCatch(){
+  const btn = document.getElementById('btn-log'), msg = document.getElementById('catch-msg'); msg.className='msg';
+  const slug = document.getElementById('c-species').value;
+  const kg = Number(document.getElementById('c-weight').value)||0;
+  const cm = Number(document.getElementById('c-length').value)||0;
+  const file = document.getElementById('c-photo').files[0];
+  if (!slug || kg<=0){ msg.className='msg err'; msg.textContent='Pick a species and enter a weight.'; return; }
+
+  btn.disabled=true; btn.textContent='Saving…';
+  try {
+    let photo_url = null;
+    if (file){
+      try { photo_url = await uploadCatchPhoto(file); }
+      catch(e){ msg.className='msg err'; msg.textContent='Photo upload failed — try again or log without a photo. ('+e.message+')'; btn.disabled=false; btn.textContent='Log Catch'; return; }
+    }
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch('/.netlify/functions/sc-log-claim', {
+      method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify({ species_slug:slug, weight_g:Math.floor(kg*1000), length_mm: cm?Math.floor(cm*10):null, photo_url })
+    });
+    const d = await res.json(); if (!res.ok) throw new Error(d.error||'Failed');
+    msg.className='msg ok'; msg.textContent='Catch logged ✓';
+    document.getElementById('c-weight').value=''; document.getElementById('c-length').value=''; document.getElementById('c-photo').value=''; catchPreview();
+    await loadCatchList();
+  } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
+  btn.disabled=false; btn.textContent='Log Catch';
+}
+
+async function deleteCatch(id){
+  if (!confirm('Remove this catch?')) return;
+  const { data:{ session } } = await sb.auth.getSession();
+  const res = await fetch('/.netlify/functions/sc-log-claim', {
+    method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+    body: JSON.stringify({ action:'delete', claim_id:id })
+  });
+  if (res.ok) loadCatchList(); else { const d = await res.json().catch(()=>({})); alert(d.error||'Failed'); }
+}
+
 // ── ADMIN: matching + teams ──
 function compName(c){ return c.members?.full_name || '(no name)'; }
 function expRank(e){ return e==='Experienced'?3 : e==='Intermediate'?2 : e==='Beginner'?1 : 0; }
@@ -421,6 +548,22 @@ async function loadAdmin(){
   ]);
   state.admin = { competitors: comps||[], teams: teams||[], tms: tms||[] };
   renderAdmin();
+  renderToggles();
+}
+
+function renderToggles(){
+  const c = state.competition;
+  document.getElementById('admin-toggles').innerHTML = `
+    <label style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;cursor:pointer">
+      <input type="checkbox" ${c.spearing_open?'checked':''} onchange="toggleComp('spearing_open',this.checked)" style="width:18px;height:18px;accent-color:var(--surge)"> Catch logging open</label>
+    <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer">
+      <input type="checkbox" ${c.judging_open?'checked':''} onchange="toggleComp('judging_open',this.checked)" style="width:18px;height:18px;accent-color:var(--surge)"> Cook judging open</label>`;
+}
+
+async function toggleComp(field, val){
+  const { error } = await sb.from('sc_competitions').update({ [field]: val }).eq('id', state.competition.id);
+  if (error){ adminErr(error); renderToggles(); return; }
+  state.competition[field] = val;
 }
 
 function renderAdmin(){
@@ -569,6 +712,7 @@ document.getElementById('tabs').addEventListener('click', e => {
   t.classList.add('active');
   document.getElementById('panel-' + t.dataset.tab).classList.add('active');
   if (t.dataset.tab === 'admin') loadAdmin();
+  if (t.dataset.tab === 'catch') loadCatch();
 });
 
 boot();
