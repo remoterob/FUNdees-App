@@ -203,9 +203,20 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
         <div id="catch-list"><div class="hint">No catches logged yet.</div></div>
       </div>
     </div>
-    <div class="panel" id="panel-cook"><div class="placeholder"><div class="ico">🍳</div><div>Cook-off entries open on competition day.</div></div></div>
-    <div class="panel" id="panel-judge"><div class="placeholder"><div class="ico">🎚️</div><div>Judging opens when the cook-off begins.</div></div></div>
-    <div class="panel" id="panel-scores"><div class="placeholder"><div class="ico">🏆</div><div>The leaderboard appears here once scoring starts.</div></div></div>
+    <div class="panel" id="panel-cook">
+      <div id="cook-gate"></div>
+      <div id="cook-main" style="display:none"><div id="cook-cats"></div></div>
+    </div>
+    <div class="panel" id="panel-judge">
+      <div id="judge-gate"></div>
+      <div id="judge-main" style="display:none"><div id="judge-list"></div></div>
+    </div>
+    <div class="panel" id="panel-scores">
+      <div class="sec-h" style="margin-top:0">Catch Leaderboard</div>
+      <div id="scores-catch"><div class="hint">Loading…</div></div>
+      <div class="sec-h">Cook-off Results</div>
+      <div id="scores-cook"><div class="hint">Loading…</div></div>
+    </div>
     <div class="panel" id="panel-admin">
       <div class="notice" id="admin-stats">Loading…</div>
 
@@ -541,6 +552,128 @@ async function deleteCatch(id){
   if (res.ok) loadCatchList(); else { const d = await res.json().catch(()=>({})); alert(d.error||'Failed'); }
 }
 
+// ── COOK / JUDGE / SCORES ──
+const COOK_CATS = [['cooked','Cooked'],['raw','Raw'],['whole','Whole']];
+const COOK_CRIT = [['presentation','Presentation'],['flavour','Flavour'],['creativity','Creativity'],['wow','Wow']];
+
+async function myTeamRow(){
+  if (!state.competitor) return null;
+  const { data: tm } = await sb.from('sc_team_members').select('team_id, sc_teams(name)').eq('competitor_id', state.competitor.id).maybeSingle();
+  return tm?.team_id ? { id: tm.team_id, name: tm.sc_teams?.name || '' } : null;
+}
+async function scApi(url, payload){
+  const { data:{ session } } = await sb.auth.getSession();
+  const res = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` }, body: JSON.stringify(payload||{}) });
+  const d = await res.json().catch(()=>({}));
+  if (!res.ok) throw new Error(d.error || 'Something went wrong');
+  return d;
+}
+
+// COOK — submit your team's dishes
+async function loadCook(){
+  const gate = document.getElementById('cook-gate'), main = document.getElementById('cook-main');
+  if (!state.competitor){ gate.innerHTML='<div class="notice warn">Register on the Competitor tab first.</div>'; main.style.display='none'; return; }
+  const team = await myTeamRow();
+  if (!team){ gate.innerHTML="<div class=\"notice warn\">You'll submit dishes once you've been assigned to a team.</div>"; main.style.display='none'; return; }
+  state.myTeamId = team.id;
+  const { data: entries } = await sb.from('sc_cooking_entries').select('*').eq('team_id', team.id);
+  const byCat = {}; (entries||[]).forEach(e=>byCat[e.category]=e);
+  gate.innerHTML = `<div class="notice">Submitting dishes for <strong>${team.name}</strong>. One dish per category — judges score Presentation, Flavour, Creativity and Wow.</div>`;
+  main.style.display='block';
+  document.getElementById('cook-cats').innerHTML = COOK_CATS.map(([cat,label])=>{
+    const e = byCat[cat];
+    return `<div class="card" style="margin-bottom:0.75rem">
+      <div class="sec-h" style="margin-top:0">${label}</div>
+      ${e?.image_url?`<img src="${e.image_url}" style="width:100%;max-height:180px;object-fit:cover;border-radius:4px;margin-bottom:0.6rem">`:''}
+      <label class="lbl">Dish name</label>
+      <input class="field" id="ck-title-${cat}" value="${(e?.title||'').replace(/"/g,'&quot;')}" placeholder="e.g. Kingfish ceviche">
+      <label class="lbl">Photo ${e?.image_url?'(replace)':'(optional)'}</label>
+      <input class="field" id="ck-photo-${cat}" type="file" accept="image/*" style="padding:0.5rem">
+      <button class="btn" style="margin-top:0.9rem" onclick="saveDish('${cat}')">${e?'Update':'Submit'} ${label}</button>
+      ${e?`<button class="btn btn-o" style="margin-top:0.9rem;margin-left:0.5rem" onclick="deleteDish('${e.id}')">Remove</button>`:''}
+      <div class="msg" id="ck-msg-${cat}"></div>
+    </div>`;
+  }).join('');
+}
+async function saveDish(cat){
+  const msg = document.getElementById('ck-msg-'+cat); msg.className='msg';
+  const title = document.getElementById('ck-title-'+cat).value.trim();
+  const file = document.getElementById('ck-photo-'+cat).files[0];
+  if (!title){ msg.className='msg err'; msg.textContent='Enter a dish name.'; return; }
+  try {
+    let photo_url;
+    if (file){ try { photo_url = await uploadCatchPhoto(file); } catch(e){ msg.className='msg err'; msg.textContent='Photo upload failed — try again or save without a photo.'; return; } }
+    await scApi('/.netlify/functions/sc-cook-entry', { category:cat, title, photo_url });
+    msg.className='msg ok'; msg.textContent='Saved ✓'; loadCook();
+  } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
+}
+async function deleteDish(id){
+  if (!confirm('Remove this dish?')) return;
+  try { await scApi('/.netlify/functions/sc-cook-entry', { action:'delete', entry_id:id }); loadCook(); } catch(e){ alert(e.message); }
+}
+
+// JUDGE — score other teams' dishes (no aggregates shown)
+async function loadJudge(){
+  const gate = document.getElementById('judge-gate'), main = document.getElementById('judge-main');
+  if (!state.competitor){ gate.innerHTML='<div class="notice warn">Register on the Competitor tab first.</div>'; main.style.display='none'; return; }
+  if (!state.competition.judging_open && !state.member.is_admin){ gate.innerHTML="<div class=\"notice warn\">Judging isn't open yet.</div>"; main.style.display='none'; return; }
+  const team = await myTeamRow();
+  const myTeamId = team?.id || null;
+  const [{ data: entries }, { data: myVotes }] = await Promise.all([
+    sb.from('sc_cooking_entries').select('*, sc_teams(name)').eq('competition_id', state.competition.id),
+    sb.from('sc_cooking_votes').select('*').eq('voter_id', state.member.id)
+  ]);
+  const voteBy = {}; (myVotes||[]).forEach(v=>voteBy[v.entry_id]=v);
+  const others = (entries||[]).filter(e=>e.team_id!==myTeamId);
+  gate.innerHTML = `<div class="notice">Score each dish 1–5 on Presentation, Flavour, Creativity and Wow. You can't see anyone else's scores or the totals — judge honestly.</div>`;
+  main.style.display='block';
+  if (!others.length){ document.getElementById('judge-list').innerHTML='<div class="hint">No dishes to judge yet.</div>'; return; }
+  const byTeam = {};
+  others.forEach(e=>{ (byTeam[e.team_id] = byTeam[e.team_id] || { name:e.sc_teams?.name||'Team', items:[] }).items.push(e); });
+  document.getElementById('judge-list').innerHTML = Object.values(byTeam).map(t=>`
+    <div class="card" style="margin-bottom:0.75rem">
+      <div class="sec-h" style="margin-top:0">${t.name}</div>
+      ${t.items.map(e=>{ const v=voteBy[e.id]||{}; const voted=!!v.entry_id;
+        return `<div style="border-top:1px solid var(--dim);padding-top:0.75rem;margin-top:0.75rem">
+          <div style="font-weight:600;margin-bottom:0.5rem">${(e.category||'').toUpperCase()} — ${e.title||'(untitled)'} ${voted?'<span class="pill pill-paid">voted</span>':''}</div>
+          ${e.image_url?`<img src="${e.image_url}" style="width:100%;max-height:160px;object-fit:cover;border-radius:4px;margin-bottom:0.6rem">`:''}
+          <div class="grid2">
+            ${COOK_CRIT.map(([k,lbl])=>`<div><label class="lbl">${lbl}</label>
+              <select class="field" id="jv-${e.id}-${k}">${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${(+(v[k]||0)===n)?'selected':''}>${n||'—'}</option>`).join('')}</select></div>`).join('')}
+          </div>
+          <button class="btn" style="margin-top:0.8rem" onclick="saveVote('${e.id}')">${voted?'Update Vote':'Submit Vote'}</button>
+          <div class="msg" id="jv-msg-${e.id}"></div>
+        </div>`; }).join('')}
+    </div>`).join('');
+}
+async function saveVote(id){
+  const msg = document.getElementById('jv-msg-'+id); msg.className='msg';
+  const payload = { entry_id:id };
+  COOK_CRIT.forEach(([k])=>payload[k]=Number(document.getElementById(`jv-${id}-${k}`).value)||0);
+  try { await scApi('/.netlify/functions/sc-cook-vote', payload); msg.className='msg ok'; msg.textContent='Vote saved ✓'; loadJudge(); }
+  catch(e){ msg.className='msg err'; msg.textContent=e.message; }
+}
+
+// SCORES — catch leaderboard (open) + cook results (gated)
+async function loadScores(){
+  const { data: ct } = await sb.from('sc_team_catch_totals').select('*').eq('competition_id', state.competition.id).order('catch_points', { ascending:false });
+  document.getElementById('scores-catch').innerHTML = (ct&&ct.length)
+    ? ct.map((r,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem;display:flex;justify-content:space-between">
+        <span>${i+1}. ${r.name}</span><span style="color:var(--surge);font-weight:600">${r.catch_points} pts <span style="color:var(--muted);font-size:0.75rem">(${r.catch_count})</span></span></div>`).join('')
+    : '<div class="hint">No catches yet.</div>';
+
+  const box = document.getElementById('scores-cook');
+  try {
+    const d = await scApi('/.netlify/functions/sc-cook-results', {});
+    if (!d.visible){ box.innerHTML = '<div class="notice warn">🔒 Cook results are hidden until the organisers reveal them.</div>'; return; }
+    box.innerHTML = (d.teams && d.teams.length)
+      ? d.teams.map((t,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem">
+          <div style="display:flex;justify-content:space-between"><span>${i+1}. ${t.name}</span><span style="color:var(--surge);font-weight:600">${t.cook_score.toFixed(1)}</span></div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">${t.entries.map(e=>`${e.category}: ${e.avg.toFixed(1)} (${e.count})`).join(' · ')||'no dishes'}</div></div>`).join('')
+      : '<div class="hint">No cook entries yet.</div>';
+  } catch(e){ box.innerHTML = `<div class="msg err">${e.message}</div>`; }
+}
+
 // ── ADMIN: matching + teams ──
 function compName(c){ return c.members?.full_name || '(no name)'; }
 function expRank(e){ return e==='Experienced'?3 : e==='Intermediate'?2 : e==='Beginner'?1 : 0; }
@@ -564,8 +697,10 @@ function renderToggles(){
   document.getElementById('admin-toggles').innerHTML = `
     <label style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;cursor:pointer">
       <input type="checkbox" ${c.spearing_open?'checked':''} onchange="toggleComp('spearing_open',this.checked)" style="width:18px;height:18px;accent-color:var(--surge)"> Catch logging open</label>
+    <label style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;cursor:pointer">
+      <input type="checkbox" ${c.judging_open?'checked':''} onchange="toggleComp('judging_open',this.checked)" style="width:18px;height:18px;accent-color:var(--surge)"> Cook judging open</label>
     <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer">
-      <input type="checkbox" ${c.judging_open?'checked':''} onchange="toggleComp('judging_open',this.checked)" style="width:18px;height:18px;accent-color:var(--surge)"> Cook judging open</label>`;
+      <input type="checkbox" ${c.cook_results_visible?'checked':''} onchange="toggleComp('cook_results_visible',this.checked)" style="width:18px;height:18px;accent-color:var(--surge)"> Reveal cook results <span style="color:var(--muted);font-size:0.75rem">(scores visible to everyone — keep OFF while judging)</span></label>`;
 }
 
 async function toggleComp(field, val){
@@ -756,6 +891,9 @@ document.getElementById('tabs').addEventListener('click', e => {
   document.getElementById('panel-' + t.dataset.tab).classList.add('active');
   if (t.dataset.tab === 'admin') loadAdmin();
   if (t.dataset.tab === 'catch') loadCatch();
+  if (t.dataset.tab === 'cook') loadCook();
+  if (t.dataset.tab === 'judge') loadJudge();
+  if (t.dataset.tab === 'scores') loadScores();
 });
 
 boot();
