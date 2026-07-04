@@ -97,6 +97,7 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
     <!-- COMPETITOR -->
     <div class="panel active" id="panel-competitor">
       <div class="notice" id="reg-status"></div>
+      <div id="entry-actions"></div>
       <div class="card">
         <div class="sec-h">Your Details</div>
         <div class="grid2">
@@ -220,8 +221,16 @@ async function boot(){
 
   renderComp();
   renderCompetitor();
+  renderEntry();
   renderRules();
   show('app');
+
+  // Return from Stripe entry checkout
+  const params = new URLSearchParams(location.search);
+  if (params.get('entry') === 'success') {
+    const s = document.getElementById('reg-status');
+    s.className = 'notice'; s.innerHTML = '✅ Entry payment received — thanks! You\'re all set.';
+  }
 }
 
 function renderComp(){
@@ -252,6 +261,68 @@ function renderCompetitor(){
     st.className = 'notice';
     st.innerHTML = `✅ You're registered for <strong>${state.competition.name}</strong>. ${paidBit}` +
       (fee > 0 && !r.paid ? '<br><span style="font-size:0.8rem;color:var(--muted)">Entry payment opens shortly.</span>' : '');
+  }
+}
+
+function renderEntry(){
+  const box = document.getElementById('entry-actions');
+  const m = state.member, c = state.competition, r = state.competitor;
+  const fee = Number(c.entry_fee) || 0;
+  let html = '';
+
+  // Gate 1 — active FUNdees membership required
+  if (m.status !== 'active') {
+    html += `<div class="notice warn">⚠️ Spear &amp; Cook entry requires an <strong>active FUNdees membership</strong>.
+      Your membership is currently <strong>${m.status || 'inactive'}</strong>.
+      <div style="margin-top:0.75rem"><button class="btn" style="margin-top:0" onclick="getMembership(this)">Activate / Renew Membership</button></div>
+      <div class="msg" id="mem-msg"></div></div>`;
+  }
+
+  // Gate 2 — entry fee (only once registered)
+  if (r && fee > 0 && !r.paid) {
+    const gated = m.status !== 'active';
+    html += `<div class="notice">Competition entry fee: <strong>$${fee.toFixed(2)}</strong> NZD.
+      <div style="margin-top:0.75rem"><button class="btn" style="margin-top:0" onclick="payEntry(this)" ${gated?'disabled':''}>Pay $${fee.toFixed(0)} Entry</button></div>
+      ${gated ? '<div class="hint">Activate your membership first.</div>' : ''}
+      <div class="msg" id="entry-msg"></div></div>`;
+  }
+
+  box.innerHTML = html;
+}
+
+async function getMembership(btn){
+  btn.disabled = true; btn.textContent = 'Redirecting…';
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch('/.netlify/functions/create-membership-checkout', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify({})
+    });
+    const d = await res.json();
+    if (!res.ok || !d.url) throw new Error(d.error || 'Could not start checkout');
+    location.href = d.url;
+  } catch(e){
+    const mm = document.getElementById('mem-msg'); if (mm){ mm.className='msg err'; mm.textContent = e.message; }
+    btn.disabled = false; btn.textContent = 'Activate / Renew Membership';
+  }
+}
+
+async function payEntry(btn){
+  btn.disabled = true; btn.textContent = 'Redirecting…';
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch('/.netlify/functions/sc-entry-checkout', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify({})
+    });
+    const d = await res.json();
+    if (!res.ok || !d.url) throw new Error(d.message || d.error || 'Could not start checkout');
+    location.href = d.url;
+  } catch(e){
+    const em = document.getElementById('entry-msg'); if (em){ em.className='msg err'; em.textContent = e.message; }
+    btn.disabled = false; btn.textContent = 'Pay Entry';
   }
 }
 
@@ -297,7 +368,7 @@ async function saveCompetitor(){
   try {
     state.competitor = await api(payload);
     msg.className='msg ok'; msg.textContent='Registration saved ✓';
-    renderCompetitor(); renderRules();
+    renderCompetitor(); renderEntry(); renderRules();
   } catch(e){ msg.className='msg err'; msg.textContent = e.message; }
   btn.disabled = false; btn.textContent = 'Save Registration';
 }

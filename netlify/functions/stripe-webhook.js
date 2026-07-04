@@ -33,6 +33,7 @@ exports.handler = async (event) => {
         const type = sess.metadata?.type;
         if (type === 'membership') await handleMembership(sess);
         else if (type === 'enrolment') await handleEnrolment(sess);
+        else if (type === 'sc_entry') await handleScEntry(sess);
         else console.warn(`Unknown checkout type: "${type}"`);
         break;
       }
@@ -112,6 +113,27 @@ async function handleMembership(sess) {
   if (pErr) throw new Error(`Payment record failed: ${pErr.message}`);
 
   console.log(`✓ Membership activated: ${memberId}`);
+}
+
+async function handleScEntry(sess) {
+  const competitorId = sess.metadata?.competitor_id;
+  const memberId     = sess.metadata?.member_id;
+  if (!competitorId) throw new Error(`Missing sc_entry metadata: competitor=${competitorId}`);
+
+  // Idempotency — skip if this competitor's entry is already marked paid
+  const { data: c, error: fErr } = await supabaseAdmin.from('sc_competitors')
+    .select('id, paid').eq('id', competitorId).maybeSingle();
+  if (fErr) throw new Error(`sc_entry fetch: ${fErr.message}`);
+  if (c?.paid) { console.log(`sc_entry already paid: ${competitorId}`); return; }
+
+  const { error } = await supabaseAdmin.from('sc_competitors').update({
+    paid: true,
+    payment_ref: sess.payment_intent,
+    stripe_payment_intent_id: sess.payment_intent
+  }).eq('id', competitorId);
+  if (error) throw new Error(`sc_entry update: ${error.message}`);
+
+  console.log(`✓ Spear & Cook entry paid: competitor=${competitorId} member=${memberId}`);
 }
 
 async function handleEnrolment(sess) {
