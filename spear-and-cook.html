@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0A1628">
+  <link rel="apple-touch-icon" href="/icons/icon-180.png">
+<title>Spear &amp; Cook — Spearfishing FUNdamentals</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--midnight:#0A1628;--deep:#0D2D4A;--surge:#00CFAD;--coral:#FF5C3A;--sand:#F0EDE6;--muted:rgba(240,237,230,0.55);--dim:rgba(255,255,255,0.08);--surge-dim:rgba(0,207,173,0.1)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#07101e;color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh;padding-top:64px}
+.wrap{max-width:900px;margin:0 auto;padding:2rem 1.25rem 4rem}
+.hero{margin-bottom:1.5rem}
+.hero h1{font-family:'Bebas Neue',sans-serif;font-size:2.6rem;line-height:1;color:var(--sand)}
+.hero .sub{color:var(--muted);font-size:0.9rem;margin-top:0.35rem}
+.pill{display:inline-block;font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;font-weight:600;padding:0.2rem 0.6rem;border-radius:2px;margin-left:0.5rem;vertical-align:middle}
+.pill-open{background:var(--surge-dim);color:var(--surge)}
+.pill-draft{background:rgba(245,166,35,0.12);color:#F5A623}
+.pill-paid{background:var(--surge-dim);color:var(--surge)}
+.pill-unpaid{background:rgba(255,92,58,0.12);color:var(--coral)}
+
+/* tabs */
+.tabs{display:flex;gap:0.25rem;overflow-x:auto;border-bottom:1px solid var(--dim);margin-bottom:1.75rem;-webkit-overflow-scrolling:touch}
+.tab{flex:0 0 auto;padding:0.7rem 1rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;margin-bottom:-1px;transition:color 0.15s}
+.tab.active{color:var(--surge);border-bottom-color:var(--surge)}
+.panel{display:none}.panel.active{display:block}
+
+/* forms */
+.card{background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:5px;padding:1.5rem}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0.85rem}
+.lbl{display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.3rem;margin-top:1rem}
+.lbl:first-child{margin-top:0}
+.field{width:100%;background:rgba(10,22,40,0.7);border:1px solid rgba(255,255,255,0.12);border-radius:3px;padding:0.7rem 0.85rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.9rem;font-weight:300;outline:none;transition:border-color 0.2s}
+.field:focus{border-color:var(--surge)}
+select.field{cursor:pointer}
+textarea.field{resize:vertical;min-height:70px}
+.hint{font-size:0.75rem;color:var(--muted);margin-top:0.3rem;line-height:1.5}
+.btn{background:var(--surge);color:var(--midnight);border:none;padding:0.8rem 1.6rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:opacity 0.2s;margin-top:1.5rem}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+.btn-o{background:transparent;color:var(--sand);border:1px solid rgba(255,255,255,0.2)}
+.msg{font-size:0.82rem;margin-top:0.9rem;display:none}
+.msg.err{color:var(--coral);display:block}
+.msg.ok{color:var(--surge);display:block}
+.notice{background:var(--surge-dim);border:1px solid rgba(0,207,173,0.25);color:var(--sand);border-radius:4px;padding:1rem 1.15rem;font-size:0.85rem;line-height:1.6;margin-bottom:1.5rem}
+.notice.warn{background:rgba(245,166,35,0.1);border-color:rgba(245,166,35,0.3)}
+.sec-h{font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--surge);font-weight:600;margin:1.75rem 0 0.5rem;padding-bottom:0.4rem;border-bottom:1px solid var(--dim)}
+.sec-h:first-child{margin-top:0}
+.rules-body{background:rgba(10,22,40,0.5);border:1px solid var(--dim);border-radius:4px;padding:1.25rem;font-size:0.86rem;line-height:1.7;color:rgba(240,237,230,0.85);white-space:pre-wrap;max-height:340px;overflow-y:auto;margin-bottom:1rem}
+.accept-row{display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer;margin-top:0.5rem}
+.accept-row input{width:18px;height:18px;flex-shrink:0;accent-color:var(--surge);margin-top:0.15rem}
+.placeholder{text-align:center;padding:3rem 1.5rem;color:var(--muted)}
+.placeholder .ico{font-size:2.2rem;margin-bottom:0.75rem}
+.center-msg{text-align:center;padding:4rem 1.5rem;color:var(--muted)}
+.center-msg h2{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--sand);margin-bottom:0.75rem}
+a.link{color:var(--surge);text-decoration:none;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="wrap">
+  <div class="center-msg" id="loading">Loading…</div>
+
+  <!-- GUEST (not signed in) -->
+  <div class="center-msg" id="guest" style="display:none">
+    <h2>Spear &amp; Cook</h2>
+    <p style="margin-bottom:1.5rem">A paired spearfishing &amp; cook-off competition.<br>Sign in with your FUNdees account to enter.</p>
+    <a class="btn" href="/auth.html" style="display:inline-block;text-decoration:none">Sign In</a>
+    <p style="margin-top:1rem;font-size:0.82rem">No account? <a class="link" href="/auth.html?tab=signup">Join the club</a> first.</p>
+  </div>
+
+  <!-- NO ACTIVE COMPETITION -->
+  <div class="center-msg" id="no-comp" style="display:none">
+    <h2>No Competition Open</h2>
+    <p>There's no Spear &amp; Cook competition running right now. Check back soon.</p>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app" style="display:none">
+    <div class="hero">
+      <h1 id="comp-name">Spear &amp; Cook</h1>
+      <div class="sub" id="comp-sub"></div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="competitor">Competitor</button>
+      <button class="tab" data-tab="rules">Rules</button>
+      <button class="tab" data-tab="catch">Catch</button>
+      <button class="tab" data-tab="cook">Cook</button>
+      <button class="tab" data-tab="judge">Judge</button>
+      <button class="tab" data-tab="scores">Scores</button>
+      <button class="tab" data-tab="admin" id="tab-admin" style="display:none">Admin</button>
+    </div>
+
+    <!-- COMPETITOR -->
+    <div class="panel active" id="panel-competitor">
+      <div class="notice" id="reg-status"></div>
+      <div class="card">
+        <div class="sec-h">Your Details</div>
+        <div class="grid2">
+          <div>
+            <label class="lbl">Spearfishing Experience</label>
+            <select class="field" id="f-experience">
+              <option value="">— Select —</option>
+              <option>Beginner</option>
+              <option>Intermediate</option>
+              <option>Experienced</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Age Group</label>
+            <select class="field" id="f-age_group">
+              <option value="">— Select —</option>
+              <option>Under 18</option>
+              <option>18–29</option>
+              <option>30–39</option>
+              <option>40–49</option>
+              <option>50–59</option>
+              <option>60+</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Gender</label>
+            <select class="field" id="f-gender">
+              <option value="">— Prefer not to say —</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Club (optional)</label>
+            <input class="field" id="f-club" type="text" placeholder="Your dive club">
+          </div>
+        </div>
+
+        <label class="lbl">Preferred Partner (optional)</label>
+        <input class="field" id="f-preferred_partner" type="text" placeholder="Name of someone you'd like to be paired with">
+        <div class="hint">Pairs are matched by experience level. If you enter solo we'll match you — name a preferred partner here and we'll try to honour it.</div>
+
+        <div class="sec-h">Safety</div>
+        <div class="grid2">
+          <div>
+            <label class="lbl">Safety Contact Name</label>
+            <input class="field" id="f-safety_contact" type="text" placeholder="Emergency contact">
+          </div>
+          <div>
+            <label class="lbl">Safety Contact Phone</label>
+            <input class="field" id="f-safety_phone" type="tel" placeholder="+64 21 000 0000">
+          </div>
+        </div>
+        <label class="lbl">Medical Info (optional)</label>
+        <textarea class="field" id="f-medical_info" placeholder="Anything a buddy or medic should know"></textarea>
+        <label class="lbl">Boat / Capacity Note (optional)</label>
+        <input class="field" id="f-boat_capacity_note" type="text" placeholder="e.g. I have a boat, room for 2 more">
+
+        <button class="btn" id="btn-save" onclick="saveCompetitor()">Save Registration</button>
+        <div class="msg" id="reg-msg"></div>
+      </div>
+    </div>
+
+    <!-- RULES -->
+    <div class="panel" id="panel-rules">
+      <div class="card">
+        <div class="sec-h">Competition Rules</div>
+        <div class="rules-body" id="rules-body">Loading rules…</div>
+        <div id="rules-accept-wrap">
+          <label class="accept-row">
+            <input type="checkbox" id="cb-rules">
+            <span style="font-size:0.85rem;line-height:1.55">I have read, understood and agree to the competition rules, and I accept the inherent risks of freediving and spearfishing.</span>
+          </label>
+          <label class="lbl">Type your full name to accept</label>
+          <input class="field" id="f-rules_name" type="text" placeholder="Your full name">
+          <button class="btn" id="btn-accept" onclick="acceptRules()">Accept Rules</button>
+          <div class="msg" id="rules-msg"></div>
+        </div>
+        <div class="notice" id="rules-accepted" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- PLACEHOLDERS -->
+    <div class="panel" id="panel-catch"><div class="placeholder"><div class="ico">🐟</div><div>Catch logging opens once the competition is underway.</div></div></div>
+    <div class="panel" id="panel-cook"><div class="placeholder"><div class="ico">🍳</div><div>Cook-off entries open on competition day.</div></div></div>
+    <div class="panel" id="panel-judge"><div class="placeholder"><div class="ico">🎚️</div><div>Judging opens when the cook-off begins.</div></div></div>
+    <div class="panel" id="panel-scores"><div class="placeholder"><div class="ico">🏆</div><div>The leaderboard appears here once scoring starts.</div></div></div>
+    <div class="panel" id="panel-admin"><div class="placeholder"><div class="ico">⚙️</div><div>Organiser tools (matching, verifying catches, exports) arrive in the next phases.</div></div></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+window.sb = sb;
+
+const state = { member:null, competition:null, competitor:null };
+
+function show(id){ ['loading','guest','no-comp','app'].forEach(x => document.getElementById(x).style.display = (x===id?'block':'none')); }
+
+async function boot(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ show('guest'); if(window.fnSetAuth) window.fnSetAuth(null,false); return; }
+
+  const { data: member } = await sb.from('members').select('*').eq('auth_user_id', session.user.id).maybeSingle();
+  state.member = member;
+  if (window.fnSetAuth) window.fnSetAuth(member || null, false);
+
+  const { data: comp } = await sb.from('sc_competitions').select('*').eq('status','active').maybeSingle();
+  state.competition = comp;
+  if (!comp){ show('no-comp'); return; }
+
+  if (member?.is_admin) document.getElementById('tab-admin').style.display = '';
+
+  const { data: competitor } = await sb.from('sc_competitors')
+    .select('*').eq('competition_id', comp.id).eq('member_id', member.id).maybeSingle();
+  state.competitor = competitor;
+
+  renderComp();
+  renderCompetitor();
+  renderRules();
+  show('app');
+}
+
+function renderComp(){
+  const c = state.competition;
+  document.getElementById('comp-name').textContent = c.name;
+  const dates = (c.date_start || c.date_end)
+    ? `${fmt(c.date_start)}${c.date_end ? ' – ' + fmt(c.date_end) : ''}` : '';
+  document.getElementById('comp-sub').innerHTML =
+    (c.description ? c.description : '') + (dates ? `<br>${dates}` : '');
+}
+
+function fmt(d){ return d ? new Date(d+'T12:00:00').toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'}) : ''; }
+
+function renderCompetitor(){
+  const r = state.competitor || {};
+  ['experience','age_group','gender','club','preferred_partner','safety_contact','safety_phone','medical_info','boat_capacity_note']
+    .forEach(k => { const el = document.getElementById('f-'+k); if (el) el.value = r[k] || ''; });
+
+  const st = document.getElementById('reg-status');
+  if (!state.competitor){
+    st.className = 'notice warn';
+    st.innerHTML = '👋 You haven\'t registered yet. Fill in your details below and save to enter.';
+  } else {
+    const fee = Number(state.competition.entry_fee) || 0;
+    const paidBit = fee > 0
+      ? (r.paid ? '<span class="pill pill-paid">Paid</span>' : '<span class="pill pill-unpaid">Entry fee due</span>')
+      : '';
+    st.className = 'notice';
+    st.innerHTML = `✅ You're registered for <strong>${state.competition.name}</strong>. ${paidBit}` +
+      (fee > 0 && !r.paid ? '<br><span style="font-size:0.8rem;color:var(--muted)">Entry payment opens shortly.</span>' : '');
+  }
+}
+
+function renderRules(){
+  const c = state.competition, r = state.competitor;
+  document.getElementById('rules-body').textContent = c.rules_text || 'Rules will be published here before the competition.';
+  const acceptedBox = document.getElementById('rules-accepted');
+  const wrap = document.getElementById('rules-accept-wrap');
+  if (r?.rules_accepted_at){
+    wrap.style.display = 'none';
+    acceptedBox.style.display = 'block';
+    acceptedBox.innerHTML = `✅ Rules accepted by <strong>${r.rules_accepted_name || ''}</strong> on ${new Date(r.rules_accepted_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}.`;
+  } else {
+    wrap.style.display = 'block';
+    acceptedBox.style.display = 'none';
+  }
+}
+
+// ── API helper (authenticated) ──
+async function api(payload){
+  const { data:{ session } } = await sb.auth.getSession();
+  const res = await fetch('/.netlify/functions/sc-register', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+    body: JSON.stringify(payload)
+  });
+  const d = await res.json();
+  if (!res.ok) throw new Error(d.error || 'Something went wrong');
+  return d.competitor;
+}
+
+async function saveCompetitor(){
+  const btn = document.getElementById('btn-save'), msg = document.getElementById('reg-msg');
+  msg.className = 'msg';
+  const payload = {};
+  ['experience','age_group','gender','club','preferred_partner','safety_contact','safety_phone','medical_info','boat_capacity_note']
+    .forEach(k => payload[k] = document.getElementById('f-'+k).value.trim());
+
+  if (!payload.experience){ msg.className='msg err'; msg.textContent='Please select your experience level.'; return; }
+  if (!payload.safety_contact || !payload.safety_phone){ msg.className='msg err'; msg.textContent='Safety contact name and phone are required.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    state.competitor = await api(payload);
+    msg.className='msg ok'; msg.textContent='Registration saved ✓';
+    renderCompetitor(); renderRules();
+  } catch(e){ msg.className='msg err'; msg.textContent = e.message; }
+  btn.disabled = false; btn.textContent = 'Save Registration';
+}
+
+async function acceptRules(){
+  const btn = document.getElementById('btn-accept'), msg = document.getElementById('rules-msg');
+  msg.className = 'msg';
+  if (!document.getElementById('cb-rules').checked){ msg.className='msg err'; msg.textContent='Please tick the box to confirm you accept the rules.'; return; }
+  const name = document.getElementById('f-rules_name').value.trim();
+  if (!name){ msg.className='msg err'; msg.textContent='Please type your full name.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    state.competitor = await api({ accept_rules:true, rules_accepted_name:name });
+    renderRules(); renderCompetitor();
+  } catch(e){ msg.className='msg err'; msg.textContent = e.message; }
+  btn.disabled = false; btn.textContent = 'Accept Rules';
+}
+
+// ── tabs ──
+document.getElementById('tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if (!t) return;
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+});
+
+boot();
+</script>
+<script src="/nav.js"></script>
+</body>
+</html>

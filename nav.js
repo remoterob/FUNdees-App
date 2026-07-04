@@ -86,6 +86,7 @@ navEl.innerHTML = `
     <li><a href="/?page=courses">Courses</a></li>
     <li><a href="/?page=inspiration">Inspiration</a></li>
     <li><a href="/articles.html" class="${isActive('/articles')}">Articles</a></li>
+    <li><a href="/spear-and-cook.html" class="${isActive('/spear-and-cook')}">Spear &amp; Cook</a></li>
     <li class="fn-my-sessions" style="display:none"><a href="/?page=my-sessions">My Sessions</a></li>
     <li class="fn-guest"><a href="/auth.html" class="${isActive('/auth')}">Sign In</a></li>
     <li class="fn-guest"><a href="/auth.html?tab=signup" class="fn-cta">Join Now</a></li>
@@ -108,6 +109,7 @@ mobEl.innerHTML = `
   <a href="/?page=courses">Courses</a>
   <a href="/?page=inspiration">Inspiration</a>
   <a href="/articles.html">Articles</a>
+  <a href="/spear-and-cook.html">Spear &amp; Cook</a>
   <a class="fn-mob-my-sessions" href="/?page=my-sessions" style="display:none">My Sessions</a>
   <a class="fn-mob-guest" href="/auth.html">Sign In</a>
   <a class="fn-mob-guest fn-mob-cta" href="/auth.html?tab=signup">Join Now</a>
