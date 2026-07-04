@@ -193,8 +193,9 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
             <div><label class="lbl">Weight (kg)</label><input class="field" id="c-weight" type="number" min="0" step="0.01" placeholder="e.g. 2.4" oninput="catchPreview()"></div>
             <div><label class="lbl">Length (cm, optional)</label><input class="field" id="c-length" type="number" min="0" step="0.1" placeholder="e.g. 45"></div>
           </div>
-          <label class="lbl">Photo (optional)</label>
-          <input class="field" id="c-photo" type="file" accept="image/*" style="padding:0.5rem">
+          <label class="lbl">Photo (required)</label>
+          <input class="field" id="c-photo" type="file" accept="image/*" style="padding:0.5rem" onchange="previewCatchPhoto(this)">
+          <img id="c-photo-preview" alt="preview" style="display:none;width:100%;max-height:220px;object-fit:cover;border-radius:4px;margin-top:0.6rem">
           <div class="notice" id="c-preview" style="margin-top:1rem">Select a species and weight to see the points.</div>
           <button class="btn" id="btn-log" onclick="logCatch()">Log Catch</button>
           <div class="msg" id="catch-msg"></div>
@@ -474,6 +475,15 @@ async function loadCatch(){
   await loadCatchList();
 }
 
+function previewCatchPhoto(input){
+  const img = document.getElementById('c-photo-preview');
+  const file = input.files[0];
+  if (!file){ img.style.display='none'; img.src=''; return; }
+  const r = new FileReader();
+  r.onload = e => { img.src = e.target.result; img.style.display='block'; };
+  r.readAsDataURL(file);
+}
+
 function catchPreview(){
   const sel = document.getElementById('c-species'); const opt = sel.options[sel.selectedIndex];
   const base = opt ? Number(opt.dataset.base)||0 : 0;
@@ -496,7 +506,7 @@ async function loadCatchList(){
     const canDel = (r.competitor_id===state.competitor.id && !r.verified) || state.member.is_admin;
     return `<div class="card" style="margin-bottom:0.5rem;padding:0.7rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:1rem">
       <div style="display:flex;gap:0.75rem;align-items:center">
-        ${r.photo_url?`<img src="${r.photo_url}" style="width:46px;height:46px;object-fit:cover;border-radius:3px">`:''}
+        ${r.photo_url?`<a href="${r.photo_url}" target="_blank" rel="noopener"><img src="${r.photo_url}" style="width:56px;height:56px;object-fit:cover;border-radius:3px" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🖼️',title:'image unavailable'}))"></a>`:''}
         <div><strong>${r.species}</strong> <span style="color:var(--muted);font-size:0.78rem">${(r.weight_g/1000).toFixed(2)} kg${r.length_mm?` · ${(r.length_mm/10).toFixed(0)} cm`:''}</span>
           <div style="font-size:0.72rem;color:var(--muted)">${who}${r.verified?' · <span style="color:var(--surge)">verified</span>':''}</div></div>
       </div>
@@ -508,7 +518,7 @@ async function loadCatchList(){
 
 async function uploadCatchPhoto(file){
   const ext = (file.name.split('.').pop() || 'jpg');
-  const path = `SpearCook/${state.competition.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const path = `Media/spear-cook/${state.competition.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const { error } = await sb.storage.from('Fundees').upload(path, file, { cacheControl:'3600' });
   if (error) throw error;
   return sb.storage.from('Fundees').getPublicUrl(path).data.publicUrl;
@@ -521,14 +531,13 @@ async function logCatch(){
   const cm = Number(document.getElementById('c-length').value)||0;
   const file = document.getElementById('c-photo').files[0];
   if (!slug || kg<=0){ msg.className='msg err'; msg.textContent='Pick a species and enter a weight.'; return; }
+  if (!file){ msg.className='msg err'; msg.textContent='A photo of your catch is required.'; return; }
 
   btn.disabled=true; btn.textContent='Saving…';
   try {
     let photo_url = null;
-    if (file){
-      try { photo_url = await uploadCatchPhoto(file); }
-      catch(e){ msg.className='msg err'; msg.textContent='Photo upload failed — try again or log without a photo. ('+e.message+')'; btn.disabled=false; btn.textContent='Log Catch'; return; }
-    }
+    try { photo_url = await uploadCatchPhoto(file); }
+    catch(e){ msg.className='msg err'; msg.textContent='Photo upload failed — please try again. ('+e.message+')'; btn.disabled=false; btn.textContent='Log Catch'; return; }
     const { data:{ session } } = await sb.auth.getSession();
     const res = await fetch('/.netlify/functions/sc-log-claim', {
       method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
@@ -536,7 +545,9 @@ async function logCatch(){
     });
     const d = await res.json(); if (!res.ok) throw new Error(d.error||'Failed');
     msg.className='msg ok'; msg.textContent='Catch logged ✓';
-    document.getElementById('c-weight').value=''; document.getElementById('c-length').value=''; document.getElementById('c-photo').value=''; catchPreview();
+    document.getElementById('c-weight').value=''; document.getElementById('c-length').value='';
+    document.getElementById('c-photo').value=''; document.getElementById('c-photo-preview').style.display='none';
+    catchPreview();
     await loadCatchList();
   } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
   btn.disabled=false; btn.textContent='Log Catch';

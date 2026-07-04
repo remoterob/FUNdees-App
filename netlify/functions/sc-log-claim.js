@@ -68,6 +68,8 @@ exports.handler = async (event) => {
     const length_mm = body.length_mm ? Math.floor(Number(body.length_mm)) : null;
     if (!species_slug || weight_g <= 0)
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Species and a valid weight are required.' }) };
+    if (!body.photo_url)
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'A photo of the catch is required.' }) };
 
     const { data: sp } = await supabaseAdmin.from('sc_species').select('slug, name, base_points').eq('slug', species_slug).maybeSingle();
     if (!sp) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown species.' }) };
