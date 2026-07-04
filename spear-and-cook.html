@@ -218,12 +218,20 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
         <div class="sec-h" style="margin-top:0">Assisted Matching</div>
         <p class="hint" style="margin-top:0">Pairs unassigned competitors by experience (experienced with newer divers; intermediates together) and honours preferred-partner requests. Review the suggestions, then create the teams — each competitor is emailed.</p>
         <button class="btn" id="btn-suggest" style="margin-top:1rem" onclick="suggestPairs()">Suggest Pairs</button>
-        <button class="btn btn-o" id="btn-new-team" style="margin-top:1rem;margin-left:0.5rem" onclick="newEmptyTeam()">+ Empty Team</button>
         <div class="msg" id="admin-msg"></div>
         <div id="suggestions" style="margin-top:1.25rem"></div>
       </div>
 
       <div class="sec-h">Teams</div>
+      <div class="card" style="margin-bottom:0.75rem">
+        <div style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Create a team manually</div>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">
+          <input class="field" id="nt-name" placeholder="Team name" style="max-width:180px;margin:0">
+          <input class="field" id="nt-boat" placeholder="Boat (optional)" style="max-width:150px;margin:0">
+          <input class="field" id="nt-skip" placeholder="Skipper contact (optional)" style="max-width:180px;margin:0">
+          <button class="btn" style="margin:0" onclick="createTeamManual()">Create Team</button>
+        </div>
+      </div>
       <div id="admin-teams"><div class="hint">No teams yet.</div></div>
 
       <div class="sec-h">Unassigned Competitors</div>
@@ -543,7 +551,7 @@ async function loadAdmin(){
   const cid = state.competition.id;
   const [{ data: comps }, { data: teams }, { data: tms }] = await Promise.all([
     sb.from('sc_competitors').select('id, experience, preferred_partner, paid, member_id, members(full_name)').eq('competition_id', cid),
-    sb.from('sc_teams').select('id, name, boat').eq('competition_id', cid).order('created_at'),
+    sb.from('sc_teams').select('id, name, boat, skipper_contact').eq('competition_id', cid).order('created_at'),
     sb.from('sc_team_members').select('id, team_id, competitor_id')
   ]);
   state.admin = { competitors: comps||[], teams: teams||[], tms: tms||[] };
@@ -579,24 +587,31 @@ function renderAdmin(){
 
   const uOpts = unassigned.map(c=>`<option value="${c.id}">${compName(c)} (${c.experience||'—'})</option>`).join('');
 
+  const esc = s => (s||'').replace(/"/g,'&quot;');
   document.getElementById('admin-teams').innerHTML = teams.length ? teams.map(t=>{
     const list = mems.filter(m=>m.team_id===t.id);
+    const teamOpts = teams.filter(x=>x.id!==t.id).map(x=>`<option value="${x.id}">Move → ${x.name}</option>`).join('');
     const rows = list.map(m=>{ const c=byId[m.competitor_id];
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--dim)">
+      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:1px solid var(--dim)">
         <span>${c?compName(c):'?'} <span style="color:var(--muted);font-size:0.72rem">(${c?.experience||'—'})${c&&!c.paid?' · <span style="color:var(--coral)">unpaid</span>':''}</span></span>
-        <button class="btn-o" style="padding:0.25rem 0.6rem;font-size:0.7rem;margin:0" onclick="removeMember('${m.id}')">Remove</button></div>`;
+        <select class="field" style="margin:0;padding:0.25rem 0.4rem;font-size:0.7rem;max-width:135px" onchange="moveMember('${m.id}', this.value)">
+          <option value="">Move…</option>${teamOpts}<option value="__unassign">Unassign</option>
+        </select></div>`;
     }).join('') || '<div class="hint">No members</div>';
     return `<div class="card" style="margin-bottom:0.6rem">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
-        <strong>${t.name}</strong>
-        <span><button class="btn-o" style="padding:0.3rem 0.7rem;font-size:0.72rem;margin:0" onclick="notifyTeamBtn('${t.id}',this)">Notify</button>
-        <button class="btn-o" style="padding:0.3rem 0.7rem;font-size:0.72rem;margin:0 0 0 0.35rem;border-color:rgba(255,92,58,0.4);color:var(--coral)" onclick="deleteTeam('${t.id}','${(t.name||'').replace(/'/g,"\\'")}')">Delete</button></span>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;margin-bottom:0.6rem">
+        <input class="field" id="tn-${t.id}" value="${esc(t.name)}" style="max-width:150px;margin:0">
+        <input class="field" id="tb-${t.id}" value="${esc(t.boat)}" placeholder="Boat" style="max-width:120px;margin:0">
+        <input class="field" id="ts-${t.id}" value="${esc(t.skipper_contact)}" placeholder="Skipper contact" style="max-width:150px;margin:0">
+        <button class="btn-o" style="margin:0;padding:0.35rem 0.7rem;font-size:0.72rem" onclick="saveTeam('${t.id}')">Save</button>
+        <button class="btn-o" style="margin:0;padding:0.35rem 0.7rem;font-size:0.72rem" onclick="notifyTeamBtn('${t.id}',this)">Notify</button>
+        <button class="btn-o" style="margin:0;padding:0.35rem 0.7rem;font-size:0.72rem;border-color:rgba(255,92,58,0.4);color:var(--coral)" onclick="deleteTeam('${t.id}','${(t.name||'').replace(/'/g,"\\'")}')">Delete</button>
       </div>${rows}
       ${unassigned.length?`<div style="margin-top:0.6rem;display:flex;gap:0.4rem">
-        <select class="field" id="add-${t.id}" style="flex:1">${uOpts}</select>
+        <select class="field" id="add-${t.id}" style="flex:1;margin:0">${uOpts}</select>
         <button class="btn-o" style="margin:0" onclick="addMemberBtn('${t.id}')">Add</button></div>`:''}
     </div>`;
-  }).join('') : '<div class="hint">No teams yet.</div>';
+  }).join('') : '<div class="hint">No teams yet. Create one above.</div>';
 
   document.getElementById('admin-unassigned').innerHTML = unassigned.length ? unassigned.map(c=>
     `<div style="padding:0.4rem 0;border-bottom:1px solid var(--dim);font-size:0.85rem">${compName(c)}
@@ -693,9 +708,37 @@ async function deleteTeam(id, name){
   if (!confirm(`Delete ${name}? Its members become unassigned.`)) return;
   try { await sb.from('sc_teams').delete().eq('id', id); await loadAdmin(); } catch(e){ adminErr(e); }
 }
-async function newEmptyTeam(){
-  const n = prompt('Team name?', 'Team '+(state.admin.teams.length+1)); if (!n) return;
-  try { await createTeam(n.trim()); await loadAdmin(); } catch(e){ adminErr(e); }
+async function createTeamManual(){
+  const name = document.getElementById('nt-name').value.trim();
+  if (!name){ adminErr(new Error('Enter a team name.')); return; }
+  const boat = document.getElementById('nt-boat').value.trim() || null;
+  const skip = document.getElementById('nt-skip').value.trim() || null;
+  try {
+    const { error } = await sb.from('sc_teams').insert({ competition_id: state.competition.id, name, boat, skipper_contact: skip, created_by: state.member.id });
+    if (error) throw error;
+    document.getElementById('nt-name').value=''; document.getElementById('nt-boat').value=''; document.getElementById('nt-skip').value='';
+    await loadAdmin();
+  } catch(e){ adminErr(e); }
+}
+
+async function saveTeam(id){
+  const name = document.getElementById('tn-'+id).value.trim();
+  if (!name){ adminErr(new Error('Team name is required.')); return; }
+  const boat = document.getElementById('tb-'+id).value.trim() || null;
+  const skip = document.getElementById('ts-'+id).value.trim() || null;
+  const { error } = await sb.from('sc_teams').update({ name, boat, skipper_contact: skip }).eq('id', id);
+  if (error){ adminErr(error); return; }
+  const m = document.getElementById('admin-msg'); m.className='msg ok'; m.textContent='Team saved ✓';
+  await loadAdmin();
+}
+
+async function moveMember(tmId, target){
+  if (!target) return;
+  try {
+    if (target === '__unassign'){ const { error } = await sb.from('sc_team_members').delete().eq('id', tmId); if (error) throw error; }
+    else { const { error } = await sb.from('sc_team_members').update({ team_id: target }).eq('id', tmId); if (error) throw error; }
+    await loadAdmin();
+  } catch(e){ adminErr(e); }
 }
 async function notifyTeamBtn(id, btn){
   btn.disabled = true; btn.textContent = 'Sending…';
