@@ -326,7 +326,7 @@ function renderCompetitor(){
 
   const st = document.getElementById('reg-status');
   const btnSave = document.getElementById('btn-save');
-  const regClosed = state.competition.registration_open === false;
+  const regClosed = state.competition.registration_open !== true;
 
   if (regClosed && !state.competitor){
     st.className = 'notice warn';

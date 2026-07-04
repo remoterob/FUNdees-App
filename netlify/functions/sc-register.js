@@ -53,9 +53,10 @@ exports.handler = async (event) => {
       .eq('member_id', member.id)
       .maybeSingle();
 
-    // Registration gate — blocks NEW sign-ups when closed. `registration_open`
-    // being undefined (pre-migration) is treated as open for safety.
-    if (comp.registration_open === false && !existing) {
+    // Registration gate — CLOSED by default; only open when an admin has
+    // explicitly turned registration_open ON. Existing competitors can still
+    // edit their own details while it's closed.
+    if (comp.registration_open !== true && !existing) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Registration is not open yet. Check back soon.' }) };
     }
 
