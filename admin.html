@@ -64,8 +64,12 @@ select.field{cursor:pointer}
 .msg.ok{color:var(--surge);display:block}
 .access-denied{text-align:center;padding:4rem 2rem;color:var(--muted)}
 .enrolments-list{margin-top:0.5rem}
-.enr-row{display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--dim);font-size:0.83rem}
+.enr-row{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;padding:0.6rem 0;border-bottom:1px solid var(--dim);font-size:0.83rem}
 .enr-row:last-child{border-bottom:none}
+.enr-controls{display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;justify-content:flex-end}
+.enr-controls select.field{width:auto;padding:0.35rem 0.5rem;font-size:0.78rem}
+.b-refunded{background:rgba(255,255,255,0.06);color:var(--muted)}
+.b-cancelled{background:rgba(255,92,58,0.12);color:var(--coral)}
 .toast{position:fixed;bottom:2rem;right:2rem;background:#0C7C6A;color:white;padding:0.9rem 1.5rem;border-radius:3px;font-size:0.85rem;transform:translateY(100px);opacity:0;transition:all 0.3s;border-left:3px solid var(--surge);z-index:300}
 .toast.show{transform:translateY(0);opacity:1}
 
@@ -668,14 +672,22 @@ async function deleteSession(id, title) {
   loadSessions();
 }
 
+let currentEnrSession = null;
+
+function enrStatusBadge(status) {
+  const cls = { enrolled: 'b-open', pending_payment: 'b-opening_soon', cancelled: 'b-cancelled', refunded: 'b-refunded' }[status] || 'b-closed';
+  return `<span class="badge ${cls}">${status.replace('_',' ')}</span>`;
+}
+
 async function viewEnrolments(sessionId, title) {
+  currentEnrSession = { id: sessionId, title };
   document.getElementById('enr-title').textContent = 'Enrolments — ' + title;
   document.getElementById('enrolments-list').innerHTML = '<div style="color:var(--muted);font-size:0.85rem">Loading...</div>';
   document.getElementById('enrolments-modal').classList.add('open');
 
   const { data, error } = await sb
     .from('enrolments')
-    .select('status, amount_paid, enrolled_at, members(full_name, email, medical_confirmed, liability_confirmed, declarations_date)')
+    .select('id, status, amount_paid, enrolled_at, stripe_payment_intent_id, members(full_name, email, medical_confirmed, liability_confirmed, declarations_date)')
     .eq('session_id', sessionId)
     .order('enrolled_at', { ascending: true });
 
@@ -690,6 +702,14 @@ async function viewEnrolments(sessionId, title) {
     const decBadge = decOk
       ? `<span style="background:rgba(0,207,173,0.12);color:var(--surge);font-size:0.6rem;padding:0.15rem 0.45rem;border-radius:2px;font-weight:600;letter-spacing:0.06em">✓ DECLARATIONS OK</span>`
       : `<span style="background:rgba(255,92,58,0.12);color:var(--coral);font-size:0.6rem;padding:0.15rem 0.45rem;border-radius:2px;font-weight:600;letter-spacing:0.06em">⚠ NO DECLARATIONS</span>`;
+    const isRefunded = e.status === 'refunded';
+    const statusSelect = isRefunded ? '' : `
+        <select class="field" onchange="changeEnrStatus('${e.id}', this.value, this)">
+          ${['pending_payment','enrolled','cancelled'].map(s =>
+            `<option value="${s}" ${e.status === s ? 'selected' : ''}>${s.replace('_',' ')}</option>`).join('')}
+        </select>`;
+    const refundBtn = (!isRefunded && e.stripe_payment_intent_id) ? `
+        <button class="btn-danger" onclick="refundEnrolment('${e.id}', '${(m.full_name || 'this member').replace(/'/g,"\\'")}', ${Number(e.amount_paid) || 0}, this)">Refund</button>` : '';
     return `
     <div class="enr-row">
       <div>
@@ -698,11 +718,51 @@ async function viewEnrolments(sessionId, title) {
         <div style="margin-top:0.3rem">${decBadge}${m.declarations_date ? `<span style="font-size:0.7rem;color:var(--muted);margin-left:0.4rem">Signed ${m.declarations_date}</span>` : ''}</div>
       </div>
       <div style="text-align:right">
-        <span class="badge b-${e.status === 'enrolled' ? 'open' : 'opening_soon'}">${e.status.replace('_',' ')}</span>
+        ${enrStatusBadge(e.status)}
         ${e.amount_paid ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">$${Number(e.amount_paid).toFixed(2)}</div>` : ''}
+        <div class="enr-controls">${statusSelect}${refundBtn}</div>
       </div>
     </div>`;
   }).join('');
+}
+
+async function manageEnrolment(body) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = '/auth.html'; return null; }
+  const res = await fetch('/.netlify/functions/admin-manage-enrolment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+    body: JSON.stringify(body)
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || 'Request failed');
+  return json;
+}
+
+async function changeEnrStatus(enrolmentId, status, el) {
+  el.disabled = true;
+  try {
+    await manageEnrolment({ enrolmentId, action: 'set_status', status });
+    toast('Enrolment updated ✓');
+  } catch (err) {
+    toast(err.message, true);
+  }
+  if (currentEnrSession) viewEnrolments(currentEnrSession.id, currentEnrSession.title);
+  loadSessions();
+}
+
+async function refundEnrolment(enrolmentId, name, amount, btn) {
+  const amtTxt = amount ? `$${amount.toFixed(2)} ` : '';
+  if (!confirm(`Refund ${amtTxt}to ${name} via Stripe? This cannot be undone.`)) return;
+  btn.disabled = true; btn.textContent = 'Refunding...';
+  try {
+    const result = await manageEnrolment({ enrolmentId, action: 'refund' });
+    toast(result.amount ? `Refunded $${result.amount.toFixed(2)} ✓` : 'Refund recorded ✓');
+  } catch (err) {
+    toast(err.message, true);
+  }
+  if (currentEnrSession) viewEnrolments(currentEnrSession.id, currentEnrSession.title);
+  loadSessions();
 }
 
 function closeEnrolments() { document.getElementById('enrolments-modal').classList.remove('open'); }

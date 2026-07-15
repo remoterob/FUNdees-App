@@ -47,6 +47,11 @@ exports.handler = async (event) => {
         break;
       }
 
+      case 'charge.refunded': {
+        await handleChargeRefunded(stripeEvent.data.object);
+        break;
+      }
+
       case 'invoice.payment_failed': {
         // Memberships are one-time payments (mode: 'payment'), so a failed
         // *invoice* should NOT expire an active member — that only applies to
@@ -134,6 +139,42 @@ async function handleScEntry(sess) {
   if (error) throw new Error(`sc_entry update: ${error.message}`);
 
   console.log(`✓ Spear & Cook entry paid: competitor=${competitorId} member=${memberId}`);
+}
+
+async function handleChargeRefunded(charge) {
+  // Syncs refunds issued outside the app (e.g. in the Stripe dashboard) onto
+  // the matching enrolment. Refunds for memberships / Spear & Cook entries
+  // simply won't match an enrolment row and are ignored.
+  if (!charge.payment_intent) { console.warn('charge.refunded: no payment_intent — ignored'); return; }
+
+  const { data: enr, error } = await supabaseAdmin.from('enrolments')
+    .select('id, status, session_id').eq('stripe_payment_intent_id', charge.payment_intent).maybeSingle();
+  if (error) throw new Error(`refund enrolment lookup: ${error.message}`);
+  if (!enr) { console.log(`charge.refunded: no enrolment for ${charge.payment_intent} — ignored`); return; }
+
+  // Idempotency — already synced (or refunded via the admin screen)
+  if (enr.status === 'refunded') { console.log(`Refund already recorded: enrolment=${enr.id}`); return; }
+
+  // Only flip status on a FULL refund; partial refunds keep the enrolment live
+  if (!charge.refunded) {
+    console.warn(`Partial refund on ${charge.payment_intent} (enrolment=${enr.id}) — status left as '${enr.status}'`);
+    return;
+  }
+
+  const { error: uErr } = await supabaseAdmin.from('enrolments').update({
+    status: 'refunded',
+    stripe_refund_id: charge.refunds?.data?.[0]?.id || null,
+    refunded_at: new Date().toISOString()
+  }).eq('id', enr.id);
+  if (uErr) throw new Error(`refund enrolment update: ${uErr.message}`);
+
+  // A freed spot may reopen a full session
+  const { data: s } = await supabaseAdmin.from('sessions_with_counts')
+    .select('id, status, spots_remaining').eq('id', enr.session_id).maybeSingle();
+  if (s && s.status === 'full' && s.spots_remaining > 0)
+    await supabaseAdmin.from('sessions').update({ status: 'open' }).eq('id', s.id);
+
+  console.log(`✓ Refund synced from Stripe: enrolment=${enr.id} pi=${charge.payment_intent}`);
 }
 
 async function handleEnrolment(sess) {
