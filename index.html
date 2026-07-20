@@ -1740,6 +1740,7 @@
       for (const enr of enrolments) {
         const sess = sessMap[enr.session_id];
         if (!sess) { console.warn('[My Sessions] no session found for', enr.session_id); continue; }
+        if (sess.status === 'closed') { console.log('[My Sessions] skipping closed session:', sess.id, sess.title); continue; }
         console.log('[My Sessions] processing session:', sess.id, sess.title);
 
         // Get published plans for this session
@@ -1859,7 +1860,7 @@
       }
 
       try {
-        el.innerHTML = html || '<div style="color:var(--muted);font-size:0.85rem">No sessions found.</div>';
+        el.innerHTML = html || '<div style="color:var(--muted);font-size:0.85rem">No active sessions — your enrolled sessions have finished.</div>';
       } catch(htmlErr) {
         console.error('[My Sessions] innerHTML error:', htmlErr);
         el.innerHTML = '<div style="color:var(--coral);font-size:0.82rem;padding:1rem">Error rendering sessions. Please refresh.</div>';
