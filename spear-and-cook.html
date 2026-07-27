@@ -174,6 +174,7 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
       <div class="card">
         <div class="sec-h">Competition Rules</div>
         <div class="rules-body" id="rules-body">Loading rules…</div>
+        <div class="notice warn" id="rules-gate" style="display:none">Save your registration on the Competitor tab first, then come back here to accept the rules.</div>
         <div id="rules-accept-wrap">
           <label class="accept-row">
             <input type="checkbox" id="cb-rules">
@@ -429,6 +430,20 @@ function renderRules(){
   document.getElementById('rules-body').textContent = c.rules_text || 'Rules will be published here before the competition.';
   const acceptedBox = document.getElementById('rules-accepted');
   const wrap = document.getElementById('rules-accept-wrap');
+  const gate = document.getElementById('rules-gate');
+
+  // Registration must be saved (experience etc.) before rules can be
+  // accepted — otherwise accepting rules first creates a stub sc_competitors
+  // row with everything else blank, which then looks like a broken/empty
+  // registration on reload.
+  if (!r?.experience){
+    gate.style.display = 'block';
+    wrap.style.display = 'none';
+    acceptedBox.style.display = 'none';
+    return;
+  }
+  gate.style.display = 'none';
+
   if (r?.rules_accepted_at){
     wrap.style.display = 'none';
     acceptedBox.style.display = 'block';
@@ -927,9 +942,12 @@ function renderAdmin(){
     const rows = list.map(m=>{ const c=byId[m.competitor_id];
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:1px solid var(--dim)">
         <span>${c?compName(c):'?'} <span style="color:var(--muted);font-size:0.72rem">(${c?.experience||'—'})${c&&!c.paid?' · <span style="color:var(--coral)">unpaid</span>':''}</span></span>
-        <select class="field" style="margin:0;padding:0.25rem 0.4rem;font-size:0.7rem;max-width:135px" onchange="moveMember('${m.id}', this.value)">
-          <option value="">Move…</option>${teamOpts}<option value="__unassign">Unassign</option>
-        </select></div>`;
+        <span style="display:flex;gap:0.35rem;align-items:center">
+          <select class="field" style="margin:0;padding:0.25rem 0.4rem;font-size:0.7rem;max-width:135px" onchange="moveMember('${m.id}', this.value)">
+            <option value="">Move…</option>${teamOpts}<option value="__unassign">Unassign</option>
+          </select>
+          ${c?`<button class="btn-o" style="margin:0;padding:0.25rem 0.5rem;font-size:0.68rem;border-color:rgba(255,92,58,0.4);color:var(--coral)" onclick="deleteEntry('${c.id}','${(compName(c)||'').replace(/'/g,"\\'")}')">Delete</button>`:''}
+        </span></div>`;
     }).join('') || '<div class="hint">No members</div>';
     return `<div class="card" style="margin-bottom:0.6rem">
       <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;margin-bottom:0.6rem">
@@ -947,8 +965,10 @@ function renderAdmin(){
   }).join('') : '<div class="hint">No teams yet. Create one above.</div>';
 
   document.getElementById('admin-unassigned').innerHTML = unassigned.length ? unassigned.map(c=>
-    `<div style="padding:0.4rem 0;border-bottom:1px solid var(--dim);font-size:0.85rem">${compName(c)}
-      <span style="color:var(--muted);font-size:0.72rem">(${c.experience||'—'})${!c.paid?' · <span style="color:var(--coral)">unpaid</span>':''}${c.preferred_partner?` · wants: ${c.preferred_partner}`:''}</span></div>`
+    `<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:1px solid var(--dim);font-size:0.85rem">
+      <span>${compName(c)}
+      <span style="color:var(--muted);font-size:0.72rem">(${c.experience||'—'})${!c.paid?' · <span style="color:var(--coral)">unpaid</span>':''}${c.preferred_partner?` · wants: ${c.preferred_partner}`:''}</span></span>
+      <button class="btn-o" style="margin:0;padding:0.25rem 0.5rem;font-size:0.68rem;border-color:rgba(255,92,58,0.4);color:var(--coral)" onclick="deleteEntry('${c.id}','${(compName(c)||'').replace(/'/g,"\\'")}')">Delete</button></div>`
   ).join('') : '<div class="hint">Everyone is assigned 🎉</div>';
 }
 
@@ -1039,6 +1059,10 @@ async function removeMember(tmId){
 async function deleteTeam(id, name){
   if (!confirm(`Delete ${name}? Its members become unassigned.`)) return;
   try { await sb.from('sc_teams').delete().eq('id', id); await loadAdmin(); } catch(e){ adminErr(e); }
+}
+async function deleteEntry(id, name){
+  if (!confirm(`Delete ${name}'s registration?\n\nThis removes their details, rules acceptance and team spot entirely. If they paid the entry fee it is NOT refunded automatically — do that in Stripe/Admin first if needed. They can re-register from scratch afterwards.`)) return;
+  try { const { error } = await sb.from('sc_competitors').delete().eq('id', id); if (error) throw error; await loadAdmin(); } catch(e){ adminErr(e); }
 }
 async function createTeamManual(){
   const name = document.getElementById('nt-name').value.trim();

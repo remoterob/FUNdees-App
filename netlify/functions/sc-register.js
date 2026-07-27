@@ -48,7 +48,7 @@ exports.handler = async (event) => {
     // Is this member already registered? (existing competitors can always edit)
     const { data: existing } = await supabaseAdmin
       .from('sc_competitors')
-      .select('id')
+      .select('id, experience')
       .eq('competition_id', comp.id)
       .eq('member_id', member.id)
       .maybeSingle();
@@ -68,6 +68,9 @@ exports.handler = async (event) => {
 
     // Optional rules acceptance
     if (body.accept_rules) {
+      if (!existing?.experience && !fields.experience) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Save your registration details before accepting the rules.' }) };
+      }
       if (!body.rules_accepted_name || !body.rules_accepted_name.trim()) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Please type your name to accept the rules.' }) };
       }
