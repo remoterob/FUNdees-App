@@ -233,6 +233,13 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
       <div class="card" style="margin-bottom:1.25rem">
         <div class="sec-h" style="margin-top:0">Competition Controls</div>
         <div id="admin-toggles"></div>
+        <label class="lbl">Entry fee (NZD)</label>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <input class="field" id="cc-fee" type="number" min="0" step="0.01" style="max-width:140px;margin:0">
+          <button class="btn-o" style="margin:0" onclick="saveEntryFee()">Save</button>
+        </div>
+        <div class="hint">$0 means no payment step — competitors register but are never shown a "Pay Entry" button.</div>
+        <div class="msg" id="fee-msg"></div>
       </div>
 
       <div class="card" style="margin-bottom:1.25rem">
@@ -879,12 +886,25 @@ function renderToggles(){
       <input type="checkbox" ${c.judging_open?'checked':''} onchange="toggleComp('judging_open',this.checked)" style="width:18px;height:18px;accent-color:var(--surge)"> Cook judging open</label>
     <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer">
       <input type="checkbox" ${c.cook_results_visible?'checked':''} onchange="toggleComp('cook_results_visible',this.checked)" style="width:18px;height:18px;accent-color:var(--surge)"> Reveal cook results <span style="color:var(--muted);font-size:0.75rem">(scores visible to everyone — keep OFF while judging)</span></label>`;
+  const feeEl = document.getElementById('cc-fee');
+  if (feeEl) feeEl.value = Number(c.entry_fee) || 0;
 }
 
 async function toggleComp(field, val){
   const { error } = await sb.from('sc_competitions').update({ [field]: val }).eq('id', state.competition.id);
   if (error){ adminErr(error); renderToggles(); return; }
   state.competition[field] = val;
+}
+
+async function saveEntryFee(){
+  const msg = document.getElementById('fee-msg');
+  const val = Number(document.getElementById('cc-fee').value);
+  if (isNaN(val) || val < 0){ msg.className='msg err'; msg.textContent='Enter a valid amount.'; return; }
+  const { error } = await sb.from('sc_competitions').update({ entry_fee: val }).eq('id', state.competition.id);
+  if (error){ msg.className='msg err'; msg.textContent = error.message; return; }
+  state.competition.entry_fee = val;
+  msg.className='msg ok'; msg.textContent = 'Entry fee saved ✓';
+  renderCompetitor(); renderEntry();
 }
 
 function renderAdmin(){
