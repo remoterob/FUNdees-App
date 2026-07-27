@@ -1290,7 +1290,8 @@ async function loadMembers() {
         <div class="td-actions">
           ${isDeactivated
             ? `<button class="btn-o" onclick="reactivateMember('${m.id}','${m.full_name.replace(/'/g,"\\'")}')">Reactivate</button>`
-            : `<button class="btn-o" onclick="toggleLeadRole('${m.id}', ${!!m.is_qualified_lead}, '${m.full_name.replace(/'/g,"\\'")}')">
+            : `${m.status !== 'active' ? `<button class="btn-o" onclick="activateMember('${m.id}','${m.full_name.replace(/'/g,"\\'")}')">Activate</button>` : ''}
+               <button class="btn-o" onclick="toggleLeadRole('${m.id}', ${!!m.is_qualified_lead}, '${m.full_name.replace(/'/g,"\\'")}')">
                 ${m.is_qualified_lead ? 'Remove Lead' : 'Make Lead'}
                </button>
                <button class="btn-danger" onclick="deactivateMember('${m.id}','${m.full_name.replace(/'/g,"\\'")}')">Deactivate</button>`
@@ -1320,6 +1321,21 @@ async function reactivateMember(id, name) {
   }).eq('id', id);
   if (error) { toast('Failed: ' + error.message, true); return; }
   toast(`${name} reactivated ✓`);
+  loadMembers();
+}
+
+async function activateMember(id, name) {
+  if (!confirm(`Activate ${name} without payment?\n\nThis grants a full annual membership (1 year from today) without charging them. Use for comps, goodwill, or manual/offline payment.`)) return;
+  const now = new Date();
+  const end = new Date(now); end.setFullYear(end.getFullYear() + 1);
+  const { error } = await sb.from('members').update({
+    status: 'active',
+    membership_start: now.toISOString().split('T')[0],
+    membership_end: end.toISOString().split('T')[0],
+    deactivated_at: null
+  }).eq('id', id);
+  if (error) { toast('Failed: ' + error.message, true); return; }
+  toast(`${name} activated ✓`);
   loadMembers();
 }
 
