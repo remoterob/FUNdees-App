@@ -963,14 +963,18 @@ async function renderOccurrences() {
           <button class="btn-danger" style="padding:0.2rem 0.5rem;font-size:0.65rem" onclick="removeRigMember('${rig.id}','${rm.member_id}')">Remove</button>
         </div>`).join('') || '<div style="color:var(--muted);font-size:0.75rem;padding:0.2rem 0">No one on this rig yet.</div>';
 
+      const rigStart = (rig.time_start || '').slice(0, 5);
+      const rigEnd = (rig.time_end || '').slice(0, 5);
+      const timeLabel = rigStart ? `${rigStart}${rigEnd ? ' – ' + rigEnd : ''}` : '';
+
       return `
         <div class="rig-card">
           <div class="occ-head" style="margin-bottom:0.3rem">
-            <div><strong>${nameOf[rig.lead_member_id] || rig.lead_member_id}</strong>'s rig — ${confirmed.length}/${rig.capacity}${waitlisted.length ? ` (+${waitlisted.length} waitlisted)` : ''}
+            <div><strong>${nameOf[rig.lead_member_id] || rig.lead_member_id}</strong>'s rig${timeLabel ? ` · ${timeLabel}` : ''} — ${confirmed.length}/${rig.capacity}${waitlisted.length ? ` (+${waitlisted.length} waitlisted)` : ''}
               ${rig.status === 'cancelled' ? '<span class="badge b-closed" style="margin-left:0.4rem">Cancelled</span>' : ''}
             </div>
             <div class="td-actions">
-              <button class="btn-o" onclick="editRig('${rig.id}','${(rig.description||'').replace(/'/g,"\\'")}',${rig.capacity})">Edit</button>
+              <button class="btn-o" onclick="editRig('${rig.id}','${(rig.description||'').replace(/'/g,"\\'")}',${rig.capacity},'${rigStart}','${rigEnd}')">Edit</button>
               ${rig.status !== 'cancelled' ? `<button class="btn-danger" onclick="cancelRig('${rig.id}')">Cancel Rig</button>` : ''}
             </div>
           </div>
@@ -1000,6 +1004,16 @@ async function renderOccurrences() {
           <input class="field" id="add-rig-desc-${occ.id}" type="text" placeholder="Dive plan description">
           <label class="lbl">Capacity (1-4, not counting the lead)</label>
           <input class="field" id="add-rig-cap-${occ.id}" type="number" min="1" max="4" value="4">
+          <div class="form-grid">
+            <div>
+              <label class="lbl">Start time</label>
+              <input class="field" id="add-rig-start-${occ.id}" type="time">
+            </div>
+            <div>
+              <label class="lbl">End time</label>
+              <input class="field" id="add-rig-end-${occ.id}" type="time">
+            </div>
+          </div>
           <div class="enr-controls" style="justify-content:flex-start;margin-top:0.6rem">
             <button class="btn-p" onclick="createRig('${occ.id}')">Create Rig</button>
             <button class="btn-o" onclick="toggleAddRigForm('${occ.id}')">Cancel</button>
@@ -1026,17 +1040,27 @@ async function createRig(occurrenceId) {
   if (!leadId) { toast('Pick a lead first', true); return; }
   const description = document.getElementById(`add-rig-desc-${occurrenceId}`).value.trim() || null;
   const capacity = Math.max(1, Math.min(4, parseInt(document.getElementById(`add-rig-cap-${occurrenceId}`).value, 10) || 4));
-  const { error } = await sb.from('rigs').insert({ occurrence_id: occurrenceId, lead_member_id: leadId, description, capacity });
+  const time_start = document.getElementById(`add-rig-start-${occurrenceId}`).value || null;
+  const time_end = document.getElementById(`add-rig-end-${occurrenceId}`).value || null;
+  if (time_start && time_end && time_end <= time_start) { toast('End time must be after start time', true); return; }
+  const { error } = await sb.from('rigs').insert({ occurrence_id: occurrenceId, lead_member_id: leadId, description, capacity, time_start, time_end });
   if (error) { toast('Add rig failed: ' + error.message, true); return; }
   toast('Rig added ✓');
   renderOccurrences();
 }
 
-async function editRig(rigId, currentDesc, currentCapacity) {
+async function editRig(rigId, currentDesc, currentCapacity, currentStart, currentEnd) {
   const description = prompt('Dive plan description:', currentDesc || '');
   if (description === null) return;
   const capacity = Math.max(1, Math.min(4, parseInt(prompt('Capacity (1-4):', currentCapacity), 10) || currentCapacity));
-  const { error } = await sb.from('rigs').update({ description: description || null, capacity }).eq('id', rigId);
+  const timeStartInput = prompt('Start time (HH:MM, blank to clear):', currentStart || '');
+  if (timeStartInput === null) return;
+  const timeEndInput = prompt('End time (HH:MM, blank to clear):', currentEnd || '');
+  if (timeEndInput === null) return;
+  const time_start = timeStartInput.trim() || null;
+  const time_end = timeEndInput.trim() || null;
+  if (time_start && time_end && time_end <= time_start) { toast('End time must be after start time', true); return; }
+  const { error } = await sb.from('rigs').update({ description: description || null, capacity, time_start, time_end }).eq('id', rigId);
   if (error) { toast('Update failed: ' + error.message, true); return; }
   renderOccurrences();
 }

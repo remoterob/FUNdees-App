@@ -2021,10 +2021,14 @@
         const memberNames = [...confirmed, ...waitlisted]
           .map(m => `${nameOf[m.member_id]||'—'}${m.status==='waitlisted'?' (waitlist)':''}`).join(', ') || 'No one yet';
 
+        const rigStart = (rig.time_start || '').slice(0, 5);
+        const rigEnd = (rig.time_end || '').slice(0, 5);
+        const timeLabel = rigStart ? `${rigStart}${rigEnd ? ' – ' + rigEnd : ''}` : '';
+
         return `
           <div style="background:rgba(74,144,226,0.05);border:1px solid rgba(74,144,226,0.15);border-radius:3px;padding:0.65rem 0.85rem;margin-top:0.5rem;font-size:0.8rem">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap">
-              <div><strong>${nameOf[rig.lead_member_id]||'—'}</strong>'s rig — ${confirmed.length}/${rig.capacity}${waitlisted.length ? ` (+${waitlisted.length} waitlisted)`:''}</div>
+              <div><strong>${nameOf[rig.lead_member_id]||'—'}</strong>'s rig${timeLabel ? ` · ${timeLabel}` : ''} — ${confirmed.length}/${rig.capacity}${waitlisted.length ? ` (+${waitlisted.length} waitlisted)`:''}</div>
               ${actionBtn}
             </div>
             ${rig.description ? `<div style="color:rgba(240,237,230,0.6);margin-top:0.3rem">${rig.description}</div>` : ''}
@@ -2035,9 +2039,13 @@
       const openRigForm = (currentMember.is_qualified_lead && !hasOwnRig) ? `
         <div id="new-rig-${occ.id}" style="display:none;margin-top:0.6rem;padding:0.65rem 0.85rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:3px">
           <input class="form-input" id="new-rig-desc-${occ.id}" type="text" placeholder="Dive plan description" style="width:100%;margin-bottom:0.5rem">
-          <div style="display:flex;align-items:center;gap:0.5rem">
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
             <label style="font-size:0.75rem;color:rgba(240,237,230,0.5)">Capacity</label>
             <input class="form-input" id="new-rig-cap-${occ.id}" type="number" min="1" max="4" value="4" style="width:70px">
+            <label style="font-size:0.75rem;color:rgba(240,237,230,0.5)">Start</label>
+            <input class="form-input" id="new-rig-start-${occ.id}" type="time" style="width:110px">
+            <label style="font-size:0.75rem;color:rgba(240,237,230,0.5)">End</label>
+            <input class="form-input" id="new-rig-end-${occ.id}" type="time" style="width:110px">
             <button class="btn-primary" style="padding:0.35rem 0.8rem;font-size:0.72rem" onclick="depthCreateRig('${occ.id}')">Create rig</button>
           </div>
         </div>
@@ -2059,8 +2067,10 @@
   window.depthCreateRig = async function(occId) {
     const description = document.getElementById(`new-rig-desc-${occId}`).value.trim() || null;
     const capacity = Math.max(1, Math.min(4, parseInt(document.getElementById(`new-rig-cap-${occId}`).value, 10) || 4));
+    const timeStart = document.getElementById(`new-rig-start-${occId}`).value || null;
+    const timeEnd = document.getElementById(`new-rig-end-${occId}`).value || null;
     try {
-      await manageRig({ action: 'create_rig', occurrenceId: occId, description, capacity });
+      await manageRig({ action: 'create_rig', occurrenceId: occId, description, capacity, timeStart, timeEnd });
       showToast('Rig opened ✓');
     } catch (err) { showToast(err.message, true); }
     loadMySessions();

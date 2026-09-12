@@ -40,7 +40,7 @@ async function sendEmail(to, subject, html) {
 async function getRigContext(rigId) {
   const { data: rig } = await supabaseAdmin
     .from('rigs')
-    .select('description, lead_member_id, depth_occurrences(occurrence_date, sessions(title, location))')
+    .select('description, lead_member_id, time_start, time_end, depth_occurrences(occurrence_date, sessions(title, location))')
     .eq('id', rigId)
     .maybeSingle();
   if (!rig) return null;
@@ -54,6 +54,7 @@ async function getRigContext(rigId) {
     sessionTitle: sess?.title || 'Depth session',
     location: sess?.location || null,
     description: rig.description || null,
+    timeLabel: rig.time_start ? `${rig.time_start.slice(0, 5)}${rig.time_end ? ' – ' + rig.time_end.slice(0, 5) : ''}` : null,
     leadName: lead?.full_name || 'the lead'
   };
 }
@@ -120,7 +121,14 @@ async function getRig(rigId) {
   return data;
 }
 
-async function createRig(member, { occurrenceId, description, capacity }, CORS) {
+// Accepts "HH:MM" (optionally "HH:MM:SS"); returns null for blank/absent,
+// or false if the value doesn't look like a time at all.
+function normalizeTime(value) {
+  if (value === undefined || value === null || value === '') return null;
+  return /^\d{2}:\d{2}(:\d{2})?$/.test(value) ? value : false;
+}
+
+async function createRig(member, { occurrenceId, description, capacity, timeStart, timeEnd }, CORS) {
   if (!member.is_qualified_lead && !member.is_admin) {
     return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Only qualified leads can open a rig' }) };
   }
@@ -146,9 +154,18 @@ async function createRig(member, { occurrenceId, description, capacity }, CORS) 
 
   const cap = Math.max(1, Math.min(4, parseInt(capacity, 10) || 4));
 
+  const start = normalizeTime(timeStart);
+  const end = normalizeTime(timeEnd);
+  if (start === false || end === false) {
+    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Times must be in HH:MM format' }) };
+  }
+  if (start && end && end <= start) {
+    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'End time must be after start time' }) };
+  }
+
   const { data: rig, error } = await supabaseAdmin
     .from('rigs')
-    .insert({ occurrence_id: occurrenceId, lead_member_id: member.id, description: description || null, capacity: cap })
+    .insert({ occurrence_id: occurrenceId, lead_member_id: member.id, description: description || null, capacity: cap, time_start: start, time_end: end })
     .select()
     .single();
   if (error) throw new Error(`Create rig: ${error.message}`);
@@ -156,7 +173,7 @@ async function createRig(member, { occurrenceId, description, capacity }, CORS) 
   return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true, rig }) };
 }
 
-async function updateRig(member, { rigId, description, capacity }, CORS) {
+async function updateRig(member, { rigId, description, capacity, timeStart, timeEnd }, CORS) {
   if (!rigId) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing rigId' }) };
   const rig = await getRig(rigId);
   if (!rig) return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Rig not found' }) };
@@ -167,6 +184,19 @@ async function updateRig(member, { rigId, description, capacity }, CORS) {
   const payload = {};
   if (description !== undefined) payload.description = description || null;
   if (capacity !== undefined) payload.capacity = Math.max(1, Math.min(4, parseInt(capacity, 10) || 4));
+  if (timeStart !== undefined) {
+    const start = normalizeTime(timeStart);
+    if (start === false) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Start time must be in HH:MM format' }) };
+    payload.time_start = start;
+  }
+  if (timeEnd !== undefined) {
+    const end = normalizeTime(timeEnd);
+    if (end === false) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'End time must be in HH:MM format' }) };
+    payload.time_end = end;
+  }
+  if (payload.time_start && payload.time_end && payload.time_end <= payload.time_start) {
+    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'End time must be after start time' }) };
+  }
 
   const { error } = await supabaseAdmin.from('rigs').update(payload).eq('id', rigId);
   if (error) throw new Error(`Update rig: ${error.message}`);
@@ -199,7 +229,7 @@ async function setRigStatus(member, { rigId }, status, CORS) {
     if (ctx) {
       await Promise.all(displaced.map(m => sendEmail(m.email, `Rig cancelled — ${ctx.sessionTitle}`, `
         <p>Kia ora ${m.full_name || ''},</p>
-        <p><strong>${ctx.leadName}'s rig</strong> for <strong>${ctx.sessionTitle}</strong> on <strong>${ctx.dateLabel}</strong> has been cancelled.</p>
+        <p><strong>${ctx.leadName}'s rig</strong> for <strong>${ctx.sessionTitle}</strong> on <strong>${ctx.dateLabel}</strong>${ctx.timeLabel ? ` (${ctx.timeLabel})` : ''} has been cancelled.</p>
         <p>Log in to join another rig on that date, or check back if a new one opens.</p>`)));
     }
   }
@@ -309,7 +339,7 @@ async function promoteFromWaitlist(rigId) {
   if (member?.email && ctx) {
     await sendEmail(member.email, `You're in! A spot opened on ${ctx.sessionTitle}`, `
       <p>Kia ora ${member.full_name || ''},</p>
-      <p>A spot opened up on <strong>${ctx.leadName}'s rig</strong> for <strong>${ctx.sessionTitle}</strong> on <strong>${ctx.dateLabel}</strong>${ctx.location ? ` at ${ctx.location}` : ''}, and you've been moved off the waitlist and confirmed.</p>
+      <p>A spot opened up on <strong>${ctx.leadName}'s rig</strong> for <strong>${ctx.sessionTitle}</strong> on <strong>${ctx.dateLabel}</strong>${ctx.timeLabel ? ` (${ctx.timeLabel})` : ''}${ctx.location ? ` at ${ctx.location}` : ''}, and you've been moved off the waitlist and confirmed.</p>
       ${ctx.description ? `<p>Dive plan: ${ctx.description}</p>` : ''}
       <p>See you in the water!</p>`);
   }
