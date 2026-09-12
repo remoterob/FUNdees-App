@@ -1020,6 +1020,10 @@
 
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 
+  .filter-bar{display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap}
+  .filter-btn{background:rgba(13,45,74,0.5);border:1px solid rgba(255,255,255,0.07);color:var(--muted);padding:0.45rem 1rem;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.15s}
+  .filter-btn:hover,.filter-btn.active{background:rgba(0,207,173,0.1);border-color:rgba(0,207,173,0.3);color:#00CFAD}
+
   .payment-box {
     background: rgba(10,22,40,0.6);
     border: 1px solid rgba(0,207,173,0.15);
@@ -1282,6 +1286,11 @@
   <div style="max-width:900px;margin:0 auto;padding:3rem 2rem">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--sand);margin-bottom:0.25rem">My Sessions</div>
     <div style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem">Your enrolled training sessions and published weekly plans.</div>
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="setMySessionsFilter('all',this)">All</button>
+      <button class="filter-btn" onclick="setMySessionsFilter('pool',this)">Pool</button>
+      <button class="filter-btn" onclick="setMySessionsFilter('depth',this)">Depth</button>
+    </div>
     <div id="my-sessions-content">
       <div style="color:var(--muted);font-size:0.85rem;padding:2rem 0">Loading your sessions…</div>
     </div>
@@ -1686,6 +1695,15 @@
   }
 
   // ─── MY SESSIONS ─────────────────────────────────────────────────────────
+  let mySessionsFilter = 'all';
+
+  function setMySessionsFilter(f, btn) {
+    mySessionsFilter = f;
+    document.querySelectorAll('#page-my-sessions .filter-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    loadMySessions();
+  }
+
   async function loadMySessions() {
     const el = document.getElementById('my-sessions-content');
     if (!el) return;
@@ -1732,15 +1750,23 @@
       (sessionsData||[]).forEach(s => { sessMap[s.id] = s; });
       console.log('[My Sessions] sessMap keys:', Object.keys(sessMap));
 
+      // Earliest date first
+      const sortedEnrolments = [...enrolments].sort((a, b) => {
+        const da = sessMap[a.session_id]?.date_start || '';
+        const db = sessMap[b.session_id]?.date_start || '';
+        return da.localeCompare(db);
+      });
+
       let html = '';
 
       // Store session context globally for chatbot access
       window._chatSessionCtx = window._chatSessionCtx || {};
 
-      for (const enr of enrolments) {
+      for (const enr of sortedEnrolments) {
         const sess = sessMap[enr.session_id];
         if (!sess) { console.warn('[My Sessions] no session found for', enr.session_id); continue; }
         if (sess.status === 'closed') { console.log('[My Sessions] skipping closed session:', sess.id, sess.title); continue; }
+        if (mySessionsFilter !== 'all' && sess.type !== mySessionsFilter) continue;
         console.log('[My Sessions] processing session:', sess.id, sess.title);
 
         if (sess.type === 'depth') {
@@ -1865,7 +1891,10 @@
       }
 
       try {
-        el.innerHTML = html || '<div style="color:var(--muted);font-size:0.85rem">No active sessions — your enrolled sessions have finished.</div>';
+        const emptyMsg = mySessionsFilter === 'all'
+          ? 'No active sessions — your enrolled sessions have finished.'
+          : `No ${mySessionsFilter} sessions among your active enrolments.`;
+        el.innerHTML = html || `<div style="color:var(--muted);font-size:0.85rem">${emptyMsg}</div>`;
       } catch(htmlErr) {
         console.error('[My Sessions] innerHTML error:', htmlErr);
         el.innerHTML = '<div style="color:var(--coral);font-size:0.82rem;padding:1rem">Error rendering sessions. Please refresh.</div>';
