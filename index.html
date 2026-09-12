@@ -1915,6 +1915,12 @@
     }
   }
 
+  // Local YYYY-MM-DD — NOT toISOString(), which converts to UTC and rolls
+  // the date back a day in any timezone ahead of UTC by 12+ hours (e.g. NZ).
+  function toLocalDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   function fmtDateRange(start, end) {
     const s = new Date(start+'T12:00:00').toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
     const e = new Date(end+'T12:00:00').toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
@@ -1941,7 +1947,7 @@
   }
 
   async function renderDepthSession(sess) {
-    const today = new Date().toISOString().slice(0,10);
+    const today = toLocalDateStr(new Date());
     const { data: occs } = await sb.from('depth_occurrences')
       .select('*').eq('session_id', sess.id).eq('status', 'scheduled')
       .gte('occurrence_date', today).order('occurrence_date');

@@ -733,7 +733,7 @@ async function saveSession() {
 // occurrences that fall on a removed weekday will be deleted, including any
 // rigs already opened on them. Returns true to proceed, false to abort the save.
 async function confirmWeekdayRemoval(sessionId, removedWeekdays) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toLocalDateStr(new Date());
   const { data: occs } = await sb.from('depth_occurrences')
     .select('id, occurrence_date')
     .eq('session_id', sessionId)
@@ -754,7 +754,7 @@ async function confirmWeekdayRemoval(sessionId, removedWeekdays) {
 // Deletes upcoming (not-yet-happened) occurrences that fall on a removed
 // weekday. Cascades to any rigs/rig_members on them (foreign keys).
 async function removeOccurrencesForWeekdays(sessionId, removedWeekdays) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toLocalDateStr(new Date());
   const { data: occs } = await sb.from('depth_occurrences')
     .select('id, occurrence_date')
     .eq('session_id', sessionId)
@@ -773,12 +773,18 @@ async function removeOccurrencesForWeekdays(sessionId, removedWeekdays) {
 // weekday is in `weekdays`. Never removes/cancels existing occurrences, so
 // re-saving a series after editing its weekdays doesn't disturb rigs already
 // booked on dates generated earlier.
+// Local YYYY-MM-DD — NOT toISOString(), which converts to UTC and rolls the
+// date back a day in any timezone ahead of UTC by 12+ hours (e.g. NZ).
+function toLocalDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 async function generateDepthOccurrences(sessionId, start, end, weekdays) {
   const rows = [];
   const cur = new Date(start + 'T12:00:00');
   const endDate = new Date(end + 'T12:00:00');
   while (cur <= endDate) {
-    if (weekdays.includes(cur.getDay())) rows.push({ session_id: sessionId, occurrence_date: cur.toISOString().slice(0, 10) });
+    if (weekdays.includes(cur.getDay())) rows.push({ session_id: sessionId, occurrence_date: toLocalDateStr(cur) });
     cur.setDate(cur.getDate() + 1);
   }
   if (!rows.length) return;
