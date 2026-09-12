@@ -1743,6 +1743,11 @@
         if (sess.status === 'closed') { console.log('[My Sessions] skipping closed session:', sess.id, sess.title); continue; }
         console.log('[My Sessions] processing session:', sess.id, sess.title);
 
+        if (sess.type === 'depth') {
+          html += await renderDepthSession(sess);
+          continue;
+        }
+
         // Get published plans for this session
         const { data: plans, error: planErr } = await sb.from('session_plans')
           .select('*')
@@ -1890,6 +1895,166 @@
   function fmtPlanDate(d) {
     return new Date(d+'T12:00:00').toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   }
+
+  // ─── DEPTH SESSIONS: occurrences + rigs ─────────────────────────────────
+
+  async function manageRig(body) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = '/auth.html'; return null; }
+    const res = await fetch('/.netlify/functions/depth-rig-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify(body)
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || 'Request failed');
+    return json;
+  }
+
+  async function renderDepthSession(sess) {
+    const today = new Date().toISOString().slice(0,10);
+    const { data: occs } = await sb.from('depth_occurrences')
+      .select('*').eq('session_id', sess.id).eq('status', 'scheduled')
+      .gte('occurrence_date', today).order('occurrence_date');
+
+    const typeTag = `<span style="background:rgba(74,144,226,0.1);border:1px solid rgba(74,144,226,0.3);color:#4A90E2;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:2px">Depth</span>`;
+
+    const header = `
+      <div style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1.1rem;padding-bottom:0.85rem;border-bottom:1px solid rgba(255,255,255,0.07)">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem">${typeTag}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#F0EDE6;line-height:1">${sess.title}</div>
+          <div style="font-size:0.78rem;color:rgba(240,237,230,0.5);margin-top:0.25rem">
+            📅 ${fmtDateRange(sess.date_start, sess.date_end)}
+            ${sess.location ? ` &nbsp;·&nbsp; 📍 ${sess.location}` : ''}
+          </div>
+        </div>
+        <span style="background:rgba(0,207,173,0.1);border:1px solid rgba(0,207,173,0.2);color:#00CFAD;font-size:0.72rem;font-weight:600;padding:0.3rem 0.75rem;border-radius:2px;white-space:nowrap;flex-shrink:0">Enrolled ✓</span>
+      </div>`;
+
+    if (!occs?.length) {
+      return `<div style="margin-bottom:2.5rem">${header}
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:1.25rem;color:rgba(240,237,230,0.35);font-size:0.82rem;text-align:center">
+          No upcoming dates yet — check back soon.
+        </div></div>`;
+    }
+
+    const occIds = occs.map(o => o.id);
+    const { data: rigs } = await sb.from('rigs').select('*').in('occurrence_id', occIds).eq('status', 'open').order('created_at');
+    const rigIds = (rigs || []).map(r => r.id);
+    const { data: rigMembers } = rigIds.length
+      ? await sb.from('rig_members').select('*').in('rig_id', rigIds).order('created_at')
+      : { data: [] };
+
+    const memberIds = [...new Set([
+      ...(rigs || []).map(r => r.lead_member_id),
+      ...(rigMembers || []).map(rm => rm.member_id)
+    ])];
+    const { data: memberRows } = memberIds.length
+      ? await sb.from('members').select('id, full_name').in('id', memberIds)
+      : { data: [] };
+    const nameOf = {}; (memberRows || []).forEach(m => { nameOf[m.id] = m.full_name; });
+
+    const rigsByOcc = {};
+    (rigs || []).forEach(r => { (rigsByOcc[r.occurrence_id] = rigsByOcc[r.occurrence_id] || []).push(r); });
+    const membersByRig = {};
+    (rigMembers || []).forEach(rm => { (membersByRig[rm.rig_id] = membersByRig[rm.rig_id] || []).push(rm); });
+
+    const occsHtml = occs.map(occ => {
+      const dateLabel = new Date(occ.occurrence_date+'T12:00:00').toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+      const occRigs = rigsByOcc[occ.id] || [];
+      const hasOwnRig = occRigs.some(r => r.lead_member_id === currentMember.id);
+
+      const rigsHtml = occRigs.map(rig => {
+        const members = membersByRig[rig.id] || [];
+        const confirmed = members.filter(m => m.status === 'confirmed');
+        const waitlisted = members.filter(m => m.status === 'waitlisted');
+        const mine = members.find(m => m.member_id === currentMember.id);
+        const isLead = rig.lead_member_id === currentMember.id;
+
+        let actionBtn;
+        if (isLead) {
+          actionBtn = `<button class="btn-outline" style="padding:0.35rem 0.8rem;font-size:0.72rem" onclick="depthCancelRig('${rig.id}')">Cancel my rig</button>`;
+        } else if (mine) {
+          actionBtn = `<button class="btn-outline" style="padding:0.35rem 0.8rem;font-size:0.72rem" onclick="depthLeaveRig('${rig.id}')">Leave${mine.status==='waitlisted' ? ' waitlist' : ''}</button>`;
+        } else if (confirmed.length < rig.capacity) {
+          actionBtn = `<button class="btn-primary" style="padding:0.35rem 0.8rem;font-size:0.72rem" onclick="depthJoinRig('${rig.id}')">Join</button>`;
+        } else {
+          actionBtn = `<button class="btn-outline" style="padding:0.35rem 0.8rem;font-size:0.72rem" onclick="depthJoinRig('${rig.id}')">Join waitlist</button>`;
+        }
+
+        const memberNames = [...confirmed, ...waitlisted]
+          .map(m => `${nameOf[m.member_id]||'—'}${m.status==='waitlisted'?' (waitlist)':''}`).join(', ') || 'No one yet';
+
+        return `
+          <div style="background:rgba(74,144,226,0.05);border:1px solid rgba(74,144,226,0.15);border-radius:3px;padding:0.65rem 0.85rem;margin-top:0.5rem;font-size:0.8rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap">
+              <div><strong>${nameOf[rig.lead_member_id]||'—'}</strong>'s rig — ${confirmed.length}/${rig.capacity}${waitlisted.length ? ` (+${waitlisted.length} waitlisted)`:''}</div>
+              ${actionBtn}
+            </div>
+            ${rig.description ? `<div style="color:rgba(240,237,230,0.6);margin-top:0.3rem">${rig.description}</div>` : ''}
+            <div style="color:rgba(240,237,230,0.4);font-size:0.72rem;margin-top:0.3rem">${memberNames}</div>
+          </div>`;
+      }).join('');
+
+      const openRigForm = (currentMember.is_qualified_lead && !hasOwnRig) ? `
+        <div id="new-rig-${occ.id}" style="display:none;margin-top:0.6rem;padding:0.65rem 0.85rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:3px">
+          <input class="form-input" id="new-rig-desc-${occ.id}" type="text" placeholder="Dive plan description" style="width:100%;margin-bottom:0.5rem">
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            <label style="font-size:0.75rem;color:rgba(240,237,230,0.5)">Capacity</label>
+            <input class="form-input" id="new-rig-cap-${occ.id}" type="number" min="1" max="4" value="4" style="width:70px">
+            <button class="btn-primary" style="padding:0.35rem 0.8rem;font-size:0.72rem" onclick="depthCreateRig('${occ.id}')">Create rig</button>
+          </div>
+        </div>
+        <button class="btn-outline" style="padding:0.3rem 0.7rem;font-size:0.68rem;margin-top:0.5rem" onclick="document.getElementById('new-rig-${occ.id}').style.display=document.getElementById('new-rig-${occ.id}').style.display==='none'?'block':'none'">+ Open a rig</button>` : '';
+
+      return `
+        <details style="background:rgba(13,45,74,0.35);border:1px solid rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;margin-bottom:0.6rem" open>
+          <summary style="padding:0.85rem 1rem;cursor:pointer;list-style:none;user-select:none;font-size:0.85rem;font-weight:500;color:#F0EDE6">${dateLabel}</summary>
+          <div style="padding:0 1rem 1rem">
+            ${rigsHtml || '<div style="color:rgba(240,237,230,0.35);font-size:0.8rem">No rigs opened yet.</div>'}
+            ${openRigForm}
+          </div>
+        </details>`;
+    }).join('');
+
+    return `<div style="margin-bottom:2.5rem">${header}${occsHtml}</div>`;
+  }
+
+  window.depthCreateRig = async function(occId) {
+    const description = document.getElementById(`new-rig-desc-${occId}`).value.trim() || null;
+    const capacity = Math.max(1, Math.min(4, parseInt(document.getElementById(`new-rig-cap-${occId}`).value, 10) || 4));
+    try {
+      await manageRig({ action: 'create_rig', occurrenceId: occId, description, capacity });
+      showToast('Rig opened ✓');
+    } catch (err) { showToast(err.message, true); }
+    loadMySessions();
+  };
+
+  window.depthJoinRig = async function(rigId) {
+    try {
+      const result = await manageRig({ action: 'join_rig', rigId });
+      showToast(result.status === 'waitlisted' ? 'Added to the waitlist' : 'Joined the rig ✓');
+    } catch (err) { showToast(err.message, true); }
+    loadMySessions();
+  };
+
+  window.depthLeaveRig = async function(rigId) {
+    try {
+      await manageRig({ action: 'leave_rig', rigId });
+      showToast('Left the rig');
+    } catch (err) { showToast(err.message, true); }
+    loadMySessions();
+  };
+
+  window.depthCancelRig = async function(rigId) {
+    if (!confirm('Cancel your rig? Anyone on it will be removed.')) return;
+    try {
+      await manageRig({ action: 'cancel_rig', rigId });
+      showToast('Rig cancelled');
+    } catch (err) { showToast(err.message, true); }
+    loadMySessions();
+  };
 
   function buildWeekPlans(plans) {
     const TIME_SLOTS = ['6:00','6:10','6:20','6:30','6:40','6:50','7:00','7:10','7:20','7:30','7:40','7:50'];

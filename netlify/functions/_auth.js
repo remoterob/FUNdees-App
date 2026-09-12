@@ -19,7 +19,7 @@ async function authenticate(event) {
 
   const { data: member, error: memberErr } = await supabaseAdmin
     .from('members')
-    .select('id, email, status, is_admin, stripe_customer_id')
+    .select('id, email, status, is_admin, is_qualified_lead, stripe_customer_id')
     .eq('auth_user_id', user.id)
     .maybeSingle();
   if (memberErr) return { error: 'Member lookup failed', statusCode: 500 };

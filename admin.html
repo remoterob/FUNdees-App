@@ -68,6 +68,13 @@ select.field{cursor:pointer}
 .enr-row:last-child{border-bottom:none}
 .enr-controls{display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;justify-content:flex-end}
 .enr-controls select.field{width:auto;padding:0.35rem 0.5rem;font-size:0.78rem}
+.weekday-picker{display:flex;gap:0.4rem;flex-wrap:wrap}
+.weekday-chip{display:flex;align-items:center;gap:0.35rem;background:rgba(10,22,40,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:3px;padding:0.45rem 0.65rem;font-size:0.78rem;cursor:pointer}
+.weekday-chip input{accent-color:var(--surge)}
+.occ-card{background:rgba(10,22,40,0.4);border:1px solid var(--dim);border-radius:4px;padding:0.85rem 1rem;margin-bottom:0.75rem}
+.occ-head{display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem}
+.rig-card{background:rgba(0,207,173,0.04);border:1px solid rgba(0,207,173,0.15);border-radius:3px;padding:0.65rem 0.85rem;margin-top:0.5rem;font-size:0.82rem}
+.rig-member-row{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.25rem 0;font-size:0.78rem}
 .b-refunded{background:rgba(255,255,255,0.06);color:var(--muted)}
 .b-cancelled{background:rgba(255,92,58,0.12);color:var(--coral)}
 .toast{position:fixed;bottom:2rem;right:2rem;background:#0C7C6A;color:white;padding:0.9rem 1.5rem;border-radius:3px;font-size:0.85rem;transform:translateY(100px);opacity:0;transition:all 0.3s;border-left:3px solid var(--surge);z-index:300}
@@ -402,7 +409,7 @@ select.field{cursor:pointer}
     <div class="form-grid">
       <div>
         <label class="lbl">Type</label>
-        <select class="field" id="f-type">
+        <select class="field" id="f-type" onchange="onTypeChange()">
           <option value="pool">Pool</option>
           <option value="depth">Depth</option>
         </select>
@@ -431,6 +438,19 @@ select.field{cursor:pointer}
       <div>
         <label class="lbl">Capacity</label>
         <input class="field" id="f-capacity" type="number" min="1" placeholder="12">
+      </div>
+    </div>
+
+    <div id="f-weekdays-wrap" style="display:none">
+      <label class="lbl">Runs on</label>
+      <div class="weekday-picker" id="f-weekdays">
+        <label class="weekday-chip"><input type="checkbox" value="1"> Mon</label>
+        <label class="weekday-chip"><input type="checkbox" value="2"> Tue</label>
+        <label class="weekday-chip"><input type="checkbox" value="3"> Wed</label>
+        <label class="weekday-chip"><input type="checkbox" value="4"> Thu</label>
+        <label class="weekday-chip"><input type="checkbox" value="5"> Fri</label>
+        <label class="weekday-chip"><input type="checkbox" value="6"> Sat</label>
+        <label class="weekday-chip"><input type="checkbox" value="0"> Sun</label>
       </div>
     </div>
 
@@ -463,6 +483,15 @@ select.field{cursor:pointer}
     <button class="modal-close" onclick="closeEnrolments()">✕</button>
     <div class="modal-title" id="enr-title">Enrolments</div>
     <div id="enrolments-list" class="enrolments-list"></div>
+  </div>
+</div>
+
+<!-- OCCURRENCES / RIGS MODAL -->
+<div class="overlay" id="occurrences-modal">
+  <div class="modal" style="max-width:720px">
+    <button class="modal-close" onclick="closeOccurrences()">✕</button>
+    <div class="modal-title" id="occ-title">Rigs</div>
+    <div id="occurrences-list"></div>
   </div>
 </div>
 
@@ -585,6 +614,7 @@ async function loadSessions() {
         <div class="td-actions">
           <button class="btn-o" onclick="editSession(${JSON.stringify(s).replace(/"/g,'&quot;')})">Edit</button>
           <button class="btn-o" onclick="viewEnrolments('${s.id}','${s.title.replace(/'/g,"\\'")}')">Enrolments</button>
+          ${s.type === 'depth' ? `<button class="btn-o" onclick="viewOccurrences('${s.id}','${s.title.replace(/'/g,"\\'")}')">Rigs</button>` : ''}
           <button class="btn-danger" onclick="deleteSession('${s.id}','${s.title.replace(/'/g,"\\'")}')">Delete</button>
         </div>
       </td>
@@ -617,10 +647,20 @@ async function openModal(session=null) {
   document.getElementById('f-location').value = session?.location || '';
   document.getElementById('f-desc').value     = session?.description || '';
   document.getElementById('f-prereq').value   = session?.prerequisites || '';
+  const weekdays = session?.weekdays || [];
+  document.querySelectorAll('#f-weekdays input[type=checkbox]').forEach(cb => {
+    cb.checked = weekdays.includes(parseInt(cb.value, 10));
+  });
+  onTypeChange();
   // Load leads first, then set the selected value
   await loadLeads(session?.lead_member_id || '');
   const msg = document.getElementById('modal-msg'); msg.className='msg'; msg.textContent='';
   document.getElementById('session-modal').classList.add('open');
+}
+
+function onTypeChange() {
+  const isDepth = document.getElementById('f-type').value === 'depth';
+  document.getElementById('f-weekdays-wrap').style.display = isDepth ? 'block' : 'none';
 }
 
 function closeModal() { document.getElementById('session-modal').classList.remove('open'); }
@@ -639,29 +679,58 @@ async function saveSession() {
   const desc     = document.getElementById('f-desc').value.trim();
   const prereq   = document.getElementById('f-prereq').value.trim();
   const leadId   = document.getElementById('f-lead').value || null;
+  const weekdays = type === 'depth'
+    ? [...document.querySelectorAll('#f-weekdays input[type=checkbox]:checked')].map(cb => parseInt(cb.value, 10))
+    : null;
 
   const msg = document.getElementById('modal-msg');
   msg.className = 'msg'; msg.textContent = '';
 
   if (!title || !start || !end) { msg.className='msg err'; msg.textContent='Title and dates are required.'; return; }
   if (end < start)              { msg.className='msg err'; msg.textContent='End date must be after start date.'; return; }
+  if (type === 'depth' && weekdays.length === 0) { msg.className='msg err'; msg.textContent='Pick at least one weekday for a depth session.'; return; }
 
   const btn = document.getElementById('btn-save-session');
   btn.disabled = true; btn.textContent = 'Saving...';
 
-  const payload = { title, type, status, date_start: start, date_end: end, price, capacity, location: location||null, description: desc||null, prerequisites: prereq||null, lead_member_id: leadId };
+  const payload = { title, type, status, date_start: start, date_end: end, price, capacity, location: location||null, description: desc||null, prerequisites: prereq||null, lead_member_id: leadId, weekdays };
 
-  const { error } = editingId
-    ? await sb.from('sessions').update(payload).eq('id', editingId)
-    : await sb.from('sessions').insert(payload);
+  const { data: saved, error } = editingId
+    ? await sb.from('sessions').update(payload).eq('id', editingId).select().single()
+    : await sb.from('sessions').insert(payload).select().single();
+
+  if (error) {
+    btn.disabled = false; btn.textContent = 'Save Session';
+    msg.className='msg err'; msg.textContent='Save failed: '+error.message; return;
+  }
+
+  if (type === 'depth') {
+    try { await generateDepthOccurrences(saved.id, start, end, weekdays); }
+    catch (genErr) { toast('Session saved, but occurrence generation failed: ' + genErr.message, true); }
+  }
 
   btn.disabled = false; btn.textContent = 'Save Session';
-
-  if (error) { msg.className='msg err'; msg.textContent='Save failed: '+error.message; return; }
 
   closeModal();
   toast(editingId ? 'Session updated ✓' : 'Session created ✓');
   loadSessions();
+}
+
+// Ensures a depth_occurrences row exists for every date in [start, end] whose
+// weekday is in `weekdays`. Never removes/cancels existing occurrences, so
+// re-saving a series after editing its weekdays doesn't disturb rigs already
+// booked on dates generated earlier.
+async function generateDepthOccurrences(sessionId, start, end, weekdays) {
+  const rows = [];
+  const cur = new Date(start + 'T12:00:00');
+  const endDate = new Date(end + 'T12:00:00');
+  while (cur <= endDate) {
+    if (weekdays.includes(cur.getDay())) rows.push({ session_id: sessionId, occurrence_date: cur.toISOString().slice(0, 10) });
+    cur.setDate(cur.getDate() + 1);
+  }
+  if (!rows.length) return;
+  const { error } = await sb.from('depth_occurrences').upsert(rows, { onConflict: 'session_id,occurrence_date', ignoreDuplicates: true });
+  if (error) throw error;
 }
 
 async function deleteSession(id, title) {
@@ -766,6 +835,192 @@ async function refundEnrolment(enrolmentId, name, amount, btn) {
 }
 
 function closeEnrolments() { document.getElementById('enrolments-modal').classList.remove('open'); }
+
+// ─── DEPTH: OCCURRENCES + RIGS ──────────────────────────────────────────
+let currentOccSession = null;
+
+async function viewOccurrences(sessionId, title) {
+  currentOccSession = { id: sessionId, title };
+  document.getElementById('occ-title').textContent = 'Rigs — ' + title;
+  document.getElementById('occurrences-list').innerHTML = '<div style="color:var(--muted);font-size:0.85rem">Loading...</div>';
+  document.getElementById('occurrences-modal').classList.add('open');
+  await renderOccurrences();
+}
+
+function closeOccurrences() { document.getElementById('occurrences-modal').classList.remove('open'); }
+
+async function renderOccurrences() {
+  if (!currentOccSession) return;
+  const sessionId = currentOccSession.id;
+  const listEl = document.getElementById('occurrences-list');
+
+  const { data: occs, error: occErr } = await sb.from('depth_occurrences')
+    .select('*').eq('session_id', sessionId).order('occurrence_date');
+  if (occErr) { listEl.innerHTML = `<div style="color:var(--coral)">${occErr.message}</div>`; return; }
+  if (!occs?.length) { listEl.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0">No dates generated yet — check the session\'s weekday config.</div>'; return; }
+
+  const occIds = occs.map(o => o.id);
+  const { data: rigs } = await sb.from('rigs').select('*').in('occurrence_id', occIds).order('created_at');
+  const rigsByOcc = {};
+  (rigs || []).forEach(r => { (rigsByOcc[r.occurrence_id] = rigsByOcc[r.occurrence_id] || []).push(r); });
+
+  const rigIds = (rigs || []).map(r => r.id);
+  const { data: rigMembers } = rigIds.length
+    ? await sb.from('rig_members').select('*').in('rig_id', rigIds).order('created_at')
+    : { data: [] };
+  const membersByRig = {};
+  (rigMembers || []).forEach(rm => { (membersByRig[rm.rig_id] = membersByRig[rm.rig_id] || []).push(rm); });
+
+  const memberIds = [...new Set([
+    ...(rigs || []).map(r => r.lead_member_id),
+    ...(rigMembers || []).map(rm => rm.member_id)
+  ])];
+  const { data: memberRows } = memberIds.length
+    ? await sb.from('members').select('id, full_name').in('id', memberIds)
+    : { data: [] };
+  const nameOf = {}; (memberRows || []).forEach(m => { nameOf[m.id] = m.full_name; });
+
+  const { data: enrolled } = await sb.from('enrolments')
+    .select('member_id, members(full_name)').eq('session_id', sessionId).eq('status', 'enrolled');
+  const enrolledOptions = (enrolled || [])
+    .map(e => `<option value="${e.member_id}">${e.members?.full_name || e.member_id}</option>`).join('');
+
+  const { data: leads } = await sb.from('members').select('id, full_name')
+    .or('is_qualified_lead.eq.true,is_admin.eq.true').order('full_name');
+  const leadOptions = (leads || []).map(m => `<option value="${m.id}">${m.full_name}</option>`).join('');
+
+  listEl.innerHTML = occs.map(occ => {
+    const dateLabel = new Date(occ.occurrence_date + 'T12:00:00').toLocaleDateString('en-NZ', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+    const isCancelled = occ.status === 'cancelled';
+    const occRigs = rigsByOcc[occ.id] || [];
+
+    const rigsHtml = occRigs.map(rig => {
+      const members = membersByRig[rig.id] || [];
+      const confirmed = members.filter(m => m.status === 'confirmed');
+      const waitlisted = members.filter(m => m.status === 'waitlisted');
+      const memberRows = [...confirmed, ...waitlisted].map(rm => `
+        <div class="rig-member-row">
+          <span>${nameOf[rm.member_id] || rm.member_id}${rm.status === 'waitlisted' ? ' <span style="color:var(--muted);font-size:0.7rem">(waitlist)</span>' : ''}</span>
+          <button class="btn-danger" style="padding:0.2rem 0.5rem;font-size:0.65rem" onclick="removeRigMember('${rig.id}','${rm.member_id}')">Remove</button>
+        </div>`).join('') || '<div style="color:var(--muted);font-size:0.75rem;padding:0.2rem 0">No one on this rig yet.</div>';
+
+      return `
+        <div class="rig-card">
+          <div class="occ-head" style="margin-bottom:0.3rem">
+            <div><strong>${nameOf[rig.lead_member_id] || rig.lead_member_id}</strong>'s rig — ${confirmed.length}/${rig.capacity}${waitlisted.length ? ` (+${waitlisted.length} waitlisted)` : ''}
+              ${rig.status === 'cancelled' ? '<span class="badge b-closed" style="margin-left:0.4rem">Cancelled</span>' : ''}
+            </div>
+            <div class="td-actions">
+              <button class="btn-o" onclick="editRig('${rig.id}','${(rig.description||'').replace(/'/g,"\\'")}',${rig.capacity})">Edit</button>
+              ${rig.status !== 'cancelled' ? `<button class="btn-danger" onclick="cancelRig('${rig.id}')">Cancel Rig</button>` : ''}
+            </div>
+          </div>
+          ${rig.description ? `<div style="color:var(--muted);font-size:0.8rem;margin-bottom:0.4rem">${rig.description}</div>` : ''}
+          ${memberRows}
+          <div class="enr-controls" style="justify-content:flex-start;margin-top:0.5rem">
+            <select class="field" id="assign-${rig.id}"><option value="">Assign member...</option>${enrolledOptions}</select>
+            <button class="btn-o" onclick="assignToRig('${rig.id}')">Add</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="occ-card">
+        <div class="occ-head">
+          <div><strong>${dateLabel}</strong> ${isCancelled ? '<span class="badge b-closed">Cancelled</span>' : '<span class="badge b-open">Scheduled</span>'}</div>
+          <div class="td-actions">
+            <button class="btn-o" onclick="toggleAddRigForm('${occ.id}')">Add Rig</button>
+            <button class="btn-danger" onclick="toggleOccurrence('${occ.id}','${isCancelled ? 'scheduled' : 'cancelled'}')">${isCancelled ? 'Reinstate' : 'Cancel Date'}</button>
+          </div>
+        </div>
+        ${occ.notes ? `<div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.4rem">📋 ${occ.notes}</div>` : ''}
+        <div class="rig-card" id="add-rig-${occ.id}" style="display:none">
+          <label class="lbl" style="margin-top:0">Lead</label>
+          <select class="field" id="add-rig-lead-${occ.id}"><option value="">Select a lead...</option>${leadOptions}</select>
+          <label class="lbl">Description</label>
+          <input class="field" id="add-rig-desc-${occ.id}" type="text" placeholder="Dive plan description">
+          <label class="lbl">Capacity (1-4, not counting the lead)</label>
+          <input class="field" id="add-rig-cap-${occ.id}" type="number" min="1" max="4" value="4">
+          <div class="enr-controls" style="justify-content:flex-start;margin-top:0.6rem">
+            <button class="btn-p" onclick="createRig('${occ.id}')">Create Rig</button>
+            <button class="btn-o" onclick="toggleAddRigForm('${occ.id}')">Cancel</button>
+          </div>
+        </div>
+        ${rigsHtml || '<div style="color:var(--muted);font-size:0.8rem">No rigs opened yet.</div>'}
+      </div>`;
+  }).join('');
+}
+
+async function toggleOccurrence(occId, status) {
+  const { error } = await sb.from('depth_occurrences').update({ status }).eq('id', occId);
+  if (error) { toast('Update failed: ' + error.message, true); return; }
+  renderOccurrences();
+}
+
+function toggleAddRigForm(occId) {
+  const el = document.getElementById(`add-rig-${occId}`);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function createRig(occurrenceId) {
+  const leadId = document.getElementById(`add-rig-lead-${occurrenceId}`).value;
+  if (!leadId) { toast('Pick a lead first', true); return; }
+  const description = document.getElementById(`add-rig-desc-${occurrenceId}`).value.trim() || null;
+  const capacity = Math.max(1, Math.min(4, parseInt(document.getElementById(`add-rig-cap-${occurrenceId}`).value, 10) || 4));
+  const { error } = await sb.from('rigs').insert({ occurrence_id: occurrenceId, lead_member_id: leadId, description, capacity });
+  if (error) { toast('Add rig failed: ' + error.message, true); return; }
+  toast('Rig added ✓');
+  renderOccurrences();
+}
+
+async function editRig(rigId, currentDesc, currentCapacity) {
+  const description = prompt('Dive plan description:', currentDesc || '');
+  if (description === null) return;
+  const capacity = Math.max(1, Math.min(4, parseInt(prompt('Capacity (1-4):', currentCapacity), 10) || currentCapacity));
+  const { error } = await sb.from('rigs').update({ description: description || null, capacity }).eq('id', rigId);
+  if (error) { toast('Update failed: ' + error.message, true); return; }
+  renderOccurrences();
+}
+
+async function cancelRig(rigId) {
+  if (!confirm('Cancel this rig? Members on it will need to be reassigned elsewhere.')) return;
+  const { error } = await sb.from('rigs').update({ status: 'cancelled' }).eq('id', rigId);
+  if (error) { toast('Cancel failed: ' + error.message, true); return; }
+  renderOccurrences();
+}
+
+async function assignToRig(rigId) {
+  const sel = document.getElementById(`assign-${rigId}`);
+  const memberId = sel?.value;
+  if (!memberId) return;
+  try {
+    await manageRig({ action: 'admin_assign', rigId, memberId, status: 'confirmed' });
+    toast('Member assigned ✓');
+  } catch (err) { toast(err.message, true); }
+  renderOccurrences();
+}
+
+async function removeRigMember(rigId, memberId) {
+  if (!confirm('Remove this member from the rig?')) return;
+  try {
+    await manageRig({ action: 'leave_rig', rigId, memberId });
+    toast('Removed ✓');
+  } catch (err) { toast(err.message, true); }
+  renderOccurrences();
+}
+
+async function manageRig(body) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = '/auth.html'; return null; }
+  const res = await fetch('/.netlify/functions/depth-rig-action', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+    body: JSON.stringify(body)
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || 'Request failed');
+  return json;
+}
 
 // Close modals on overlay click
 document.querySelectorAll('.overlay').forEach(o => {
