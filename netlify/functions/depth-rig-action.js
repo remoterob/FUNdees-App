@@ -20,6 +20,44 @@ const { supabaseAdmin } = require('./_supabase');
 const { corsHeaders } = require('./_cors');
 const { authenticate } = require('./_auth');
 
+const FROM = 'FUNdees Training <noreply@spearfishingfundamentals.com>';
+
+async function sendEmail(to, subject, html) {
+  if (!process.env.RESEND_API_KEY || !to) return;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM, to: [to], subject, html })
+    });
+    if (!res.ok) console.error('depth-rig-action email failed:', await res.text());
+  } catch (err) {
+    console.error('depth-rig-action email error:', err.message);
+  }
+}
+
+// Human-readable context about a rig for use in notification emails.
+async function getRigContext(rigId) {
+  const { data: rig } = await supabaseAdmin
+    .from('rigs')
+    .select('description, lead_member_id, depth_occurrences(occurrence_date, sessions(title, location))')
+    .eq('id', rigId)
+    .maybeSingle();
+  if (!rig) return null;
+
+  const occ = rig.depth_occurrences;
+  const sess = occ?.sessions;
+  const { data: lead } = await supabaseAdmin.from('members').select('full_name').eq('id', rig.lead_member_id).maybeSingle();
+
+  return {
+    dateLabel: occ ? new Date(occ.occurrence_date + 'T12:00:00').toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'an upcoming date',
+    sessionTitle: sess?.title || 'Depth session',
+    location: sess?.location || null,
+    description: rig.description || null,
+    leadName: lead?.full_name || 'the lead'
+  };
+}
+
 exports.handler = async (event) => {
   const CORS = corsHeaders(event);
 
@@ -144,8 +182,27 @@ async function setRigStatus(member, { rigId }, status, CORS) {
     return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Only this rig\'s lead or an admin can cancel it' }) };
   }
 
+  let displaced = [];
+  if (status === 'cancelled') {
+    const { data } = await supabaseAdmin
+      .from('rig_members')
+      .select('members(full_name, email)')
+      .eq('rig_id', rigId);
+    displaced = (data || []).map(r => r.members).filter(m => m?.email);
+  }
+
   const { error } = await supabaseAdmin.from('rigs').update({ status }).eq('id', rigId);
   if (error) throw new Error(`Set rig status: ${error.message}`);
+
+  if (displaced.length) {
+    const ctx = await getRigContext(rigId);
+    if (ctx) {
+      await Promise.all(displaced.map(m => sendEmail(m.email, `Rig cancelled — ${ctx.sessionTitle}`, `
+        <p>Kia ora ${m.full_name || ''},</p>
+        <p><strong>${ctx.leadName}'s rig</strong> for <strong>${ctx.sessionTitle}</strong> on <strong>${ctx.dateLabel}</strong> has been cancelled.</p>
+        <p>Log in to join another rig on that date, or check back if a new one opens.</p>`)));
+    }
+  }
 
   return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };
 }
@@ -235,7 +292,7 @@ async function promoteFromWaitlist(rigId) {
 
   const { data: next } = await supabaseAdmin
     .from('rig_members')
-    .select('id')
+    .select('id, member_id')
     .eq('rig_id', rigId)
     .eq('status', 'waitlisted')
     .order('created_at', { ascending: true })
@@ -244,4 +301,16 @@ async function promoteFromWaitlist(rigId) {
   if (!next) return;
 
   await supabaseAdmin.from('rig_members').update({ status: 'confirmed' }).eq('id', next.id);
+
+  const [{ data: member }, ctx] = await Promise.all([
+    supabaseAdmin.from('members').select('full_name, email').eq('id', next.member_id).maybeSingle(),
+    getRigContext(rigId)
+  ]);
+  if (member?.email && ctx) {
+    await sendEmail(member.email, `You're in! A spot opened on ${ctx.sessionTitle}`, `
+      <p>Kia ora ${member.full_name || ''},</p>
+      <p>A spot opened up on <strong>${ctx.leadName}'s rig</strong> for <strong>${ctx.sessionTitle}</strong> on <strong>${ctx.dateLabel}</strong>${ctx.location ? ` at ${ctx.location}` : ''}, and you've been moved off the waitlist and confirmed.</p>
+      ${ctx.description ? `<p>Dive plan: ${ctx.description}</p>` : ''}
+      <p>See you in the water!</p>`);
+  }
 }
