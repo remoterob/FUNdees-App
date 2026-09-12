@@ -1036,17 +1036,21 @@ function toggleAddRigForm(occId) {
 }
 
 async function createRig(occurrenceId) {
-  const leadId = document.getElementById(`add-rig-lead-${occurrenceId}`).value;
-  if (!leadId) { toast('Pick a lead first', true); return; }
-  const description = document.getElementById(`add-rig-desc-${occurrenceId}`).value.trim() || null;
-  const capacity = Math.max(1, Math.min(4, parseInt(document.getElementById(`add-rig-cap-${occurrenceId}`).value, 10) || 4));
-  const time_start = document.getElementById(`add-rig-start-${occurrenceId}`).value || null;
-  const time_end = document.getElementById(`add-rig-end-${occurrenceId}`).value || null;
-  if (time_start && time_end && time_end <= time_start) { toast('End time must be after start time', true); return; }
-  const { error } = await sb.from('rigs').insert({ occurrence_id: occurrenceId, lead_member_id: leadId, description, capacity, time_start, time_end });
-  if (error) { toast('Add rig failed: ' + error.message, true); return; }
-  toast('Rig added ✓');
-  renderOccurrences();
+  try {
+    const leadId = document.getElementById(`add-rig-lead-${occurrenceId}`)?.value;
+    if (!leadId) { toast('Pick a lead first', true); return; }
+    const description = document.getElementById(`add-rig-desc-${occurrenceId}`)?.value.trim() || null;
+    const capacity = Math.max(1, Math.min(4, parseInt(document.getElementById(`add-rig-cap-${occurrenceId}`)?.value, 10) || 4));
+    const time_start = document.getElementById(`add-rig-start-${occurrenceId}`)?.value || null;
+    const time_end = document.getElementById(`add-rig-end-${occurrenceId}`)?.value || null;
+    if (time_start && time_end && time_end <= time_start) { toast('End time must be after start time', true); return; }
+    const { error } = await sb.from('rigs').insert({ occurrence_id: occurrenceId, lead_member_id: leadId, description, capacity, time_start, time_end });
+    if (error) { toast('Add rig failed: ' + error.message, true); return; }
+    toast('Rig added ✓');
+    renderOccurrences();
+  } catch (err) {
+    toast('Add rig failed: ' + err.message, true);
+  }
 }
 
 async function editRig(rigId, currentDesc, currentCapacity, currentStart, currentEnd) {

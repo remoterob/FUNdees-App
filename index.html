@@ -2065,11 +2065,11 @@
   }
 
   window.depthCreateRig = async function(occId) {
-    const description = document.getElementById(`new-rig-desc-${occId}`).value.trim() || null;
-    const capacity = Math.max(1, Math.min(4, parseInt(document.getElementById(`new-rig-cap-${occId}`).value, 10) || 4));
-    const timeStart = document.getElementById(`new-rig-start-${occId}`).value || null;
-    const timeEnd = document.getElementById(`new-rig-end-${occId}`).value || null;
     try {
+      const description = document.getElementById(`new-rig-desc-${occId}`)?.value.trim() || null;
+      const capacity = Math.max(1, Math.min(4, parseInt(document.getElementById(`new-rig-cap-${occId}`)?.value, 10) || 4));
+      const timeStart = document.getElementById(`new-rig-start-${occId}`)?.value || null;
+      const timeEnd = document.getElementById(`new-rig-end-${occId}`)?.value || null;
       await manageRig({ action: 'create_rig', occurrenceId: occId, description, capacity, timeStart, timeEnd });
       showToast('Rig opened ✓');
     } catch (err) { showToast(err.message, true); }
