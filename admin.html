@@ -539,6 +539,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 window.sb = sb;
 
 let editingId = null;
+let editingOriginalWeekdays = [];
+const WEEKDAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 function toast(msg, err=false) {
   const t = document.getElementById('toast');
@@ -648,6 +650,7 @@ async function openModal(session=null) {
   document.getElementById('f-desc').value     = session?.description || '';
   document.getElementById('f-prereq').value   = session?.prerequisites || '';
   const weekdays = session?.weekdays || [];
+  editingOriginalWeekdays = weekdays.slice();
   document.querySelectorAll('#f-weekdays input[type=checkbox]').forEach(cb => {
     cb.checked = weekdays.includes(parseInt(cb.value, 10));
   });
@@ -690,6 +693,14 @@ async function saveSession() {
   if (end < start)              { msg.className='msg err'; msg.textContent='End date must be after start date.'; return; }
   if (type === 'depth' && weekdays.length === 0) { msg.className='msg err'; msg.textContent='Pick at least one weekday for a depth session.'; return; }
 
+  const removedWeekdays = (editingId && type === 'depth')
+    ? editingOriginalWeekdays.filter(d => !weekdays.includes(d))
+    : [];
+  if (removedWeekdays.length) {
+    const ok = await confirmWeekdayRemoval(editingId, removedWeekdays);
+    if (!ok) return;
+  }
+
   const btn = document.getElementById('btn-save-session');
   btn.disabled = true; btn.textContent = 'Saving...';
 
@@ -705,8 +716,10 @@ async function saveSession() {
   }
 
   if (type === 'depth') {
-    try { await generateDepthOccurrences(saved.id, start, end, weekdays); }
-    catch (genErr) { toast('Session saved, but occurrence generation failed: ' + genErr.message, true); }
+    try {
+      if (removedWeekdays.length) await removeOccurrencesForWeekdays(saved.id, removedWeekdays);
+      await generateDepthOccurrences(saved.id, start, end, weekdays);
+    } catch (genErr) { toast('Session saved, but updating dates failed: ' + genErr.message, true); }
   }
 
   btn.disabled = false; btn.textContent = 'Save Session';
@@ -714,6 +727,46 @@ async function saveSession() {
   closeModal();
   toast(editingId ? 'Session updated ✓' : 'Session created ✓');
   loadSessions();
+}
+
+// Warns the admin before dropping a weekday: any upcoming (not-yet-happened)
+// occurrences that fall on a removed weekday will be deleted, including any
+// rigs already opened on them. Returns true to proceed, false to abort the save.
+async function confirmWeekdayRemoval(sessionId, removedWeekdays) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: occs } = await sb.from('depth_occurrences')
+    .select('id, occurrence_date')
+    .eq('session_id', sessionId)
+    .gte('occurrence_date', today);
+
+  const affected = (occs || []).filter(o => removedWeekdays.includes(new Date(o.occurrence_date + 'T12:00:00').getDay()));
+  if (!affected.length) return true;
+
+  const { count: rigCount } = await sb.from('rigs')
+    .select('id', { count: 'exact', head: true })
+    .in('occurrence_id', affected.map(o => o.id));
+
+  const dayNames = removedWeekdays.map(d => WEEKDAY_NAMES[d]).join(', ');
+  const rigWarning = rigCount ? ` ${rigCount} rig${rigCount === 1 ? '' : 's'} already set up on those dates — and anyone on them — will be removed too.` : '';
+  return confirm(`Removing ${dayNames} will delete ${affected.length} upcoming date${affected.length === 1 ? '' : 's'} for this session.${rigWarning} This cannot be undone. Continue?`);
+}
+
+// Deletes upcoming (not-yet-happened) occurrences that fall on a removed
+// weekday. Cascades to any rigs/rig_members on them (foreign keys).
+async function removeOccurrencesForWeekdays(sessionId, removedWeekdays) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: occs } = await sb.from('depth_occurrences')
+    .select('id, occurrence_date')
+    .eq('session_id', sessionId)
+    .gte('occurrence_date', today);
+
+  const idsToDelete = (occs || [])
+    .filter(o => removedWeekdays.includes(new Date(o.occurrence_date + 'T12:00:00').getDay()))
+    .map(o => o.id);
+  if (!idsToDelete.length) return;
+
+  const { error } = await sb.from('depth_occurrences').delete().in('id', idsToDelete);
+  if (error) throw error;
 }
 
 // Ensures a depth_occurrences row exists for every date in [start, end] whose
