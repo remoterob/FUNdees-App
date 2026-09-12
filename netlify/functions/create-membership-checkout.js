@@ -3,7 +3,7 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { supabaseAdmin } = require('./_supabase');
-const { corsHeaders } = require('./_cors');
+const { corsHeaders, resolveBaseUrl } = require('./_cors');
 const { authenticate } = require('./_auth');
 
 exports.handler = async (event) => {
@@ -40,7 +40,7 @@ exports.handler = async (event) => {
       }
     }
 
-    const baseUrl = process.env.URL || 'https://fundees.netlify.app';
+    const baseUrl = resolveBaseUrl(event);
 
     // One-time payment — price must be set to one-time in Stripe dashboard
     const session = await stripe.checkout.sessions.create({

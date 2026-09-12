@@ -24,4 +24,18 @@ function corsHeaders(event) {
   };
 }
 
-module.exports = { corsHeaders, ALLOWED_ORIGINS };
+// For Stripe success_url/cancel_url: process.env.URL always resolves to
+// Netlify's fixed primary domain, regardless of which allowed origin the
+// browser actually started checkout from. If someone logs in and pays from
+// a different allowed origin (e.g. the fundees.netlify.app subdomain
+// instead of the custom domain), Stripe would bounce them back to a
+// different origin than the one holding their session in localStorage —
+// which looks exactly like being logged out. Redirect back to whichever
+// allowed origin the request actually came from instead.
+function resolveBaseUrl(event) {
+  const origin = event?.headers?.origin || event?.headers?.Origin || '';
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  return process.env.URL || ALLOWED_ORIGINS[0];
+}
+
+module.exports = { corsHeaders, ALLOWED_ORIGINS, resolveBaseUrl };

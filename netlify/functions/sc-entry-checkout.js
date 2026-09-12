@@ -8,7 +8,7 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { supabaseAdmin } = require('./_supabase');
-const { corsHeaders } = require('./_cors');
+const { corsHeaders, resolveBaseUrl } = require('./_cors');
 const { authenticate } = require('./_auth');
 
 exports.handler = async (event) => {
@@ -61,7 +61,7 @@ exports.handler = async (event) => {
       await supabaseAdmin.from('members').update({ stripe_customer_id: customerId }).eq('id', authMember.id);
     }
 
-    const baseUrl = process.env.URL || 'https://fundees.netlify.app';
+    const baseUrl = resolveBaseUrl(event);
     const checkout = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'payment',

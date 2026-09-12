@@ -4,7 +4,7 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { supabaseAdmin } = require('./_supabase');
-const { corsHeaders } = require('./_cors');
+const { corsHeaders, resolveBaseUrl } = require('./_cors');
 const { authenticate } = require('./_auth');
 
 exports.handler = async (event) => {
@@ -66,7 +66,7 @@ exports.handler = async (event) => {
       .from('enrolments')
       .upsert({ session_id: sessionId, member_id: memberId, status: 'pending_payment' }, { onConflict: 'session_id,member_id' });
 
-    const baseUrl = process.env.URL || 'https://fundees.netlify.app';
+    const baseUrl = resolveBaseUrl(event);
     const amountCents = Math.round(session.price * 100);
 
     const checkout = await stripe.checkout.sessions.create({
