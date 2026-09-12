@@ -603,9 +603,11 @@ function filterDrills(q) {
 
 // ── SESSIONS ──────────────────────────────────────────────────────────────
 async function loadSessions() {
-  // Load pool sessions that are open or future
+  // Load pool sessions that are open or future — depth sessions use the
+  // rig system (admin.html "Rigs" / index.html "My Sessions") instead.
   const { data } = await sb.from('sessions')
     .select('*, enrolments(member_id, status, members(full_name))')
+    .eq('type', 'pool')
     .in('status', ['open','full','closed','opening_soon'])
     .order('date_start');
   allSessions = data || [];
