@@ -149,6 +149,7 @@ async function createRig(member, { occurrenceId, description, capacity, timeStar
     .select('id')
     .eq('occurrence_id', occurrenceId)
     .eq('lead_member_id', member.id)
+    .neq('status', 'cancelled')
     .maybeSingle();
   if (existing) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'You already have a rig on this date' }) };
 
