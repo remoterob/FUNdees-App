@@ -104,6 +104,10 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
       <div class="notice">📅 Competition day: <strong>21 November 2026</strong> — subject to weather.</div>
       <div class="notice" id="reg-status"></div>
       <div id="entry-actions"></div>
+      <div class="card" id="team-card" style="display:none">
+        <div class="sec-h" style="margin-top:0">Your Team</div>
+        <div id="team-body"></div>
+      </div>
       <div class="card">
         <div class="sec-h">Your Details</div>
         <div class="grid2">
@@ -312,6 +316,7 @@ async function boot(){
   renderEntry();
   renderRules();
   show('app');
+  loadMyTeam();
 
   // Return from Stripe entry checkout
   const params = new URLSearchParams(location.search);
@@ -360,6 +365,34 @@ function renderCompetitor(){
     st.className = 'notice';
     st.innerHTML = `✅ You're registered for <strong>${state.competition.name}</strong>. ${paidBit}` +
       (fee > 0 && !r.paid ? '<br><span style="font-size:0.8rem;color:var(--muted)">Entry payment opens shortly.</span>' : '');
+  }
+}
+
+// ── YOUR TEAM + BUDDY CONTACTS ──
+async function loadMyTeam(){
+  const card = document.getElementById('team-card'), body = document.getElementById('team-body');
+  if (!state.competitor){ card.style.display = 'none'; return; }
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  try {
+    const { team } = await scApi('/.netlify/functions/sc-my-team', {});
+    card.style.display = 'block';
+    if (!team){
+      body.innerHTML = '<div class="hint" style="margin-top:0">You\'ll see your team and your buddy\'s contact details here once the organisers have paired you up.</div>';
+      return;
+    }
+    const buddies = team.buddies || [];
+    body.innerHTML = `
+      <div><strong>${esc(team.name)}</strong>${team.boat ? ` <span style="color:var(--muted)">· Boat: ${esc(team.boat)}</span>` : ''}</div>
+      ${buddies.length
+        ? `<div class="hint" style="margin-top:0.75rem">Your buddy${buddies.length > 1 ? 's' : ''}:</div>` + buddies.map(b => `
+            <div style="margin-top:0.5rem">
+              <strong>${esc(b.name)}</strong><br>
+              ${b.email ? `<a href="mailto:${esc(b.email)}">${esc(b.email)}</a><br>` : ''}
+              ${b.phone ? `<a href="tel:${esc(b.phone)}">${esc(b.phone)}</a>` : ''}
+            </div>`).join('')
+        : '<div class="hint" style="margin-top:0.75rem">No buddy assigned yet.</div>'}`;
+  } catch(e){
+    card.style.display = 'none';
   }
 }
 

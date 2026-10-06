@@ -26,6 +26,11 @@
 [functions."daily-backup"]
   schedule = "0 18 * * *"
 
+# Spear & Cook — weekly reminder to registered competitors who haven't paid.
+# 19:00 UTC Sunday = Monday 07:00 NZST / 08:00 NZDT.
+[functions."sc-payment-reminder"]
+  schedule = "0 19 * * 0"
+
 [[headers]]
   for = "/manifest.json"
   [headers.values]

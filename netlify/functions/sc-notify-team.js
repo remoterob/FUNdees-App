@@ -35,31 +35,39 @@ exports.handler = async (event) => {
       .single();
     if (tErr || !team) throw new Error('Team not found');
 
-    // Members → competitor → member (name/email)
+    // Members → competitor → member (name/email/phone)
     const { data: rows, error: mErr } = await supabaseAdmin
       .from('sc_team_members')
-      .select('sc_competitors(experience, members(full_name, email))')
+      .select('sc_competitors(experience, members(full_name, email, phone))')
       .eq('team_id', team_id);
     if (mErr) throw mErr;
 
-    const people = (rows || [])
-      .map(r => r.sc_competitors?.members)
-      .filter(m => m && m.email);
-    if (!people.length) return { statusCode: 200, headers, body: JSON.stringify({ sent: 0, note: 'No emails on file' }) };
+    // Everyone on the team is listed as a buddy; only people with an email get a message.
+    const all = (rows || []).map(r => r.sc_competitors?.members).filter(Boolean);
+    const recipients = all.filter(m => m.email);
+    if (!recipients.length) return { statusCode: 200, headers, body: JSON.stringify({ sent: 0, note: 'No emails on file' }) };
 
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const compName = team.sc_competitions?.name || 'Spear & Cook';
-    const teammatesFor = (email) => people.filter(p => p.email !== email).map(p => p.full_name).join(', ') || '—';
+    const buddiesFor = (email) => {
+      const others = all.filter(p => p.email !== email);
+      if (!others.length) return '<p>No buddy assigned yet — the organisers will be in touch.</p>';
+      return `<p><strong>Your buddy${others.length > 1 ? 's' : ''}:</strong></p>` + others.map(o => `
+        <p style="margin:0 0 0.75rem">
+          <strong>${esc(o.full_name)}</strong><br>
+          ${o.email ? `Email: <a href="mailto:${esc(o.email)}">${esc(o.email)}</a><br>` : ''}
+          ${o.phone ? `Phone: <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a>` : ''}
+        </p>`).join('');
+    };
 
     let sent = 0;
-    for (const p of people) {
+    for (const p of recipients) {
       const html = `
-        <p>Kia ora ${p.full_name || ''},</p>
-        <p>You've been teamed up for <strong>${compName}</strong>.</p>
-        <ul>
-          <li><strong>Team:</strong> ${team.name}</li>
-          <li><strong>Your teammate(s):</strong> ${teammatesFor(p.email)}</li>
-          ${team.boat ? `<li><strong>Boat:</strong> ${team.boat}</li>` : ''}
-        </ul>
+        <p>Kia ora ${esc(p.full_name)},</p>
+        <p>You've been teamed up for <strong>${esc(compName)}</strong>.</p>
+        <p><strong>Team:</strong> ${esc(team.name)}${team.boat ? `<br><strong>Boat:</strong> ${esc(team.boat)}` : ''}</p>
+        ${buddiesFor(p.email)}
+        <p>Get in touch with your buddy before the day to plan your dive.</p>
         <p>Log in to the app to see your team, the rules and (on the day) log your catch and cook-off entries.</p>
         <p>Dive safe — tight lines!</p>`;
 
