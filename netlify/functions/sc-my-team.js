@@ -35,7 +35,7 @@ exports.handler = async (event) => {
     if (!me) return { statusCode: 200, headers, body: JSON.stringify({ team: null }) };
 
     const { data: tm, error: tmErr } = await supabaseAdmin
-      .from('sc_team_members').select('team_id, sc_teams(name, boat)')
+      .from('sc_team_members').select('team_id, sc_teams(name, boat, photo_url)')
       .eq('competitor_id', me.id).maybeSingle();
     if (tmErr) throw tmErr;
     if (!tm?.team_id) return { statusCode: 200, headers, body: JSON.stringify({ team: null }) };
@@ -58,7 +58,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ team: { name: tm.sc_teams?.name || '', boat: tm.sc_teams?.boat || '', buddies } })
+      body: JSON.stringify({ team: { name: tm.sc_teams?.name || '', boat: tm.sc_teams?.boat || '', photo_url: tm.sc_teams?.photo_url || '', buddies } })
     };
   } catch (err) {
     console.error('sc-my-team error:', err);

@@ -47,6 +47,8 @@ textarea.field{resize:vertical;min-height:70px}
 .notice{background:var(--surge-dim);border:1px solid rgba(0,207,173,0.25);color:var(--sand);border-radius:4px;padding:1rem 1.15rem;font-size:0.85rem;line-height:1.6;margin-bottom:1.5rem}
 .notice.warn{background:rgba(245,166,35,0.1);border-color:rgba(245,166,35,0.3)}
 #team-body a{color:var(--surge)}
+.team-photo{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:4px;display:block;background:rgba(255,255,255,0.05)}
+.team-thumb{width:32px;height:32px;object-fit:cover;border-radius:3px;flex-shrink:0;vertical-align:middle;background:rgba(255,255,255,0.05)}
 .sec-h{font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--surge);font-weight:600;margin:1.75rem 0 0.5rem;padding-bottom:0.4rem;border-bottom:1px solid var(--dim)}
 .sec-h:first-child{margin-top:0}
 .rules-body{background:rgba(10,22,40,0.5);border:1px solid var(--dim);border-radius:4px;padding:1.25rem;font-size:0.86rem;line-height:1.7;color:rgba(240,237,230,0.85);white-space:pre-wrap;max-height:340px;overflow-y:auto;margin-bottom:1rem}
@@ -213,7 +215,7 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
           <button class="btn" id="btn-log" onclick="logCatch()">Log Catch</button>
           <div class="msg" id="catch-msg"></div>
         </div>
-        <div class="sec-h">Your Team's Catches — <span id="catch-total">0</span> pts</div>
+        <div class="sec-h" id="catch-team-header" style="display:flex;align-items:center;gap:0.5rem">Your Team's Catches — <span id="catch-total">0</span> pts</div>
         <div id="catch-list"><div class="hint">No catches logged yet.</div></div>
       </div>
     </div>
@@ -383,6 +385,7 @@ async function loadMyTeam(){
     }
     const buddies = team.buddies || [];
     body.innerHTML = `
+      ${team.photo_url ? `<img class="team-photo" style="margin-bottom:0.9rem" src="${esc(team.photo_url)}" alt="${esc(team.name)}">` : ''}
       <div><strong>${esc(team.name)}</strong>${team.boat ? ` <span style="color:var(--muted)">· Boat: ${esc(team.boat)}</span>` : ''}</div>
       ${buddies.length
         ? `<div class="hint" style="margin-top:0.75rem">Your buddy${buddies.length > 1 ? 's' : ''}:</div>` + buddies.map(b => `
@@ -391,9 +394,28 @@ async function loadMyTeam(){
               ${b.email ? `<a href="mailto:${esc(b.email)}">${esc(b.email)}</a><br>` : ''}
               ${b.phone ? `<a href="tel:${esc(b.phone)}">${esc(b.phone)}</a>` : ''}
             </div>`).join('')
-        : '<div class="hint" style="margin-top:0.75rem">No buddy assigned yet.</div>'}`;
+        : '<div class="hint" style="margin-top:0.75rem">No buddy assigned yet.</div>'}
+      <label class="lbl" style="margin-top:1rem">${team.photo_url ? 'Change' : 'Add a'} team photo</label>
+      <input class="field" id="team-photo-input" type="file" accept="image/*" style="padding:0.5rem" onchange="uploadTeamPhoto(this)">
+      <div class="msg" id="team-photo-msg"></div>`;
   } catch(e){
     card.style.display = 'none';
+  }
+}
+
+async function uploadTeamPhoto(input){
+  const msg = document.getElementById('team-photo-msg');
+  const file = input.files?.[0];
+  if (!file) return;
+  msg.className = 'msg'; msg.textContent = 'Uploading…'; msg.style.display = 'block';
+  try {
+    const img = await processImage(file);
+    const url = await uploadBlob(img);
+    await scApi('/.netlify/functions/sc-team-photo', { photo_url: url });
+    msg.className = 'msg ok'; msg.textContent = 'Team photo updated ✓';
+    await loadMyTeam();
+  } catch(e){
+    msg.className = 'msg err'; msg.textContent = e.message;
   }
 }
 
@@ -542,19 +564,22 @@ async function loadCatch(){
   const gate = document.getElementById('catch-gate'), main = document.getElementById('catch-main');
   if (!state.competitor){ gate.innerHTML = '<div class="notice warn">Register on the Competitor tab first.</div>'; main.style.display='none'; return; }
 
-  const { data: tm } = await sb.from('sc_team_members').select('team_id, sc_teams(name)').eq('competitor_id', state.competitor.id).maybeSingle();
+  const { data: tm } = await sb.from('sc_team_members').select('team_id, sc_teams(name, photo_url)').eq('competitor_id', state.competitor.id).maybeSingle();
   if (!tm?.team_id){ gate.innerHTML = "<div class=\"notice warn\">You'll be able to log catches once you've been assigned to a team.</div>"; main.style.display='none'; return; }
-  state.myTeamId = tm.team_id; state.myTeamName = tm.sc_teams?.name || '';
+  state.myTeamId = tm.team_id; state.myTeamName = tm.sc_teams?.name || ''; state.myTeamPhoto = tm.sc_teams?.photo_url || '';
 
   if (!state.species){ const { data: sp } = await sb.from('sc_species').select('*').eq('active', true).order('name'); state.species = sp||[]; }
   document.getElementById('c-species').innerHTML = state.species.map(s=>`<option value="${s.slug}" data-base="${s.base_points}">${s.name}</option>`).join('');
 
   const closed = !state.competition.spearing_open;
+  const teamTag = `${state.myTeamPhoto?`<img class="team-thumb" src="${state.myTeamPhoto}">`:''}<strong>${state.myTeamName}</strong>`;
   gate.innerHTML = closed
     ? '<div class="notice warn">Catch logging is currently closed by the organisers.</div>'
-    : `<div class="notice">Logging for <strong>${state.myTeamName}</strong>. Each catch scores 100 base + 1 point per 100g (max +80).</div>`;
+    : `<div class="notice" style="display:flex;align-items:center;gap:0.6rem">${teamTag}<span>Each catch scores 100 base + 1 point per 100g (max +80).</span></div>`;
   main.style.display = 'block';
   document.getElementById('btn-log').disabled = closed;
+  document.getElementById('catch-team-header').innerHTML =
+    (state.myTeamPhoto ? `<img class="team-thumb" src="${state.myTeamPhoto}">` : '') + `Your Team's Catches — <span id="catch-total">0</span> pts`;
   catchPreview();
   await loadCatchList();
 }
@@ -690,8 +715,8 @@ const COOK_CRIT = [['presentation','Presentation'],['flavour','Flavour'],['creat
 
 async function myTeamRow(){
   if (!state.competitor) return null;
-  const { data: tm } = await sb.from('sc_team_members').select('team_id, sc_teams(name)').eq('competitor_id', state.competitor.id).maybeSingle();
-  return tm?.team_id ? { id: tm.team_id, name: tm.sc_teams?.name || '' } : null;
+  const { data: tm } = await sb.from('sc_team_members').select('team_id, sc_teams(name, photo_url)').eq('competitor_id', state.competitor.id).maybeSingle();
+  return tm?.team_id ? { id: tm.team_id, name: tm.sc_teams?.name || '', photo_url: tm.sc_teams?.photo_url || '' } : null;
 }
 async function scApi(url, payload){
   const { data:{ session } } = await sb.auth.getSession();
@@ -711,7 +736,7 @@ async function loadCook(){
   const { data: entries } = await sb.from('sc_cooking_entries').select('*').eq('team_id', team.id);
   const byCat = {}; (entries||[]).forEach(e=>byCat[e.category]=e);
   state.cookByCat = byCat;
-  gate.innerHTML = `<div class="notice">Submitting dishes for <strong>${team.name}</strong>. One dish per category, each with a photo — judges score Presentation, Flavour, Creativity and Wow.</div>`;
+  gate.innerHTML = `<div class="notice" style="display:flex;align-items:center;gap:0.6rem">${team.photo_url?`<img class="team-thumb" src="${team.photo_url}">`:''}<span>Submitting dishes for <strong>${team.name}</strong>. One dish per category, each with a photo — judges score Presentation, Flavour, Creativity and Wow.</span></div>`;
   main.style.display='block';
   document.getElementById('cook-cats').innerHTML = COOK_CATS.map(([cat,label])=>{
     const e = byCat[cat];
@@ -770,7 +795,7 @@ async function loadJudge(){
   const team = await myTeamRow();
   const myTeamId = team?.id || null;
   const [{ data: entries }, { data: myVotes }] = await Promise.all([
-    sb.from('sc_cooking_entries').select('*, sc_teams(name)').eq('competition_id', state.competition.id),
+    sb.from('sc_cooking_entries').select('*, sc_teams(name, photo_url)').eq('competition_id', state.competition.id),
     sb.from('sc_cooking_votes').select('*').eq('voter_id', state.member.id)
   ]);
   const voteBy = {}; (myVotes||[]).forEach(v=>voteBy[v.entry_id]=v);
@@ -779,10 +804,10 @@ async function loadJudge(){
   main.style.display='block';
   if (!others.length){ document.getElementById('judge-list').innerHTML='<div class="hint">No dishes to judge yet.</div>'; return; }
   const byTeam = {};
-  others.forEach(e=>{ (byTeam[e.team_id] = byTeam[e.team_id] || { name:e.sc_teams?.name||'Team', items:[] }).items.push(e); });
+  others.forEach(e=>{ (byTeam[e.team_id] = byTeam[e.team_id] || { name:e.sc_teams?.name||'Team', photo:e.sc_teams?.photo_url||'', items:[] }).items.push(e); });
   document.getElementById('judge-list').innerHTML = Object.values(byTeam).map(t=>`
     <div class="card" style="margin-bottom:0.75rem">
-      <div class="sec-h" style="margin-top:0">${t.name}</div>
+      <div class="sec-h" style="margin-top:0;display:flex;align-items:center;gap:0.5rem">${t.photo?`<img class="team-thumb" src="${t.photo}">`:''}${t.name}</div>
       ${t.items.map(e=>{ const v=voteBy[e.id]||{}; const voted=!!v.entry_id;
         return `<div style="border-top:1px solid var(--dim);padding-top:0.75rem;margin-top:0.75rem">
           <div style="font-weight:600;margin-bottom:0.5rem">${(e.category||'').toUpperCase()} — ${e.title||'(untitled)'} ${voted?'<span class="pill pill-paid">voted</span>':''}</div>
@@ -809,8 +834,8 @@ async function loadScores(){
   const { data: ct } = await sb.from('sc_team_catch_totals').select('*').eq('competition_id', state.competition.id).order('catch_points', { ascending:false });
   const catchArr = ct || [];
   document.getElementById('scores-catch').innerHTML = catchArr.length
-    ? catchArr.map((r,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem;display:flex;justify-content:space-between">
-        <span>${i+1}. ${r.name}</span><span style="color:var(--surge);font-weight:600">${r.catch_points} pts <span style="color:var(--muted);font-size:0.75rem">(${r.catch_count})</span></span></div>`).join('')
+    ? catchArr.map((r,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:0.6rem">
+        <span style="display:flex;align-items:center;gap:0.5rem">${i+1}. ${r.photo_url?`<img class="team-thumb" src="${r.photo_url}">`:''}${r.name}</span><span style="color:var(--surge);font-weight:600">${r.catch_points} pts <span style="color:var(--muted);font-size:0.75rem">(${r.catch_count})</span></span></div>`).join('')
     : '<div class="hint">No catches yet.</div>';
 
   const cookBox = document.getElementById('scores-cook');
@@ -822,7 +847,7 @@ async function loadScores(){
       cookVisible = true; cookTeams = d.teams || [];
       cookBox.innerHTML = cookTeams.length
         ? cookTeams.map((t,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem">
-            <div style="display:flex;justify-content:space-between"><span>${i+1}. ${t.name}</span><span style="color:var(--surge);font-weight:600">${t.cook_score.toFixed(1)}<span style="color:var(--muted);font-size:0.75rem">/20</span></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.6rem"><span style="display:flex;align-items:center;gap:0.5rem">${i+1}. ${t.photo_url?`<img class="team-thumb" src="${t.photo_url}">`:''}${t.name}</span><span style="color:var(--surge);font-weight:600">${t.cook_score.toFixed(1)}<span style="color:var(--muted);font-size:0.75rem">/20</span></span></div>
             <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">${t.entries.map(e=>`${e.category}: ${e.avg.toFixed(1)}/20 (${e.count})`).join(' · ')||'no dishes'}</div></div>`).join('')
         : '<div class="hint">No cook entries yet.</div>';
     }
@@ -834,20 +859,21 @@ async function loadScores(){
     ov.innerHTML = '<div class="notice warn">Combined ranking appears once the organisers reveal cook results. Catch standings are shown below.</div>';
     return;
   }
-  const catchMap = {}; catchArr.forEach(r=>catchMap[r.team_id] = { name:r.name, val:r.catch_points||0 });
-  const cookMap = {}; cookTeams.forEach(t=>cookMap[t.team_id] = { name:t.name, val:t.cook_score||0 });
+  const catchMap = {}; catchArr.forEach(r=>catchMap[r.team_id] = { name:r.name, photo:r.photo_url||'', val:r.catch_points||0 });
+  const cookMap = {}; cookTeams.forEach(t=>cookMap[t.team_id] = { name:t.name, photo:t.photo_url||'', val:t.cook_score||0 });
   const catchMax = Math.max(1, ...catchArr.map(r=>r.catch_points||0));
   const cookMax = Math.max(1, ...cookTeams.map(t=>t.cook_score||0));
   const ids = new Set([...Object.keys(catchMap), ...Object.keys(cookMap)]);
   const rows = [...ids].map(id=>{
     const name = catchMap[id]?.name || cookMap[id]?.name || '';
+    const photo = catchMap[id]?.photo || cookMap[id]?.photo || '';
     const cp = (catchMap[id]?.val||0)/catchMax*100;
     const kp = (cookMap[id]?.val||0)/cookMax*100;
-    return { name, cp, kp, overall: cp+kp };
+    return { name, photo, cp, kp, overall: cp+kp };
   }).sort((a,b)=>b.overall-a.overall);
   ov.innerHTML = rows.length
     ? rows.map((r,i)=>`<div class="card" style="margin-bottom:0.4rem;padding:0.6rem 1rem">
-        <div style="display:flex;justify-content:space-between"><span>${i+1}. ${r.name}</span><span style="color:var(--surge);font-weight:600">${r.overall.toFixed(0)}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.6rem"><span style="display:flex;align-items:center;gap:0.5rem">${i+1}. ${r.photo?`<img class="team-thumb" src="${r.photo}">`:''}${r.name}</span><span style="color:var(--surge);font-weight:600">${r.overall.toFixed(0)}</span></div>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">catch ${r.cp.toFixed(0)}% · cook ${r.kp.toFixed(0)}%</div></div>`).join('')
     : '<div class="hint">No scores yet.</div>';
 }
@@ -916,7 +942,7 @@ async function loadAdmin(){
   const cid = state.competition.id;
   const [{ data: comps }, { data: teams }, { data: tms }] = await Promise.all([
     sb.from('sc_competitors').select('id, experience, preferred_partner, paid, member_id, members(full_name)').eq('competition_id', cid),
-    sb.from('sc_teams').select('id, name, boat, skipper_contact').eq('competition_id', cid).order('created_at'),
+    sb.from('sc_teams').select('id, name, boat, skipper_contact, photo_url').eq('competition_id', cid).order('created_at'),
     sb.from('sc_team_members').select('id, team_id, competitor_id')
   ]);
   state.admin = { competitors: comps||[], teams: teams||[], tms: tms||[] };
@@ -985,10 +1011,12 @@ function renderAdmin(){
     }).join('') || '<div class="hint">No members</div>';
     return `<div class="card" style="margin-bottom:0.6rem">
       <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;margin-bottom:0.6rem">
+        ${t.photo_url?`<img class="team-thumb" style="width:40px;height:40px" src="${esc(t.photo_url)}">`:''}
         <input class="field" id="tn-${t.id}" value="${esc(t.name)}" style="max-width:150px;margin:0">
         <input class="field" id="tb-${t.id}" value="${esc(t.boat)}" placeholder="Boat" style="max-width:120px;margin:0">
         <input class="field" id="ts-${t.id}" value="${esc(t.skipper_contact)}" placeholder="Skipper contact" style="max-width:150px;margin:0">
         <button class="btn-o" style="margin:0;padding:0.35rem 0.7rem;font-size:0.72rem" onclick="saveTeam('${t.id}')">Save</button>
+        <label class="btn-o" style="margin:0;padding:0.35rem 0.7rem;font-size:0.72rem;cursor:pointer">${t.photo_url?'Change photo':'Add photo'}<input type="file" accept="image/*" style="display:none" onchange="uploadTeamPhotoAdmin('${t.id}',this)"></label>
         <button class="btn-o" style="margin:0;padding:0.35rem 0.7rem;font-size:0.72rem" onclick="notifyTeamBtn('${t.id}',this)">Notify</button>
         <button class="btn-o" style="margin:0;padding:0.35rem 0.7rem;font-size:0.72rem;border-color:rgba(255,92,58,0.4);color:var(--coral)" onclick="deleteTeam('${t.id}','${(t.name||'').replace(/'/g,"\\'")}')">Delete</button>
       </div>${rows}
@@ -1047,6 +1075,18 @@ function renderSuggestions(){
     </div>`).join('') +
     `<button class="btn" onclick="createAllSuggested(this)">Create All Teams</button>
      <button class="btn btn-o" style="margin-left:0.5rem" onclick="state.suggest=[];renderSuggestions()">Discard</button>`;
+}
+
+async function uploadTeamPhotoAdmin(teamId, input){
+  const file = input.files?.[0]; if (!file) return;
+  const msg = document.getElementById('admin-msg'); msg.className='msg'; msg.textContent='Uploading…';
+  try {
+    const img = await processImage(file);
+    const url = await uploadBlob(img);
+    await scApi('/.netlify/functions/sc-team-photo', { photo_url: url, team_id: teamId });
+    msg.className='msg ok'; msg.textContent='Team photo updated ✓';
+    await loadAdmin();
+  } catch(e){ adminErr(e); }
 }
 
 async function createTeam(name){

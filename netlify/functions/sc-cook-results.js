@@ -33,7 +33,7 @@ exports.handler = async (event) => {
     }
 
     const [{ data: teams }, { data: entries }] = await Promise.all([
-      supabaseAdmin.from('sc_teams').select('id, name').eq('competition_id', comp.id),
+      supabaseAdmin.from('sc_teams').select('id, name, photo_url').eq('competition_id', comp.id),
       supabaseAdmin.from('sc_cooking_entries').select('id, team_id, category, title').eq('competition_id', comp.id)
     ]);
 
@@ -54,7 +54,7 @@ exports.handler = async (event) => {
     }
 
     const teamMap = {};
-    (teams || []).forEach(t => { teamMap[t.id] = { team_id: t.id, name: t.name, cook_score: 0, entries: [], _sum: 0, _n: 0 }; });
+    (teams || []).forEach(t => { teamMap[t.id] = { team_id: t.id, name: t.name, photo_url: t.photo_url || '', cook_score: 0, entries: [], _sum: 0, _n: 0 }; });
     for (const e of (entries || [])) {
       const a = agg[e.id] || { sum: 0, count: 0 };
       const avg = a.count ? a.sum / a.count : 0;   // this dish's average judge total (out of 20)
