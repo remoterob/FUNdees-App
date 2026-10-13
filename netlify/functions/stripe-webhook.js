@@ -34,6 +34,7 @@ exports.handler = async (event) => {
         if (type === 'membership') await handleMembership(sess);
         else if (type === 'enrolment') await handleEnrolment(sess);
         else if (type === 'sc_entry') await handleScEntry(sess);
+        else if (type === 'merch') await handleMerch(sess);
         else console.warn(`Unknown checkout type: "${type}"`);
         break;
       }
@@ -141,16 +142,50 @@ async function handleScEntry(sess) {
   console.log(`✓ Spear & Cook entry paid: competitor=${competitorId} member=${memberId}`);
 }
 
+async function handleMerch(sess) {
+  const orderId = sess.metadata?.order_id;
+  if (!orderId) throw new Error('Missing order_id in merch metadata');
+
+  // Idempotency — skip if this order is already marked paid
+  const { data: order, error: fErr } = await supabaseAdmin.from('merch_orders')
+    .select('id, status').eq('id', orderId).maybeSingle();
+  if (fErr) throw new Error(`merch order fetch: ${fErr.message}`);
+  if (!order) throw new Error(`merch order not found: ${orderId}`);
+  if (order.status === 'paid') { console.log(`Merch order already paid: ${orderId}`); return; }
+
+  const { error } = await supabaseAdmin.from('merch_orders').update({
+    status: 'paid',
+    amount: sess.amount_total / 100,
+    stripe_payment_intent_id: sess.payment_intent,
+    paid_at: new Date().toISOString()
+  }).eq('id', orderId);
+  if (error) throw new Error(`merch order update: ${error.message}`);
+
+  console.log(`✓ Merch order paid: ${orderId}`);
+}
+
 async function handleChargeRefunded(charge) {
   // Syncs refunds issued outside the app (e.g. in the Stripe dashboard) onto
-  // the matching enrolment. Refunds for memberships / Spear & Cook entries
-  // simply won't match an enrolment row and are ignored.
+  // the matching enrolment or merch order. Refunds for memberships / Spear &
+  // Cook entries simply won't match either and are ignored.
   if (!charge.payment_intent) { console.warn('charge.refunded: no payment_intent — ignored'); return; }
+
+  const { data: order, error: orderErr } = await supabaseAdmin.from('merch_orders')
+    .select('id, status').eq('stripe_payment_intent_id', charge.payment_intent).maybeSingle();
+  if (orderErr) throw new Error(`refund merch order lookup: ${orderErr.message}`);
+  if (order) {
+    if (order.status === 'refunded') { console.log(`Refund already recorded: merch order=${order.id}`); return; }
+    if (!charge.refunded) { console.warn(`Partial refund on ${charge.payment_intent} (merch order=${order.id}) — status left as '${order.status}'`); return; }
+    const { error: uErr } = await supabaseAdmin.from('merch_orders').update({ status: 'refunded' }).eq('id', order.id);
+    if (uErr) throw new Error(`refund merch order update: ${uErr.message}`);
+    console.log(`✓ Refund synced from Stripe: merch order=${order.id} pi=${charge.payment_intent}`);
+    return;
+  }
 
   const { data: enr, error } = await supabaseAdmin.from('enrolments')
     .select('id, status, session_id').eq('stripe_payment_intent_id', charge.payment_intent).maybeSingle();
   if (error) throw new Error(`refund enrolment lookup: ${error.message}`);
-  if (!enr) { console.log(`charge.refunded: no enrolment for ${charge.payment_intent} — ignored`); return; }
+  if (!enr) { console.log(`charge.refunded: no enrolment/order for ${charge.payment_intent} — ignored`); return; }
 
   // Idempotency — already synced (or refunded via the admin screen)
   if (enr.status === 'refunded') { console.log(`Refund already recorded: enrolment=${enr.id}`); return; }

@@ -189,6 +189,42 @@ select.field{cursor:pointer}
       </table>
     </div>
 
+    <!-- MERCH ORDERS -->
+    <div style="margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--dim)">
+      <div class="top-bar" style="margin-bottom:1rem">
+        <div>
+          <div class="page-title" style="font-size:1.6rem">Merch Orders</div>
+          <div style="color:var(--muted);font-size:0.82rem">Everyone who has ordered FUNdees merch, and whether they've paid.</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <div style="font-size:0.85rem;color:var(--muted)" id="merch-count"></div>
+          <select id="merch-filter" class="field" style="width:auto;font-size:0.8rem" onchange="loadMerchOrders()">
+            <option value="all">All Orders</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="refunded">Refunded</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
+      <table id="merch-table" class="responsive">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Contact</th>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Ordered</th>
+          </tr>
+        </thead>
+        <tbody id="merch-tbody">
+          <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
     <!-- IMAGE MANAGEMENT -->
     <div style="margin-top:2.5rem">
       <div class="top-bar" style="margin-bottom:1rem">
@@ -572,6 +608,7 @@ async function init() {
   loadChatbotStats();
   loadLeads();
   loadMembers();
+  loadMerchOrders();
   loadInstructors();
 }
 
@@ -1640,6 +1677,51 @@ async function loadMembers() {
           }
         </div>
       </td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadMerchOrders() {
+  const filter = document.getElementById('merch-filter')?.value || 'all';
+  let query = sb.from('merch_orders')
+    .select('id, full_name, email, phone, delivery_address, product_name, quantity, amount, unit_price, currency, status, created_at')
+    .order('created_at', { ascending: false });
+  if (filter !== 'all') query = query.eq('status', filter);
+
+  const { data, error } = await query;
+  const tbody = document.getElementById('merch-tbody');
+  const countEl = document.getElementById('merch-count');
+  if (error) { tbody.innerHTML = `<tr><td colspan="7" style="color:var(--coral)">${error.message}</td></tr>`; return; }
+  if (!data?.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem">No orders yet.</td></tr>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  if (countEl) countEl.textContent = `${data.length} order${data.length === 1 ? '' : 's'}`;
+
+  const badgeClass = { paid: 'b-open', pending: 'b-opening_soon', refunded: 'b-refunded', cancelled: 'b-cancelled' };
+
+  tbody.innerHTML = data.map(o => {
+    const phoneHref = o.phone ? o.phone.replace(/[^\d+]/g, '') : '';
+    const contact = (o.email || o.phone || o.delivery_address)
+      ? `<div class="contact-cell">
+           ${o.email ? `<div class="c-email"><a href="mailto:${o.email}">${o.email}</a></div>` : ''}
+           ${o.phone ? `<div class="c-phone"><a href="tel:${phoneHref}">📞 ${o.phone}</a></div>` : ''}
+           ${o.delivery_address ? `<div class="c-ice" style="color:var(--muted)">${o.delivery_address}</div>` : ''}
+         </div>`
+      : '<span style="color:var(--muted)">—</span>';
+
+    const amount = o.amount != null ? o.amount : (o.unit_price * o.quantity);
+    const ordered = new Date(o.created_at).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    return `<tr>
+      <td data-label="Name"><strong>${o.full_name}</strong></td>
+      <td data-label="Contact">${contact}</td>
+      <td data-label="Product">${o.product_name}</td>
+      <td data-label="Qty">${o.quantity}</td>
+      <td data-label="Amount">$${Number(amount).toFixed(2)} ${o.currency}</td>
+      <td data-label="Status"><span class="badge ${badgeClass[o.status] || 'b-closed'}">${o.status}</span></td>
+      <td data-label="Ordered" style="font-size:0.8rem;color:var(--muted)">${ordered}</td>
     </tr>`;
   }).join('');
 }

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FUNdamentals">
+  <meta name="theme-color" content="#0A1628">
+  <link rel="apple-touch-icon" href="/icons/icon-180.png">
+<title>FUNdees Merch — Spearfishing FUNdamentals</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--midnight:#0A1628;--deep:#0D2D4A;--surge:#00CFAD;--coral:#FF5C3A;--sand:#F0EDE6;--muted:rgba(240,237,230,0.55);--dim:rgba(255,255,255,0.08);--surge-dim:rgba(0,207,173,0.1)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#07101e;color:var(--sand);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh;padding-top:64px}
+.hero{padding:3rem 1.5rem 2rem;border-bottom:1px solid var(--dim);background:linear-gradient(160deg,var(--deep) 0%,var(--midnight) 100%);text-align:center}
+.hero .pill{display:inline-block;font-size:0.65rem;letter-spacing:0.16em;text-transform:uppercase;font-weight:700;color:var(--surge);background:var(--surge-dim);border:1px solid rgba(0,207,173,0.25);padding:0.3rem 0.8rem;border-radius:2px;margin-bottom:0.75rem}
+.hero h1{font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;color:var(--sand)}
+.hero .sub{color:var(--muted);font-size:0.95rem;margin-top:0.5rem;max-width:520px;margin-left:auto;margin-right:auto}
+.wrap{max-width:960px;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+.shop-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:2.5rem;align-items:flex-start}
+.product-media{position:sticky;top:5.5rem}
+.product-img{width:100%;aspect-ratio:1/1;border-radius:6px;overflow:hidden;background:linear-gradient(135deg,var(--deep),var(--midnight));border:1px solid var(--dim);display:flex;align-items:center;justify-content:center}
+.product-img img{width:100%;height:100%;object-fit:cover;display:block}
+.price-tag{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--surge);margin-top:1rem}
+.price-tag span{font-size:1.1rem;color:var(--muted);font-family:'Barlow',sans-serif;font-weight:300;margin-left:0.3rem}
+.card{background:rgba(13,45,74,0.4);border:1px solid var(--dim);border-radius:5px;padding:1.5rem}
+.blurb{white-space:pre-wrap;font-size:0.92rem;line-height:1.75;color:rgba(240,237,230,0.88);margin-bottom:1.75rem}
+.blurb strong{color:var(--sand)}
+h2.sec-h{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.1rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--sand);margin-bottom:1rem}
+.lbl{display:block;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:0.3rem;margin-top:1rem}
+.lbl:first-child{margin-top:0}
+.field{width:100%;background:rgba(10,22,40,0.7);border:1px solid rgba(255,255,255,0.12);border-radius:3px;padding:0.7rem 0.85rem;color:var(--sand);font-family:'Barlow',sans-serif;font-size:0.9rem;font-weight:300;outline:none;transition:border-color 0.2s}
+.field:focus{border-color:var(--surge)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0.85rem}
+.qty-row{display:flex;align-items:center;gap:0.75rem;margin-top:0.3rem}
+.qty-btn{width:36px;height:36px;border-radius:3px;background:rgba(10,22,40,0.7);border:1px solid rgba(255,255,255,0.12);color:var(--sand);font-size:1.1rem;cursor:pointer;line-height:1}
+.qty-btn:hover{border-color:var(--surge);color:var(--surge)}
+#f-qty{width:48px;text-align:center}
+.total-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--dim)}
+.total-row .lbl2{font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em}
+.total-row .val{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--surge)}
+.btn{width:100%;background:var(--surge);color:var(--midnight);border:none;padding:0.95rem 1.6rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:opacity 0.2s;margin-top:1.25rem}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+.msg{font-size:0.82rem;margin-top:0.9rem;display:none}
+.msg.err{color:var(--coral);display:block}
+.msg.ok{color:var(--surge);display:block}
+.hint{font-size:0.75rem;color:var(--muted);margin-top:1rem;line-height:1.5;text-align:center}
+.notice{background:var(--surge-dim);border:1px solid rgba(0,207,173,0.25);color:var(--sand);border-radius:4px;padding:1rem 1.15rem;font-size:0.9rem;line-height:1.6;margin-bottom:1.75rem;text-align:center}
+@media(max-width:800px){
+  .shop-grid{grid-template-columns:1fr}
+  .product-media{position:static}
+  .hero h1{font-size:2.3rem}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="pill">FUNdees Merch</div>
+  <h1>FUNdees Poncho Towel</h1>
+  <div class="sub">Wear the magic. Spear the monsters. One size fits all.</div>
+</div>
+
+<div class="wrap">
+  <div class="notice" id="order-notice" style="display:none"></div>
+
+  <div class="shop-grid">
+    <div class="product-media">
+      <div class="product-img">
+        <img src="/icons/poncho.jpg" alt="FUNdees Poncho Towel — crew wearing the poncho with a catch">
+      </div>
+      <div class="price-tag">$55<span>NZD</span></div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="blurb" id="blurb-text"></div>
+
+        <h2 class="sec-h">Buy One Now</h2>
+        <form id="order-form" onsubmit="return false">
+          <label class="lbl">Full Name</label>
+          <input class="field" id="f-name" type="text" placeholder="Your name" autocomplete="name" required>
+
+          <div class="grid2">
+            <div>
+              <label class="lbl">Email</label>
+              <input class="field" id="f-email" type="email" placeholder="you@example.com" autocomplete="email" required>
+            </div>
+            <div>
+              <label class="lbl">Phone</label>
+              <input class="field" id="f-phone" type="tel" placeholder="021 ..." autocomplete="tel">
+            </div>
+          </div>
+
+          <label class="lbl">Delivery Address (optional)</label>
+          <input class="field" id="f-address" type="text" placeholder="Where should we send it?" autocomplete="street-address">
+
+          <label class="lbl">Quantity</label>
+          <div class="qty-row">
+            <button type="button" class="qty-btn" onclick="changeQty(-1)">−</button>
+            <input class="field" id="f-qty" type="number" min="1" max="10" value="1" readonly>
+            <button type="button" class="qty-btn" onclick="changeQty(1)">+</button>
+          </div>
+
+          <div class="total-row">
+            <div class="lbl2">Total</div>
+            <div class="val" id="total-val">$55.00</div>
+          </div>
+
+          <button class="btn" id="btn-buy" onclick="buyNow(this)">Buy Now</button>
+          <div class="msg" id="order-msg"></div>
+          <div class="hint">Secure payment via Stripe. You'll be redirected to checkout.</div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/nav.js"></script>
+<script>
+const SUPABASE_URL  = 'https://ldlvzkjdbsabwyubdtly.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbHZ6a2pkYnNhYnd5dWJkdGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzI2OTgsImV4cCI6MjA5MDY0ODY5OH0.s3WFwMZRoSzeKVLQwPGnJCU4VtaSJ3KWUJfpo0i6m8c';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const UNIT_PRICE = 55;
+
+const BLURB = `INTRODUCING THE LEGENDARY FUNDIES PONCHO TOWEL! 🚨
+
+🐟 Big fish aren't caught by skill alone… sometimes you need a little magic!
+
+After years of questionable dive decisions, exaggerated fish stories and extensive scientific research (mostly conducted at the boat ramp), we proudly present the FUNDIES PONCHO TOWEL!
+
+Rumoured to possess ancient mystical properties, this legendary garment is believed to attract monster kingfish, improve your breath-hold and transform even the most average spearo into an underwater hunting machine!
+
+🔥 For just $55, you get:
+
+✅ ONE SIZE FITS ALL – from lean, mean spearfishing machines to the more generously proportioned!
+✅ Mystical fish-attracting properties (allegedly).
+✅ An immediate 300% increase in confidence.
+✅ The ability to look like a seasoned professional regardless of actual ability.
+✅ A convenient place to hide your shame after another fishless dive.
+
+💰 ALL THIS FOR JUST $55!
+
+Let's face it, you've spent thousands on guns, fins and wetsuits with questionable results. What's another $55 for a shot at greatness?
+
+⚠️ Disclaimer: Mystical properties are based entirely on rumours, superstition and the suspicious number of enormous fish appearing alongside people wearing these ponchos. Fundees accepts no responsibility for sudden increases in ego, outrageous fishing stories or marital disputes arising from another unnecessary spearfishing purchase.
+
+🏆 FUNDIES PONCHO TOWEL – WEAR THE MAGIC. SPEAR THE MONSTERS. 🐟`;
+
+document.getElementById('blurb-text').textContent = BLURB;
+
+function updateTotal() {
+  const qty = parseInt(document.getElementById('f-qty').value, 10) || 1;
+  document.getElementById('total-val').textContent = `$${(UNIT_PRICE * qty).toFixed(2)}`;
+}
+window.changeQty = function(delta) {
+  const el = document.getElementById('f-qty');
+  let v = (parseInt(el.value, 10) || 1) + delta;
+  v = Math.max(1, Math.min(10, v));
+  el.value = v;
+  updateTotal();
+};
+
+async function prefillFromMember() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session?.user) return;
+    const { data: member } = await sb.from('members').select('full_name, email, phone').eq('auth_user_id', session.user.id).maybeSingle();
+    if (!member) return;
+    if (member.full_name) document.getElementById('f-name').value = member.full_name;
+    if (member.email) document.getElementById('f-email').value = member.email;
+    if (member.phone) document.getElementById('f-phone').value = member.phone;
+  } catch (e) { console.warn('[merch] prefill failed:', e.message); }
+}
+
+async function buyNow(btn) {
+  const msg = document.getElementById('order-msg');
+  msg.className = 'msg';
+
+  const fullName = document.getElementById('f-name').value.trim();
+  const email    = document.getElementById('f-email').value.trim();
+  const phone    = document.getElementById('f-phone').value.trim();
+  const address  = document.getElementById('f-address').value.trim();
+  const quantity = parseInt(document.getElementById('f-qty').value, 10) || 1;
+
+  if (!fullName || !email) {
+    msg.className = 'msg err'; msg.textContent = 'Name and email are required.'; return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Redirecting…';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const headers = { 'Content-Type': 'application/json' };
+    if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+
+    const res = await fetch('/.netlify/functions/create-merch-checkout', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ fullName, email, phone, address, quantity })
+    });
+    const d = await res.json();
+    if (!res.ok || !d.url) throw new Error(d.error || 'Could not start checkout');
+    location.href = d.url;
+  } catch (e) {
+    msg.className = 'msg err'; msg.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Buy Now';
+  }
+}
+
+// ── Success / cancelled banner from Stripe redirect ────────────────────────
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const order = params.get('order');
+  const notice = document.getElementById('order-notice');
+  if (order === 'success') {
+    notice.style.display = 'block';
+    notice.textContent = '✓ Order placed! Check your email for confirmation — we\'ll be in touch about delivery.';
+  } else if (order === 'cancelled') {
+    notice.style.display = 'block';
+    notice.style.background = 'rgba(255,92,58,0.1)';
+    notice.style.borderColor = 'rgba(255,92,58,0.3)';
+    notice.textContent = 'Checkout was cancelled — no payment was taken.';
+  }
+})();
+
+updateTotal();
+prefillFromMember();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+}
+</script>
+</body>
+</html>
