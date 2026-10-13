@@ -89,6 +89,9 @@ exports.handler = async (event) => {
       ...(customerId ? { customer: customerId } : { customer_email: email }),
       mode: 'payment',
       phone_number_collection: { enabled: true },
+      // Explicit receipt_email makes Stripe email a receipt even when the
+      // account-level "successful payments" email setting is off.
+      payment_intent_data: { receipt_email: email },
       line_items: [{
         price_data: {
           currency: 'nzd',
