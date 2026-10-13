@@ -46,6 +46,7 @@ exports.handler = async (event) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'payment',
+      payment_intent_data: { receipt_email: email },
       allow_promotion_codes: true,
       line_items: [{ price: process.env.STRIPE_ANNUAL_PRICE_ID, quantity: 1 }],
       success_url: `${baseUrl}/portal.html?payment=success`,

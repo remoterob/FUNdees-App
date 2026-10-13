@@ -83,6 +83,7 @@ exports.handler = async (event) => {
       amount: amountCents,
       currency: 'nzd',
       customer: stripeCustomerId,
+      receipt_email: email,
       description: `Pool session: ${poolSession.title} on ${poolSession.session_date}`,
       metadata: {
         session_id: sessionId,

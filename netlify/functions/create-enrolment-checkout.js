@@ -72,6 +72,7 @@ exports.handler = async (event) => {
     const checkout = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'payment',
+      payment_intent_data: { receipt_email: email },
       allow_promotion_codes: true,
       line_items: [{
         price_data: {
