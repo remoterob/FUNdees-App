@@ -1267,6 +1267,7 @@
         <p class="hero-sub">Structured peer training, trips and competitions in a safe and supportive environment.</p>
         <div class="hero-actions">
           <a class="btn-primary" href="/sessions.html">Sign Up to a Training Session</a>
+          <button class="btn-outline" onclick="openClubVideo()">&#9654;&nbsp; See What We're About</button>
         </div>
       </div>
       <!-- Right: image grid (desktop only) -->
@@ -1333,6 +1334,22 @@
       <div style="color:var(--muted);font-size:0.85rem;padding:2rem 0;text-align:center">Loading…</div>
     </div>
 
+  </div>
+</div>
+
+<!-- ─── CLUB VIDEO MODAL ─── -->
+<div id="modal-club-video" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(7,16,30,0.93);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1rem"
+  onclick="if(event.target===this)closeClubVideo()">
+  <div style="width:100%;max-width:900px;position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--surge)">FUNdees on SNZ</div>
+      <button onclick="closeClubVideo()" aria-label="Close video"
+        style="background:none;border:none;color:rgba(240,237,230,0.6);cursor:pointer;font-size:1.3rem;line-height:1">✕</button>
+    </div>
+    <div style="position:relative;aspect-ratio:16/9;background:#000;border:1px solid rgba(0,207,173,0.18);border-radius:6px;overflow:hidden">
+      <iframe id="club-video-frame" title="FUNdees on SNZ" style="position:absolute;inset:0;width:100%;height:100%;border:0"
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+    </div>
   </div>
 </div>
 
@@ -1679,6 +1696,19 @@
   }
 
   function navTo(page) { closeMobileMenu(); showPage(page); }
+
+  // Club intro video (SNZ feature) — src is set on open and cleared on close so playback stops
+  function openClubVideo() {
+    document.getElementById('club-video-frame').src = 'https://www.youtube-nocookie.com/embed/sD47SjBIZXQ?autoplay=1&rel=0';
+    document.getElementById('modal-club-video').style.display = 'flex';
+  }
+  function closeClubVideo() {
+    document.getElementById('modal-club-video').style.display = 'none';
+    document.getElementById('club-video-frame').src = '';
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('modal-club-video').style.display === 'flex') closeClubVideo();
+  });
 
   function toggleMenu() {
     const menu = document.getElementById('mob-menu');
