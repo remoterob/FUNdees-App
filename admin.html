@@ -504,6 +504,14 @@ select.field{cursor:pointer}
       <option value="">— No lead assigned —</option>
     </select>
 
+    <label class="lbl">Sign-up Document (PDF)</label>
+    <div id="f-doc-current" style="display:none;align-items:center;justify-content:space-between;gap:0.75rem;margin-bottom:0.5rem;font-size:0.82rem">
+      <a id="f-doc-link" target="_blank" rel="noopener" style="color:var(--surge);overflow-wrap:anywhere"></a>
+      <button type="button" class="btn-danger" onclick="removeSignupDoc()">Remove</button>
+    </div>
+    <input class="field" id="f-doc-file" type="file" accept="application/pdf,.pdf" style="width:100%">
+    <div style="font-size:0.75rem;color:var(--muted);margin-top:0.35rem;line-height:1.45">Members must read and sign this before enrolling. Anyone already enrolled is asked when they next open the app. Uploading a replacement means everyone signs again.</div>
+
     <div class="msg" id="modal-msg"></div>
 
     <div class="modal-footer">
@@ -576,6 +584,7 @@ window.sb = sb;
 
 let editingId = null;
 let editingOriginalWeekdays = [];
+let editingDoc = null; // { path, name } of the session's current sign-up document
 const WEEKDAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 function toast(msg, err=false) {
@@ -692,6 +701,9 @@ async function openModal(session=null) {
     cb.checked = weekdays.includes(parseInt(cb.value, 10));
   });
   onTypeChange();
+  editingDoc = session?.signup_doc_path ? { path: session.signup_doc_path, name: session.signup_doc_name } : null;
+  document.getElementById('f-doc-file').value = '';
+  renderSignupDoc();
   // Load leads first, then set the selected value
   await loadLeads(session?.lead_member_id || '');
   const msg = document.getElementById('modal-msg'); msg.className='msg'; msg.textContent='';
@@ -706,6 +718,29 @@ function onTypeChange() {
 function closeModal() { document.getElementById('session-modal').classList.remove('open'); }
 
 function editSession(s) { openModal(s); }
+
+function renderSignupDoc() {
+  document.getElementById('f-doc-current').style.display = editingDoc ? 'flex' : 'none';
+  if (!editingDoc) return;
+  const link = document.getElementById('f-doc-link');
+  link.textContent = editingDoc.name;
+  link.href = sb.storage.from('Fundees').getPublicUrl(editingDoc.path).data.publicUrl;
+}
+
+function removeSignupDoc() {
+  editingDoc = null;
+  renderSignupDoc();
+}
+
+// Each upload gets a new path and old files are left in place, so a signature
+// always points at the exact version that was signed.
+async function uploadSignupDoc(file) {
+  const safeName = file.name.replace(/\.pdf$/i, '').replace(/[^a-zA-Z0-9_-]+/g, '-');
+  const path = `SignupDocs/${Date.now()}-${safeName}.pdf`;
+  const { error } = await sb.storage.from('Fundees').upload(path, file, { cacheControl: '3600', contentType: 'application/pdf' });
+  if (error) throw error;
+  return { path, name: file.name.replace(/\.pdf$/i, '') };
+}
 
 async function saveSession() {
   const title    = document.getElementById('f-title').value.trim();
@@ -730,6 +765,9 @@ async function saveSession() {
   if (end < start)              { msg.className='msg err'; msg.textContent='End date must be after start date.'; return; }
   if (type === 'depth' && weekdays.length === 0) { msg.className='msg err'; msg.textContent='Pick at least one weekday for a depth session.'; return; }
 
+  const docFile = document.getElementById('f-doc-file').files[0];
+  if (docFile && !/\.pdf$/i.test(docFile.name)) { msg.className='msg err'; msg.textContent='The sign-up document must be a PDF.'; return; }
+
   const removedWeekdays = (editingId && type === 'depth')
     ? editingOriginalWeekdays.filter(d => !weekdays.includes(d))
     : [];
@@ -741,7 +779,17 @@ async function saveSession() {
   const btn = document.getElementById('btn-save-session');
   btn.disabled = true; btn.textContent = 'Saving...';
 
-  const payload = { title, type, status, date_start: start, date_end: end, price, capacity, location: location||null, description: desc||null, prerequisites: prereq||null, lead_member_id: leadId, weekdays };
+  let doc = editingDoc;
+  if (docFile) {
+    try {
+      doc = await uploadSignupDoc(docFile);
+    } catch (uploadErr) {
+      btn.disabled = false; btn.textContent = 'Save Session';
+      msg.className='msg err'; msg.textContent='Document upload failed: '+uploadErr.message; return;
+    }
+  }
+
+  const payload = { title, type, status, date_start: start, date_end: end, price, capacity, location: location||null, description: desc||null, prerequisites: prereq||null, lead_member_id: leadId, weekdays, signup_doc_path: doc?.path || null, signup_doc_name: doc?.name || null };
 
   const { data: saved, error } = editingId
     ? await sb.from('sessions').update(payload).eq('id', editingId).select().single()
@@ -852,7 +900,7 @@ async function viewEnrolments(sessionId, title) {
 
   const { data, error } = await sb
     .from('enrolments')
-    .select('id, status, amount_paid, enrolled_at, stripe_payment_intent_id, members(full_name, email, medical_confirmed, liability_confirmed, declarations_date)')
+    .select('id, member_id, status, amount_paid, enrolled_at, stripe_payment_intent_id, members(full_name, email, medical_confirmed, liability_confirmed, declarations_date)')
     .eq('session_id', sessionId)
     .order('enrolled_at', { ascending: true });
 
@@ -861,12 +909,35 @@ async function viewEnrolments(sessionId, title) {
     return;
   }
 
-  document.getElementById('enrolments-list').innerHTML = data.map(e => {
+  // Signatures on the session's current document, keyed by member
+  const { data: sess } = await sb.from('sessions').select('signup_doc_path, signup_doc_name').eq('id', sessionId).maybeSingle();
+  const docPath = sess?.signup_doc_path;
+  const signatures = {};
+  if (docPath) {
+    const { data: sigs } = await sb.from('session_doc_signatures')
+      .select('member_id, signed_name, signed_date, signed_at')
+      .eq('session_id', sessionId)
+      .eq('doc_path', docPath);
+    (sigs || []).forEach(sig => { signatures[sig.member_id] = sig; });
+  }
+
+  const enrolled = data.filter(e => e.status === 'enrolled');
+  const signedCount = enrolled.filter(e => signatures[e.member_id]).length;
+  const docSummary = docPath ? `
+    <div style="font-size:0.82rem;color:var(--muted);padding-bottom:0.6rem;border-bottom:1px solid var(--dim)">
+      <strong style="color:var(--sand)">${signedCount} of ${enrolled.length}</strong> enrolled have signed ${escapeHtml(sess.signup_doc_name)}
+    </div>` : '';
+
+  document.getElementById('enrolments-list').innerHTML = docSummary + data.map(e => {
     const m = e.members || {};
     const decOk = m.medical_confirmed && m.liability_confirmed;
     const decBadge = decOk
       ? `<span style="background:rgba(0,207,173,0.12);color:var(--surge);font-size:0.6rem;padding:0.15rem 0.45rem;border-radius:2px;font-weight:600;letter-spacing:0.06em">✓ DECLARATIONS OK</span>`
       : `<span style="background:rgba(255,92,58,0.12);color:var(--coral);font-size:0.6rem;padding:0.15rem 0.45rem;border-radius:2px;font-weight:600;letter-spacing:0.06em">⚠ NO DECLARATIONS</span>`;
+    const sig = signatures[e.member_id];
+    const docBadge = !docPath ? '' : sig
+      ? `<div style="margin-top:0.3rem;font-size:0.7rem;color:var(--surge)" title="Recorded ${new Date(sig.signed_at).toLocaleString('en-NZ')}">✓ Signed by ${escapeHtml(sig.signed_name)} on ${fmt(sig.signed_date)}</div>`
+      : `<div style="margin-top:0.3rem;font-size:0.7rem;color:var(--coral)">⚠ Document not signed</div>`;
     const isRefunded = e.status === 'refunded';
     const statusSelect = isRefunded ? '' : `
         <select class="field" onchange="changeEnrStatus('${e.id}', this.value, this)">
@@ -881,6 +952,7 @@ async function viewEnrolments(sessionId, title) {
         <div style="font-weight:500">${m.full_name || '—'}</div>
         <div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">${m.email || ''}</div>
         <div style="margin-top:0.3rem">${decBadge}${m.declarations_date ? `<span style="font-size:0.7rem;color:var(--muted);margin-left:0.4rem">Signed ${m.declarations_date}</span>` : ''}</div>
+        ${docBadge}
       </div>
       <div style="text-align:right">
         ${enrStatusBadge(e.status)}
@@ -1866,5 +1938,6 @@ init();
   }
 </script>
 <script src="/nav.js"></script>
+<script src="/signup-docs.js"></script>
 </body>
 </html>

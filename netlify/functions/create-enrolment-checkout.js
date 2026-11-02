@@ -47,6 +47,20 @@ exports.handler = async (event) => {
 
     if (existing?.status === 'enrolled') return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Already enrolled in this session' }) };
 
+    // The sign-up document must be signed before payment. The browser shows it
+    // first; this stops anyone skipping that step or signing an outdated copy.
+    if (session.signup_doc_path) {
+      const { data: signature, error: sigErr } = await supabaseAdmin
+        .from('session_doc_signatures')
+        .select('id')
+        .eq('session_id', sessionId)
+        .eq('member_id', memberId)
+        .eq('doc_path', session.signup_doc_path)
+        .maybeSingle();
+      if (sigErr) throw new Error(`Signature check: ${sigErr.message}`);
+      if (!signature) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: `Please sign "${session.signup_doc_name || 'the sign-up document'}" before enrolling.` }) };
+    }
+
     // Get or create Stripe customer
     const { data: member } = await supabaseAdmin
       .from('members')

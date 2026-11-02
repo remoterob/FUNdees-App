@@ -11,7 +11,7 @@
 
 const { supabaseAdmin } = require('./_supabase');
 
-const TABLES = ['members', 'enrolments', 'session_bookings', 'membership_payments'];
+const TABLES = ['members', 'enrolments', 'session_bookings', 'membership_payments', 'session_doc_signatures'];
 const TO   = 'treasurer@spearfishingfundamentals.com';
 const FROM = 'FUNdees Backups <backups@spearfishingfundamentals.com>';
 
