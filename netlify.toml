@@ -26,6 +26,12 @@
 [functions."daily-backup"]
   schedule = "0 18 * * *"
 
+# Depth training — weekly reminder to rig leads about their rigs in the
+# coming Sunday–Saturday. Same time as the backup, Fridays UTC, which is
+# Saturday 06:00 NZST / 07:00 NZDT.
+[functions."rig-lead-reminder"]
+  schedule = "0 18 * * 5"
+
 # Spear & Cook — weekly reminder to registered competitors who haven't paid.
 # 19:00 UTC Sunday = Monday 07:00 NZST / 08:00 NZDT.
 [functions."sc-payment-reminder"]
