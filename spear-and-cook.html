@@ -64,6 +64,9 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
   .grid2{grid-template-columns:1fr}
   .hero h1{font-size:2.1rem}
 }
+.photo-pick{display:flex;gap:0.5rem;flex-wrap:wrap}
+.photo-pick .btn{flex:1 1 140px;margin:0;text-align:center;cursor:pointer;position:relative}
+.photo-pick input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 </style>
 </head>
 <body>
@@ -217,7 +220,10 @@ a.link{color:var(--surge);text-decoration:none;font-weight:500}
             <div><label class="lbl">Length (cm, optional)</label><input class="field" id="c-length" type="number" min="0" step="0.1" placeholder="e.g. 45"></div>
           </div>
           <label class="lbl">Photo (required)</label>
-          <input class="field" id="c-photo" type="file" accept="image/*" style="padding:0.5rem" onchange="previewCatchPhoto(this)">
+          <div class="photo-pick">
+            <label class="btn btn-o">📷 Take photo<input id="c-photo-cam" type="file" accept="image/*" capture="environment" onchange="previewCatchPhoto(this)"></label>
+            <label class="btn btn-o">🖼️ Choose from device<input id="c-photo" type="file" accept="image/*" onchange="previewCatchPhoto(this)"></label>
+          </div>
           <img id="c-photo-preview" alt="preview" style="display:none;width:100%;max-height:220px;object-fit:cover;border-radius:4px;margin-top:0.6rem">
           <div class="notice" id="c-preview" style="margin-top:1rem">Select a species and weight to see the points.</div>
           <button class="btn" id="btn-log" onclick="logCatch()">Log Catch</button>
@@ -699,7 +705,7 @@ async function logCatch(){
     const d = await res.json(); if (!res.ok) throw new Error(d.error||'Failed');
     msg.className='msg ok'; msg.textContent='Catch logged ✓';
     document.getElementById('c-weight').value=''; document.getElementById('c-length').value='';
-    document.getElementById('c-photo').value=''; document.getElementById('c-photo-preview').style.display='none';
+    document.getElementById('c-photo').value=''; document.getElementById('c-photo-cam').value=''; document.getElementById('c-photo-preview').style.display='none';
     state.catchFile = null;
     catchPreview();
     await loadCatchList();
@@ -754,7 +760,10 @@ async function loadCook(){
       <label class="lbl">Dish name</label>
       <input class="field" id="ck-title-${cat}" value="${(e?.title||'').replace(/"/g,'&quot;')}" placeholder="e.g. Kingfish ceviche">
       <label class="lbl">Photo ${e?.image_url?'(replace — optional)':'(required)'}</label>
-      <input class="field" id="ck-photo-${cat}" type="file" accept="image/*" style="padding:0.5rem" onchange="previewDishPhoto(this,'${cat}')">
+      <div class="photo-pick">
+        <label class="btn btn-o">📷 Take photo<input type="file" accept="image/*" capture="environment" onchange="previewDishPhoto(this,'${cat}')"></label>
+        <label class="btn btn-o">🖼️ Choose from device<input id="ck-photo-${cat}" type="file" accept="image/*" onchange="previewDishPhoto(this,'${cat}')"></label>
+      </div>
       <img id="ck-preview-${cat}" alt="preview" style="display:none;width:100%;max-height:180px;object-fit:cover;border-radius:4px;margin-top:0.6rem">
       <button class="btn" style="margin-top:0.9rem" onclick="saveDish('${cat}')">${e?'Update':'Submit'} ${label}</button>
       ${e?`<button class="btn btn-o" style="margin-top:0.9rem;margin-left:0.5rem" onclick="deleteDish('${e.id}')">Remove</button>`:''}
