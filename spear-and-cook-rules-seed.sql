@@ -41,8 +41,8 @@ Never load a gun on the boat or out of the water.
 SWIM COMPETITION RULES
 All boats travel to the zone together and anchor in the designated area (confirmed night before).
 No competitor boats allowed in any other part of the zone during the spearfishing phase.
-Comp will start as close to on or after 8am, as directed by the Competition Director.
-Comp will end at 1pm sharp regardless of what time it started.
+Comp time in the water is 09:00 to 13:00. Comp will start at 09:00, or as close to it as possible, as directed by the Competition Director.
+Comp will end at 13:00 sharp regardless of what time it started.
 All teams start inside the triangle start zone and must return before the official end time.
 Any team not checked in and back in the triangle by the cutoff receives 0 spearing points. No exceptions.
 You must stay within the Competition zone.
